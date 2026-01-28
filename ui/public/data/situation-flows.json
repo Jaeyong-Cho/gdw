@@ -1,4 +1,516 @@
 {
+  "IntentDefined": {
+    "situation": "IntentDefined",
+    "startQuestionId": "intent-written",
+    "questions": [
+      {
+        "id": "intent-written",
+        "question": "Intent를 문서로 작성했나요?",
+        "type": "yesno",
+        "required": true,
+        "onYesNextQuestionId": "intent-summary",
+        "onNoNextQuestionId": "intent-written"
+      },
+      {
+        "id": "intent-summary",
+        "question": "Intent를 한 문장으로 요약할 수 있나요?",
+        "type": "yesno",
+        "required": true,
+        "onYesNextQuestionId": "intent-summary-text",
+        "onNoNextSituation": "IntentDefinedFail"
+      },
+      {
+        "id": "intent-summary-text",
+        "question": "한 문장으로 요약해주세요",
+        "type": "text",
+        "required": true,
+        "nextQuestionId": "intent-consistent"
+      },
+      {
+        "id": "intent-consistent",
+        "question": "설명할 때마다 내용이 일관되나요?",
+        "type": "yesno",
+        "required": true,
+        "onYesNextQuestionId": "intent-no-tech",
+        "onNoNextSituation": "IntentDefinedFail"
+      },
+      {
+        "id": "intent-no-tech",
+        "question": "기능이나 기술을 언급하지 않았나요?",
+        "type": "yesno",
+        "required": true,
+        "onYesNextSituation": "ProblemSelected",
+        "onNoNextSituation": "IntentDefinedFail"
+      }
+    ]
+  },
+  "IntentDefinedFail": {
+    "situation": "IntentDefinedFail",
+    "startQuestionId": "intent-unclear-what",
+    "questions": [
+      {
+        "id": "intent-unclear-what",
+        "question": "어떤 부분이 불명확한가요?",
+        "type": "text",
+        "required": true,
+        "nextQuestionId": "intent-clarify-questions"
+      },
+      {
+        "id": "intent-clarify-questions",
+        "question": "명확히 하기 위한 질문을 작성했나요?",
+        "type": "yesno",
+        "required": true,
+        "onYesNextQuestionId": "intent-clarify-questions-text",
+        "onNoNextQuestionId": "intent-clarify-questions-text"
+      },
+      {
+        "id": "intent-clarify-questions-text",
+        "question": "명확히 하기 위한 질문을 작성해주세요",
+        "type": "text",
+        "required": true,
+        "nextQuestionId": "intent-ready-rewrite"
+      },
+      {
+        "id": "intent-ready-rewrite",
+        "question": "Intent를 다시 작성할 준비가 되었나요?",
+        "type": "yesno",
+        "required": true,
+        "onYesNextSituation": "IntentDefined",
+        "onNoNextQuestionId": "intent-ready-rewrite"
+      }
+    ]
+  },
+  "ProblemSelected": {
+    "situation": "ProblemSelected",
+    "startQuestionId": "problem-written",
+    "questions": [
+      {
+        "id": "problem-written",
+        "question": "문제 진술을 문서로 작성했나요?",
+        "type": "yesno",
+        "required": true,
+        "onYesNextQuestionId": "problem-distinct",
+        "onNoNextQuestionId": "problem-written"
+      },
+      {
+        "id": "problem-distinct",
+        "question": "문제가 Intent와 구별되나요? (Intent는 큰 그림, 문제는 구체적)",
+        "type": "yesno",
+        "required": true,
+        "onYesNextQuestionId": "problem-boundaries",
+        "onNoNextSituation": "IntentDefined"
+      },
+      {
+        "id": "problem-boundaries",
+        "question": "문제의 경계가 명확한가요? (무엇이 포함되고 제외되는지)",
+        "type": "yesno",
+        "required": true,
+        "onYesNextQuestionId": "problem-boundaries-text",
+        "onNoNextQuestionId": "problem-boundaries-text"
+      },
+      {
+        "id": "problem-boundaries-text",
+        "question": "문제의 경계를 명확히 작성해주세요 (포함/제외)",
+        "type": "text",
+        "required": true,
+        "nextQuestionId": "problem-measurable"
+      },
+      {
+        "id": "problem-measurable",
+        "question": "문제를 해결했는지 알 수 있나요? (측정 가능한가요?)",
+        "type": "yesno",
+        "required": true,
+        "onYesNextSituation": "AcceptanceDefined",
+        "onNoNextQuestionId": "problem-measurable"
+      }
+    ]
+  },
+  "AcceptanceDefined": {
+    "situation": "AcceptanceDefined",
+    "startQuestionId": "criteria-written",
+    "questions": [
+      {
+        "id": "criteria-written",
+        "question": "완료 기준을 문서로 작성했나요?",
+        "type": "yesno",
+        "required": true,
+        "onYesNextQuestionId": "criteria-measurable",
+        "onNoNextQuestionId": "criteria-written"
+      },
+      {
+        "id": "criteria-measurable",
+        "question": "각 기준을 true/false로 확인할 수 있나요?",
+        "type": "yesno",
+        "required": true,
+        "onYesNextQuestionId": "criteria-linked",
+        "onNoNextSituation": "ProblemSelected"
+      },
+      {
+        "id": "criteria-linked",
+        "question": "기준이 문제와 연결되어 있나요?",
+        "type": "yesno",
+        "required": true,
+        "onYesNextQuestionId": "criteria-define-done",
+        "onNoNextSituation": "ProblemSelected"
+      },
+      {
+        "id": "criteria-define-done",
+        "question": "기준으로 \"완료\"를 알 수 있나요?",
+        "type": "yesno",
+        "required": true,
+        "onYesNextQuestionId": "criteria-count",
+        "onNoNextSituation": "ProblemSelected"
+      },
+      {
+        "id": "criteria-count",
+        "question": "기준이 3-7개 정도인가요?",
+        "type": "yesno",
+        "required": true,
+        "onYesNextSituation": "FeasibilityChecked",
+        "onNoNextQuestionId": "criteria-count"
+      }
+    ]
+  },
+  "FeasibilityChecked": {
+    "situation": "FeasibilityChecked",
+    "startQuestionId": "feasibility-assessed",
+    "questions": [
+      {
+        "id": "feasibility-assessed",
+        "question": "실행 가능성 평가를 수행했나요?",
+        "type": "yesno",
+        "required": true,
+        "onYesNextQuestionId": "constraints-identified",
+        "onNoNextQuestionId": "feasibility-assessed"
+      },
+      {
+        "id": "constraints-identified",
+        "question": "기술적 제약사항을 식별했나요?",
+        "type": "yesno",
+        "required": true,
+        "onYesNextQuestionId": "constraints-text",
+        "onNoNextQuestionId": "constraints-text"
+      },
+      {
+        "id": "constraints-text",
+        "question": "기술적 제약사항을 작성해주세요",
+        "type": "text",
+        "required": true,
+        "nextQuestionId": "resources-estimated"
+      },
+      {
+        "id": "resources-estimated",
+        "question": "리소스 요구사항을 추정했나요? (시간, 인력 등)",
+        "type": "yesno",
+        "required": true,
+        "onYesNextQuestionId": "resources-text",
+        "onNoNextQuestionId": "resources-text"
+      },
+      {
+        "id": "resources-text",
+        "question": "리소스 요구사항을 작성해주세요",
+        "type": "text",
+        "required": true,
+        "nextQuestionId": "feasibility-decision"
+      },
+      {
+        "id": "feasibility-decision",
+        "question": "결정을 내렸나요?",
+        "type": "multiple",
+        "required": true,
+        "options": ["feasible", "too hard", "problem too big"]
+      }
+    ]
+  },
+  "DesignReady": {
+    "situation": "DesignReady",
+    "startQuestionId": "design-document",
+    "questions": [
+      {
+        "id": "design-document",
+        "question": "설계 문서나 다이어그램이 있나요?",
+        "type": "yesno",
+        "required": true,
+        "onYesNextQuestionId": "state-transitions",
+        "onNoNextQuestionId": "design-document"
+      },
+      {
+        "id": "state-transitions",
+        "question": "상태 전이가 필요한가요?",
+        "type": "yesno",
+        "required": true,
+        "onYesNextQuestionId": "state-transitions-defined",
+        "onNoNextQuestionId": "component-interactions"
+      },
+      {
+        "id": "state-transitions-defined",
+        "question": "상태 전이가 정의되었나요?",
+        "type": "yesno",
+        "required": true,
+        "onYesNextQuestionId": "component-interactions",
+        "onNoNextQuestionId": "state-transitions-defined"
+      },
+      {
+        "id": "component-interactions",
+        "question": "컴포넌트 상호작용이 명시되었나요?",
+        "type": "yesno",
+        "required": true,
+        "onYesNextQuestionId": "design-covers-criteria",
+        "onNoNextQuestionId": "component-interactions"
+      },
+      {
+        "id": "design-covers-criteria",
+        "question": "설계가 완료 기준을 다루나요?",
+        "type": "yesno",
+        "required": true,
+        "onYesNextQuestionId": "design-ready-to-implement",
+        "onNoNextSituation": "AcceptanceDefined"
+      },
+      {
+        "id": "design-ready-to-implement",
+        "question": "구현을 시작할 수 있을 정도인가요?",
+        "type": "yesno",
+        "required": true,
+        "onYesNextSituation": "TaskBreakdown",
+        "onNoNextSituation": "AcceptanceDefined"
+      }
+    ]
+  },
+  "TaskBreakdown": {
+    "situation": "TaskBreakdown",
+    "startQuestionId": "tasks-decomposed",
+    "questions": [
+      {
+        "id": "tasks-decomposed",
+        "question": "작업이 설계에서 분해되었나요?",
+        "type": "yesno",
+        "required": true,
+        "onYesNextQuestionId": "tasks-independent",
+        "onNoNextSituation": "DesignReady"
+      },
+      {
+        "id": "tasks-independent",
+        "question": "각 작업이 독립적으로 실행 가능한가요? (명확한 입력/출력)",
+        "type": "yesno",
+        "required": true,
+        "onYesNextQuestionId": "tasks-dependencies",
+        "onNoNextSituation": "DesignReady"
+      },
+      {
+        "id": "tasks-dependencies",
+        "question": "작업 의존성이 식별되었나요?",
+        "type": "yesno",
+        "required": true,
+        "onYesNextQuestionId": "tasks-session-sized",
+        "onNoNextSituation": "DesignReady"
+      },
+      {
+        "id": "tasks-session-sized",
+        "question": "각 작업을 90분 안에 완료할 수 있나요?",
+        "type": "yesno",
+        "required": true,
+        "onYesNextSituation": "Implementing",
+        "onNoNextQuestionId": "tasks-session-sized"
+      }
+    ]
+  },
+  "Implementing": {
+    "situation": "Implementing",
+    "startQuestionId": "task-selected",
+    "questions": [
+      {
+        "id": "task-selected",
+        "question": "특정 작업을 선택했나요?",
+        "type": "yesno",
+        "required": true,
+        "onYesNextQuestionId": "implementation-started",
+        "onNoNextSituation": "TaskBreakdown"
+      },
+      {
+        "id": "implementation-started",
+        "question": "코드나 파일을 생성/수정했나요?",
+        "type": "yesno",
+        "required": true,
+        "onYesNextQuestionId": "task-complete",
+        "onNoNextQuestionId": "implementation-started"
+      },
+      {
+        "id": "task-complete",
+        "question": "작업이 완료되었나요?",
+        "type": "yesno",
+        "required": true,
+        "onYesNextSituation": "Verifying",
+        "onNoNextQuestionId": "task-stuck"
+      },
+      {
+        "id": "task-stuck",
+        "question": "막혔나요? (15분 이상 고민 중)",
+        "type": "yesno",
+        "required": true,
+        "onYesNextSituation": "TaskBreakdown",
+        "onNoNextQuestionId": "task-complete"
+      }
+    ]
+  },
+  "Verifying": {
+    "situation": "Verifying",
+    "startQuestionId": "implementation-complete",
+    "questions": [
+      {
+        "id": "implementation-complete",
+        "question": "구현이 완료되었나요? (코드 작성됨)",
+        "type": "yesno",
+        "required": true,
+        "onYesNextQuestionId": "verification-started",
+        "onNoNextSituation": "Implementing"
+      },
+      {
+        "id": "verification-started",
+        "question": "검증을 시작했나요?",
+        "type": "yesno",
+        "required": true,
+        "onYesNextQuestionId": "criteria-checking",
+        "onNoNextQuestionId": "verification-started"
+      },
+      {
+        "id": "criteria-checking",
+        "question": "완료 기준을 확인하고 있나요?",
+        "type": "yesno",
+        "required": true,
+        "onYesNextQuestionId": "all-criteria-met",
+        "onNoNextSituation": "AcceptanceDefined"
+      },
+      {
+        "id": "all-criteria-met",
+        "question": "모든 기준이 만족되었나요?",
+        "type": "yesno",
+        "required": true,
+        "onYesNextSituation": "Verified",
+        "onNoNextQuestionId": "bugs-found"
+      },
+      {
+        "id": "bugs-found",
+        "question": "버그가 발견되었나요?",
+        "type": "yesno",
+        "required": true,
+        "onYesNextSituation": "Implementing",
+        "onNoNextQuestionId": "all-criteria-met"
+      }
+    ]
+  },
+  "Verified": {
+    "situation": "Verified",
+    "startQuestionId": "verification-complete",
+    "questions": [
+      {
+        "id": "verification-complete",
+        "question": "검증이 완료되었나요?",
+        "type": "yesno",
+        "required": true,
+        "onYesNextQuestionId": "all-criteria-satisfied",
+        "onNoNextSituation": "Verifying"
+      },
+      {
+        "id": "all-criteria-satisfied",
+        "question": "모든 완료 기준이 만족되었나요?",
+        "type": "yesno",
+        "required": true,
+        "onYesNextQuestionId": "no-blocking-bugs",
+        "onNoNextSituation": "AcceptanceDefined"
+      },
+      {
+        "id": "no-blocking-bugs",
+        "question": "차단 버그가 없나요?",
+        "type": "yesno",
+        "required": true,
+        "onYesNextQuestionId": "ready-for-release",
+        "onNoNextSituation": "Implementing"
+      },
+      {
+        "id": "ready-for-release",
+        "question": "다음 단계(릴리스) 준비가 되었나요?",
+        "type": "yesno",
+        "required": true,
+        "onYesNextSituation": "Released",
+        "onNoNextQuestionId": "ready-for-release"
+      }
+    ]
+  },
+  "Released": {
+    "situation": "Released",
+    "startQuestionId": "work-delivered",
+    "questions": [
+      {
+        "id": "work-delivered",
+        "question": "작업이 배포/병합/공유되었나요?",
+        "type": "yesno",
+        "required": true,
+        "onYesNextQuestionId": "users-accessible",
+        "onNoNextQuestionId": "work-delivered"
+      },
+      {
+        "id": "users-accessible",
+        "question": "사용자/이해관계자가 접근 가능한가요?",
+        "type": "yesno",
+        "required": true,
+        "onYesNextQuestionId": "release-artifacts",
+        "onNoNextSituation": "Verified"
+      },
+      {
+        "id": "release-announced",
+        "question": "릴리스가 공지되었나요?",
+        "type": "yesno",
+        "required": true,
+        "onYesNextSituation": "FeedbackCollected",
+        "onNoNextQuestionId": "release-announced"
+      }
+    ]
+  },
+  "FeedbackCollected": {
+    "situation": "FeedbackCollected",
+    "startQuestionId": "feedback-received",
+    "questions": [
+      {
+        "id": "feedback-received",
+        "question": "피드백을 수집했거나 받았나요?",
+        "type": "yesno",
+        "required": true,
+        "onYesNextQuestionId": "feedback-documented",
+        "onNoNextQuestionId": "feedback-received"
+      },
+      {
+        "id": "feedback-documented",
+        "question": "피드백이 문서화되었나요?",
+        "type": "yesno",
+        "required": true,
+        "onYesNextQuestionId": "feedback-documented-text",
+        "onNoNextQuestionId": "feedback-documented-text"
+      },
+      {
+        "id": "feedback-documented-text",
+        "question": "피드백을 문서화해주세요",
+        "type": "text",
+        "required": true,
+        "nextQuestionId": "feedback-related"
+      },
+      {
+        "id": "feedback-related",
+        "question": "피드백이 릴리스된 작업과 관련이 있나요?",
+        "type": "yesno",
+        "required": true,
+        "onYesNextQuestionId": "feedback-collection-complete",
+        "onNoNextSituation": "Released"
+      },
+      {
+        "id": "feedback-collection-complete",
+        "question": "피드백 수집 프로세스가 완료되었나요?",
+        "type": "yesno",
+        "required": true,
+        "onYesNextSituation": "Learned",
+        "onNoNextQuestionId": "feedback-collection-complete"
+      }
+    ]
+  },
   "Learned": {
     "situation": "Learned",
     "startQuestionId": "learned-new-facts",
@@ -47,6 +559,41 @@
         "type": "multiple",
         "required": true,
         "options": ["새로운 문제 선택", "같은 문제 심화", "Intent 조정"]
+      }
+    ]
+  },
+  "Undetermined": {
+    "situation": "Undetermined",
+    "startQuestionId": "info-missing",
+    "questions": [
+      {
+        "id": "info-missing",
+        "question": "어떤 정보가 누락되었나요?",
+        "type": "text",
+        "required": true,
+        "nextQuestionId": "info-can-collect"
+      },
+      {
+        "id": "info-can-collect",
+        "question": "필요한 정보를 수집할 수 있나요?",
+        "type": "yesno",
+        "required": true,
+        "onYesNextQuestionId": "info-collect-plan",
+        "onNoNextQuestionId": "closest-situation"
+      },
+      {
+        "id": "info-collect-plan",
+        "question": "정보 수집 계획을 작성해주세요",
+        "type": "text",
+        "required": true,
+        "nextQuestionId": "closest-situation"
+      },
+      {
+        "id": "closest-situation",
+        "question": "가장 가까운 상황이 무엇인가요?",
+        "type": "multiple",
+        "required": true,
+        "options": ["IntentDefined", "ProblemSelected", "AcceptanceDefined", "FeasibilityChecked", "DesignReady", "TaskBreakdown", "Implementing", "Verifying", "Verified", "Released", "FeedbackCollected", "Learned"]
       }
     ]
   }
