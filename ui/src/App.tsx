@@ -22,10 +22,14 @@ import { LayoutSelector } from './components/LayoutSelector';
 const App: React.FC = () => {
   const [selectedSituation, setSelectedSituation] = useState<Situation | null>(null);
   const [layoutType, setLayoutType] = useState<LayoutType>('circle');
-  const [sidebarWidth, setSidebarWidth] = useState<number>(400);
+  const [sidebarWidth, setSidebarWidth] = useState<number>(() => {
+    return typeof window !== 'undefined' ? window.innerWidth / 2 : 400;
+  });
   const [isResizing, setIsResizing] = useState<boolean>(false);
   const [startX, setStartX] = useState<number>(0);
-  const [startWidth, setStartWidth] = useState<number>(400);
+  const [startWidth, setStartWidth] = useState<number>(() => {
+    return typeof window !== 'undefined' ? window.innerWidth / 2 : 400;
+  });
   const sidebarRef = useRef<HTMLDivElement>(null);
 
   const handleNodeClick = useCallback((situation: Situation) => {
