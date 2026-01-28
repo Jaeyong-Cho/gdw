@@ -76,6 +76,18 @@ async function migrateDatabase(database: Database): Promise<void> {
     database.run('CREATE INDEX IF NOT EXISTS idx_intent_id ON question_answers(intent_id)');
     database.run('CREATE INDEX IF NOT EXISTS idx_problem_id ON question_answers(problem_id)');
     
+    // Create workflow_states table if it doesn't exist
+    database.run(`
+      CREATE TABLE IF NOT EXISTS workflow_states (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        current_situation TEXT NOT NULL,
+        saved_at TEXT NOT NULL,
+        description TEXT,
+        snapshot_data TEXT NOT NULL
+      )
+    `);
+    database.run('CREATE INDEX IF NOT EXISTS idx_saved_at ON workflow_states(saved_at)');
+    
     console.log('Database migration completed');
     
     // Save migrated database
@@ -213,6 +225,19 @@ export async function initDatabase(): Promise<void> {
       db.run(`CREATE INDEX IF NOT EXISTS idx_situation ON question_answers(situation)`);
       db.run(`CREATE INDEX IF NOT EXISTS idx_intent_id ON question_answers(intent_id)`);
       db.run(`CREATE INDEX IF NOT EXISTS idx_problem_id ON question_answers(problem_id)`);
+
+      // Create workflow state table
+      db.run(`
+        CREATE TABLE IF NOT EXISTS workflow_states (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          current_situation TEXT NOT NULL,
+          saved_at TEXT NOT NULL,
+          description TEXT,
+          snapshot_data TEXT NOT NULL
+        )
+      `);
+      
+      db.run(`CREATE INDEX IF NOT EXISTS idx_saved_at ON workflow_states(saved_at)`);
 
       await saveDatabase();
     }
@@ -813,4 +838,210 @@ export async function clearDatabase(): Promise<void> {
  */
 export async function isBackendServerAvailable(): Promise<boolean> {
   return await isServerAvailable();
+}
+
+/**
+ * @brief Save current workflow state as a snapshot
+ * 
+ * @param currentSituation - Current situation
+ * @param description - Optional description of the state
+ * @return Snapshot ID
+ */
+export async function saveWorkflowState(
+  currentSituation: string,
+  description?: string
+): Promise<number> {
+  await initDatabase();
+  
+  if (!db) {
+    throw new Error('Database not initialized');
+  }
+
+  // Get all current answers
+  const stmt = db.prepare('SELECT * FROM question_answers ORDER BY answered_at');
+  const answers: any[] = [];
+  
+  while (stmt.step()) {
+    answers.push(stmt.getAsObject());
+  }
+  stmt.free();
+
+  // Create snapshot
+  const snapshot = {
+    situation: currentSituation,
+    answers: answers,
+    savedAt: new Date().toISOString()
+  };
+
+  const snapshotData = JSON.stringify(snapshot);
+  const savedAt = new Date().toISOString();
+
+  db.run(
+    'INSERT INTO workflow_states (current_situation, saved_at, description, snapshot_data) VALUES (?, ?, ?, ?)',
+    [currentSituation, savedAt, description || null, snapshotData]
+  );
+
+  // Get inserted ID
+  const idStmt = db.prepare('SELECT last_insert_rowid() as id');
+  idStmt.step();
+  const result = idStmt.getAsObject();
+  const snapshotId = result.id as number;
+  idStmt.free();
+
+  await saveDatabase();
+  
+  console.log(`Workflow state saved: ID ${snapshotId}`);
+  return snapshotId;
+}
+
+/**
+ * @brief Restore workflow state from a snapshot
+ * 
+ * @param snapshotId - Snapshot ID to restore
+ * @return Current situation after restore
+ */
+export async function restoreWorkflowState(snapshotId: number): Promise<string> {
+  await initDatabase();
+  
+  if (!db) {
+    throw new Error('Database not initialized');
+  }
+
+  // Get snapshot
+  const stmt = db.prepare('SELECT snapshot_data FROM workflow_states WHERE id = ?');
+  stmt.bind([snapshotId]);
+  
+  if (!stmt.step()) {
+    stmt.free();
+    throw new Error('Snapshot not found');
+  }
+
+  const result = stmt.getAsObject();
+  const snapshotData = result.snapshot_data as string;
+  stmt.free();
+
+  const snapshot = JSON.parse(snapshotData);
+
+  // Clear current answers
+  db.run('DELETE FROM question_answers');
+
+  // Restore answers
+  for (const answer of snapshot.answers) {
+    db.run(
+      'INSERT INTO question_answers (id, question_id, situation, answer, answered_at, intent_id, problem_id, parent_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [
+        answer.id,
+        answer.question_id,
+        answer.situation,
+        answer.answer,
+        answer.answered_at,
+        answer.intent_id ?? null,
+        answer.problem_id ?? null,
+        answer.parent_id ?? null
+      ]
+    );
+  }
+
+  await saveDatabase();
+  
+  console.log(`Workflow state restored: ${snapshot.situation}`);
+  return snapshot.situation;
+}
+
+/**
+ * @brief Get all saved workflow states
+ * 
+ * @return Array of saved states
+ */
+export async function getSavedWorkflowStates(): Promise<Array<{
+  id: number;
+  currentSituation: string;
+  savedAt: string;
+  description: string | null;
+}>> {
+  await initDatabase();
+  
+  if (!db) {
+    throw new Error('Database not initialized');
+  }
+
+  const stmt = db.prepare('SELECT id, current_situation, saved_at, description FROM workflow_states ORDER BY saved_at DESC');
+  const states: Array<{
+    id: number;
+    currentSituation: string;
+    savedAt: string;
+    description: string | null;
+  }> = [];
+  
+  while (stmt.step()) {
+    const row = stmt.getAsObject();
+    states.push({
+      id: row.id as number,
+      currentSituation: row.current_situation as string,
+      savedAt: row.saved_at as string,
+      description: (row.description as string) || null,
+    });
+  }
+  
+  stmt.free();
+  return states;
+}
+
+/**
+ * @brief Delete a workflow state snapshot
+ * 
+ * @param snapshotId - Snapshot ID to delete
+ */
+export async function deleteWorkflowState(snapshotId: number): Promise<void> {
+  await initDatabase();
+  
+  if (!db) {
+    throw new Error('Database not initialized');
+  }
+
+  db.run('DELETE FROM workflow_states WHERE id = ?', [snapshotId]);
+  await saveDatabase();
+  
+  console.log(`Workflow state deleted: ID ${snapshotId}`);
+}
+
+/**
+ * @brief Get workflow state details
+ * 
+ * @param snapshotId - Snapshot ID
+ * @return Snapshot details including answer count
+ */
+export async function getWorkflowStateDetails(snapshotId: number): Promise<{
+  id: number;
+  currentSituation: string;
+  savedAt: string;
+  description: string | null;
+  answerCount: number;
+}> {
+  await initDatabase();
+  
+  if (!db) {
+    throw new Error('Database not initialized');
+  }
+
+  const stmt = db.prepare('SELECT * FROM workflow_states WHERE id = ?');
+  stmt.bind([snapshotId]);
+  
+  if (!stmt.step()) {
+    stmt.free();
+    throw new Error('Snapshot not found');
+  }
+
+  const result = stmt.getAsObject();
+  stmt.free();
+
+  const snapshot = JSON.parse(result.snapshot_data as string);
+
+  return {
+    id: result.id as number,
+    currentSituation: result.current_situation as string,
+    savedAt: result.saved_at as string,
+    description: (result.description as string) || null,
+    answerCount: snapshot.answers.length
+  };
 }

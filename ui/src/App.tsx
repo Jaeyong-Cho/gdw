@@ -8,6 +8,7 @@ import { CytoscapeDiagram } from './components/CytoscapeDiagram';
 import { SituationInfoPanel } from './components/SituationInfoPanel';
 import { LayoutSelector } from './components/LayoutSelector';
 import { DatabaseSettings } from './components/DatabaseSettings';
+import WorkflowStateManager from './components/WorkflowStateManager';
 
 /**
  * @brief Main application component
@@ -32,6 +33,8 @@ const App: React.FC = () => {
     return typeof window !== 'undefined' ? window.innerWidth / 2 : 400;
   });
   const [showSettings, setShowSettings] = useState<boolean>(false);
+  const [showStateManager, setShowStateManager] = useState<boolean>(false);
+  const [currentSituation, setCurrentSituation] = useState<Situation>('IntentDefinedFail');
   const sidebarRef = useRef<HTMLDivElement>(null);
 
   const handleNodeClick = useCallback((situation: Situation) => {
@@ -117,23 +120,53 @@ const App: React.FC = () => {
             Visualize and track your current position in the software development workflow
           </p>
         </div>
-        <button
-          onClick={() => setShowSettings(!showSettings)}
-          style={{
-            padding: '10px 20px',
-            fontSize: '14px',
-            fontWeight: '500',
-            backgroundColor: showSettings ? '#3b82f6' : '#4b5563',
-            color: '#ffffff',
-            border: 'none',
-            borderRadius: '6px',
-            cursor: 'pointer',
-            transition: 'background-color 0.2s',
-          }}
-        >
-          {showSettings ? '워크플로우 보기' : '데이터베이스 설정'}
-        </button>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button
+            onClick={() => setShowStateManager(true)}
+            style={{
+              padding: '10px 20px',
+              fontSize: '14px',
+              fontWeight: '500',
+              backgroundColor: '#10b981',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              transition: 'background-color 0.2s',
+            }}
+          >
+            상태 관리
+          </button>
+          <button
+            onClick={() => setShowSettings(!showSettings)}
+            style={{
+              padding: '10px 20px',
+              fontSize: '14px',
+              fontWeight: '500',
+              backgroundColor: showSettings ? '#3b82f6' : '#4b5563',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              transition: 'background-color 0.2s',
+            }}
+          >
+            {showSettings ? '워크플로우 보기' : '데이터베이스 설정'}
+          </button>
+        </div>
       </header>
+
+      {showStateManager && (
+        <WorkflowStateManager
+          currentSituation={currentSituation}
+          onRestore={(situation) => {
+            setCurrentSituation(situation);
+            setSelectedSituation(situation);
+            setShowStateManager(false);
+          }}
+          onClose={() => setShowStateManager(false)}
+        />
+      )}
 
       <div style={{
         display: 'flex',
@@ -217,7 +250,10 @@ const App: React.FC = () => {
               }}>
                 <SituationInfoPanel 
                   situation={selectedSituation} 
-                  onSituationChange={setSelectedSituation}
+                  onSituationChange={(sit) => {
+                    setSelectedSituation(sit);
+                    if (sit) setCurrentSituation(sit);
+                  }}
                 />
               </aside>
             </div>
