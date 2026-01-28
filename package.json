@@ -1,0 +1,17 @@
+{
+  "name": "gdw",
+  "version": "1.0.0",
+  "description": "Development Workflow Tracker",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:ui\"",
+    "dev:server": "cd server && npm start",
+    "dev:ui": "cd ui && npm run dev",
+    "install:all": "npm install && cd server && npm install && cd ../ui && npm install",
+    "build": "cd ui && npm run build",
+    "start": "concurrently \"npm run dev:server\" \"npm run dev:ui\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
