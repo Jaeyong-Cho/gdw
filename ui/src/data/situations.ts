@@ -232,4 +232,5 @@ export const stateTransitions: Array<[Situation, Situation, string]> = [
   ['Learned', 'ProblemSelected', 'same intent, new problem'],
   ['Learned', 'AcceptanceDefined', 'deepen same problem'],
   ['Learned', 'IntentDefined', 'adjust intent'],
+  ['Learned', 'Implementing', 'clear implementation task'],
 ];

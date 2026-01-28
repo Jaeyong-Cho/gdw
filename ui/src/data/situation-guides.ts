@@ -359,7 +359,7 @@ export const situationGuides: Record<string, SituationGuide> = {
     ],
     goBackTo: 'FeedbackCollected (피드백 재분석), ProblemSelected (새 문제), AcceptanceDefined (같은 문제 심화), IntentDefined (Intent 조정)',
     warning: '학습을 건너뛰지 말 것. 피드백에서 배우는 것이 중요. 다음 행동을 명확히 해야 함.',
-    tip: '"무엇이 잘 되었나?", "무엇을 개선할 수 있나?", "다음에 무엇을 할까?" 질문에 답. 학습 결과를 팀과 공유.',
+    tip: '"무엇이 잘 되었나?", "무엇을 개선할 수 있나?", "다음에 무엇을 할까?" 질문에 답. 학습 결과를 팀과 공유. 바로 구현할 수 있는 명확한 작업이 떠오르면 Implementing으로 바로 진행 가능.',
     aiUsage: '피드백 분석 요청, 통찰 추출 요청, 다음 행동 제안 요청. "이 피드백에서 무엇을 배웠나요?" 질문으로 검증.',
     quickCheck: {
       items: [
@@ -367,8 +367,9 @@ export const situationGuides: Record<string, SituationGuide> = {
         { question: '통찰이나 교훈을 추출했나요?' },
         { question: '학습 결과가 문서화되었나요?' },
         { question: '다음 행동이 식별되었나요?' },
+        { question: '바로 구현할 수 있는 명확한 작업이 떠오르나요?' },
       ],
-      nextStep: '모두 "예"면 다음 행동에 따라 ProblemSelected/AcceptanceDefined/IntentDefined로 진행',
+      nextStep: '모두 "예"면 다음 행동에 따라 ProblemSelected/AcceptanceDefined/IntentDefined/Implementing으로 진행 (명확한 구현 작업이 있으면 Implementing으로 바로 진행)',
     },
   },
   Undetermined: {
