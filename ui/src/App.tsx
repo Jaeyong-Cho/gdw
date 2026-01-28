@@ -2,7 +2,7 @@
  * @fileoverview Main application component
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Situation, LayoutType } from './types';
 import { CytoscapeDiagram } from './components/CytoscapeDiagram';
 import { SituationInfoPanel } from './components/SituationInfoPanel';
@@ -22,6 +22,11 @@ import { LayoutSelector } from './components/LayoutSelector';
 const App: React.FC = () => {
   const [selectedSituation, setSelectedSituation] = useState<Situation | null>(null);
   const [layoutType, setLayoutType] = useState<LayoutType>('dagre');
+  const [sidebarWidth, setSidebarWidth] = useState<number>(400);
+  const [isResizing, setIsResizing] = useState<boolean>(false);
+  const [startX, setStartX] = useState<number>(0);
+  const [startWidth, setStartWidth] = useState<number>(400);
+  const sidebarRef = useRef<HTMLDivElement>(null);
 
   const handleNodeClick = useCallback((situation: Situation) => {
     setSelectedSituation(situation);
@@ -30,6 +35,46 @@ const App: React.FC = () => {
   const handleLayoutChange = useCallback((layout: LayoutType) => {
     setLayoutType(layout);
   }, []);
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setStartX(e.clientX);
+    setStartWidth(sidebarWidth);
+    setIsResizing(true);
+  }, [sidebarWidth]);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing) return;
+      
+      const diff = startX - e.clientX;
+      const newWidth = startWidth + diff;
+      const minWidth = 300;
+      const maxWidth = window.innerWidth * 0.8;
+      
+      if (newWidth >= minWidth && newWidth <= maxWidth) {
+        setSidebarWidth(newWidth);
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+    };
+
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+  }, [isResizing, startX, startWidth]);
 
   return (
     <div style={{
@@ -67,6 +112,7 @@ const App: React.FC = () => {
         display: 'flex',
         flex: 1,
         overflow: 'hidden',
+        position: 'relative',
       }}>
         <div style={{
           flex: 1,
@@ -74,6 +120,8 @@ const App: React.FC = () => {
           position: 'relative',
           display: 'flex',
           flexDirection: 'column',
+          minWidth: 0,
+          overflow: 'hidden',
         }}>
           <LayoutSelector
             selectedLayout={layoutType}
@@ -88,15 +136,51 @@ const App: React.FC = () => {
           </div>
         </div>
 
-        <aside style={{
-          width: '400px',
-          padding: '24px',
-          backgroundColor: '#ffffff',
-          borderLeft: '1px solid #e5e7eb',
-          overflowY: 'auto',
-        }}>
-          <SituationInfoPanel situation={selectedSituation} />
-        </aside>
+        <div
+          ref={sidebarRef}
+          style={{
+            width: `${sidebarWidth}px`,
+            display: 'flex',
+            position: 'relative',
+            backgroundColor: '#ffffff',
+            borderLeft: '1px solid #e5e7eb',
+            flexShrink: 0,
+            zIndex: 100,
+          }}
+        >
+          <div
+            onMouseDown={handleMouseDown}
+            style={{
+              position: 'absolute',
+              left: '-2px',
+              top: 0,
+              bottom: 0,
+              width: '8px',
+              cursor: 'col-resize',
+              backgroundColor: isResizing ? '#3b82f6' : 'transparent',
+              zIndex: 1000,
+              transition: isResizing ? 'none' : 'background-color 0.2s',
+              pointerEvents: 'auto',
+            }}
+            onMouseEnter={(e) => {
+              if (!isResizing) {
+                e.currentTarget.style.backgroundColor = '#3b82f6';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!isResizing) {
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }
+            }}
+          />
+          <aside style={{
+            width: '100%',
+            padding: '24px',
+            overflowY: 'auto',
+          }}>
+            <SituationInfoPanel situation={selectedSituation} />
+          </aside>
+        </div>
       </div>
     </div>
   );
