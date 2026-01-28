@@ -38,6 +38,55 @@ async function isServerAvailable(): Promise<boolean> {
 }
 
 /**
+ * @brief Migrate existing database to add relationship columns
+ * 
+ * @param database - Database instance
+ * @pre Database is initialized
+ * @post Relationship columns are added if they don't exist
+ */
+async function migrateDatabase(database: Database): Promise<void> {
+  try {
+    // Check if columns exist
+    const stmt = database.prepare('PRAGMA table_info(question_answers)');
+    const columns: string[] = [];
+    
+    while (stmt.step()) {
+      const row = stmt.getAsObject();
+      columns.push(row.name as string);
+    }
+    stmt.free();
+    
+    // Add missing columns
+    if (!columns.includes('intent_id')) {
+      console.log('Adding intent_id column...');
+      database.run('ALTER TABLE question_answers ADD COLUMN intent_id INTEGER');
+    }
+    
+    if (!columns.includes('problem_id')) {
+      console.log('Adding problem_id column...');
+      database.run('ALTER TABLE question_answers ADD COLUMN problem_id INTEGER');
+    }
+    
+    if (!columns.includes('parent_id')) {
+      console.log('Adding parent_id column...');
+      database.run('ALTER TABLE question_answers ADD COLUMN parent_id INTEGER');
+    }
+    
+    // Create indexes if they don't exist
+    database.run('CREATE INDEX IF NOT EXISTS idx_intent_id ON question_answers(intent_id)');
+    database.run('CREATE INDEX IF NOT EXISTS idx_problem_id ON question_answers(problem_id)');
+    
+    console.log('Database migration completed');
+    
+    // Save migrated database
+    await saveDatabase();
+  } catch (error) {
+    console.error('Database migration failed:', error);
+    throw error;
+  }
+}
+
+/**
  * @brief Load database from backend or localStorage
  * 
  * @return Database binary data or null
@@ -136,6 +185,9 @@ export async function initDatabase(): Promise<void> {
     if (existingData) {
       db = new SQL.Database(existingData);
       console.log('Database initialized with existing data');
+      
+      // Run migrations for existing database
+      await migrateDatabase(db);
     } else {
       db = new SQL.Database();
       console.log('Database initialized (empty)');
@@ -147,12 +199,20 @@ export async function initDatabase(): Promise<void> {
           question_id TEXT NOT NULL,
           answer TEXT NOT NULL,
           answered_at TEXT NOT NULL,
-          situation TEXT
+          situation TEXT,
+          intent_id INTEGER,
+          problem_id INTEGER,
+          parent_id INTEGER,
+          FOREIGN KEY (intent_id) REFERENCES question_answers(id),
+          FOREIGN KEY (problem_id) REFERENCES question_answers(id),
+          FOREIGN KEY (parent_id) REFERENCES question_answers(id)
         )
       `);
       
       db.run(`CREATE INDEX IF NOT EXISTS idx_question_id ON question_answers(question_id)`);
       db.run(`CREATE INDEX IF NOT EXISTS idx_situation ON question_answers(situation)`);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_intent_id ON question_answers(intent_id)`);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_problem_id ON question_answers(problem_id)`);
 
       await saveDatabase();
     }
@@ -163,19 +223,79 @@ export async function initDatabase(): Promise<void> {
 }
 
 /**
- * @brief Save answer to database
+ * @brief Get current active intent ID
+ * 
+ * @return Intent answer ID or null
+ */
+export async function getCurrentIntentId(): Promise<number | null> {
+  if (!db) return null;
+
+  // Look for intent-related questions in IntentDefined situation
+  const stmt = db.prepare(`
+    SELECT id FROM question_answers 
+    WHERE situation = ? 
+    AND (question_id LIKE ? OR question_id LIKE ? OR question_id LIKE ?)
+    ORDER BY answered_at DESC LIMIT 1
+  `);
+  stmt.bind(['IntentDefined', 'intent-summary%', 'intent-summarized%', 'intent-document%']);
+  
+  if (stmt.step()) {
+    const result = stmt.getAsObject();
+    stmt.free();
+    return result.id as number;
+  }
+  
+  stmt.free();
+  return null;
+}
+
+/**
+ * @brief Get current active problem ID
+ * 
+ * @return Problem answer ID or null
+ */
+export async function getCurrentProblemId(): Promise<number | null> {
+  if (!db) return null;
+
+  // Look for problem-related questions in ProblemSelected situation
+  const stmt = db.prepare(`
+    SELECT id FROM question_answers 
+    WHERE situation = ? 
+    AND (question_id LIKE ? OR question_id LIKE ? OR question_id LIKE ?)
+    ORDER BY answered_at DESC LIMIT 1
+  `);
+  stmt.bind(['ProblemSelected', 'problem-%', 'problem-boundaries%', 'problem-distinct%']);
+  
+  if (stmt.step()) {
+    const result = stmt.getAsObject();
+    stmt.free();
+    return result.id as number;
+  }
+  
+  stmt.free();
+  return null;
+}
+
+/**
+ * @brief Save answer to database with relationship tracking
  * 
  * @param questionId - Question ID
  * @param situation - Situation name
  * @param answer - Answer value
  * @param answeredAt - ISO timestamp
+ * @param options - Optional relationship IDs
  */
 export async function saveAnswer(
   questionId: string,
   situation: string,
   answer: string | boolean,
-  answeredAt: string
-): Promise<void> {
+  answeredAt: string,
+  options?: {
+    intentId?: number | null;
+    problemId?: number | null;
+    parentId?: number | null;
+  }
+): Promise<number> {
   await initDatabase();
   
   if (!db) {
@@ -184,12 +304,48 @@ export async function saveAnswer(
 
   const answerStr = typeof answer === 'boolean' ? String(answer) : answer;
   
+  // Auto-link to current intent and problem if not specified
+  let intentId = options?.intentId;
+  let problemId = options?.problemId;
+  const parentId = options?.parentId;
+  
+  // If this is an intent answer, don't link to other intent
+  if (situation === 'IntentDefined' && questionId.includes('intent-')) {
+    intentId = null;
+    problemId = null;
+  }
+  // If this is a problem answer, link to intent but not to another problem
+  else if (situation === 'ProblemSelected' && questionId.includes('problem-')) {
+    if (intentId === undefined) {
+      intentId = await getCurrentIntentId();
+    }
+    problemId = null;
+  }
+  // For all other situations, link to both intent and problem
+  else {
+    if (intentId === undefined) {
+      intentId = await getCurrentIntentId();
+    }
+    if (problemId === undefined) {
+      problemId = await getCurrentProblemId();
+    }
+  }
+  
   db.run(
-    'INSERT INTO question_answers (question_id, situation, answer, answered_at) VALUES (?, ?, ?, ?)',
-    [questionId, situation, answerStr, answeredAt]
+    'INSERT INTO question_answers (question_id, situation, answer, answered_at, intent_id, problem_id, parent_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    [questionId, situation, answerStr, answeredAt, intentId ?? null, problemId ?? null, parentId ?? null]
   );
 
+  // Get the inserted row ID
+  const stmt = db.prepare('SELECT last_insert_rowid() as id');
+  stmt.step();
+  const result = stmt.getAsObject();
+  const insertedId = result.id as number;
+  stmt.free();
+
   await saveDatabase();
+  
+  return insertedId;
 }
 
 /**
@@ -253,23 +409,131 @@ export async function getAllAnswersByQuestionId(questionId: string): Promise<Arr
  * @param situation - Situation name
  * @return Array of answers
  */
-export async function getAnswersBySituation(situation: string): Promise<Array<{ questionId: string; answer: string; answeredAt: string }>> {
+export async function getAnswersBySituation(situation: string): Promise<Array<{ 
+  id: number;
+  questionId: string; 
+  answer: string; 
+  answeredAt: string;
+  intentId: number | null;
+  problemId: number | null;
+}>> {
   await initDatabase();
   
   if (!db) {
     throw new Error('Database not initialized');
   }
 
-  const stmt = db.prepare('SELECT question_id, answer, answered_at FROM question_answers WHERE situation = ? ORDER BY answered_at DESC');
+  const stmt = db.prepare('SELECT id, question_id, answer, answered_at, intent_id, problem_id FROM question_answers WHERE situation = ? ORDER BY answered_at DESC');
   stmt.bind([situation]);
   
-  const answers: Array<{ questionId: string; answer: string; answeredAt: string }> = [];
+  const answers: Array<{ 
+    id: number;
+    questionId: string; 
+    answer: string; 
+    answeredAt: string;
+    intentId: number | null;
+    problemId: number | null;
+  }> = [];
   while (stmt.step()) {
     const row = stmt.getAsObject();
     answers.push({
+      id: row.id as number,
       questionId: row.question_id as string,
       answer: row.answer as string,
       answeredAt: row.answered_at as string,
+      intentId: (row.intent_id as number) || null,
+      problemId: (row.problem_id as number) || null,
+    });
+  }
+  
+  stmt.free();
+  return answers;
+}
+
+/**
+ * @brief Get all answers related to an intent
+ * 
+ * @param intentId - Intent answer ID
+ * @return Array of related answers
+ */
+export async function getAnswersByIntent(intentId: number): Promise<Array<{ 
+  id: number;
+  questionId: string; 
+  answer: string; 
+  answeredAt: string;
+  situation: string;
+  problemId: number | null;
+}>> {
+  await initDatabase();
+  
+  if (!db) {
+    throw new Error('Database not initialized');
+  }
+
+  const stmt = db.prepare('SELECT id, question_id, answer, answered_at, situation, problem_id FROM question_answers WHERE intent_id = ? ORDER BY answered_at DESC');
+  stmt.bind([intentId]);
+  
+  const answers: Array<{ 
+    id: number;
+    questionId: string; 
+    answer: string; 
+    answeredAt: string;
+    situation: string;
+    problemId: number | null;
+  }> = [];
+  while (stmt.step()) {
+    const row = stmt.getAsObject();
+    answers.push({
+      id: row.id as number,
+      questionId: row.question_id as string,
+      answer: row.answer as string,
+      answeredAt: row.answered_at as string,
+      situation: row.situation as string,
+      problemId: (row.problem_id as number) || null,
+    });
+  }
+  
+  stmt.free();
+  return answers;
+}
+
+/**
+ * @brief Get all answers related to a problem
+ * 
+ * @param problemId - Problem answer ID
+ * @return Array of related answers
+ */
+export async function getAnswersByProblem(problemId: number): Promise<Array<{ 
+  id: number;
+  questionId: string; 
+  answer: string; 
+  answeredAt: string;
+  situation: string;
+}>> {
+  await initDatabase();
+  
+  if (!db) {
+    throw new Error('Database not initialized');
+  }
+
+  const stmt = db.prepare('SELECT id, question_id, answer, answered_at, situation FROM question_answers WHERE problem_id = ? ORDER BY answered_at DESC');
+  stmt.bind([problemId]);
+  
+  const answers: Array<{ 
+    id: number;
+    questionId: string; 
+    answer: string; 
+    answeredAt: string;
+    situation: string;
+  }> = [];
+  while (stmt.step()) {
+    const row = stmt.getAsObject();
+    answers.push({
+      id: row.id as number,
+      questionId: row.question_id as string,
+      answer: row.answer as string,
+      answeredAt: row.answered_at as string,
+      situation: row.situation as string,
     });
   }
   

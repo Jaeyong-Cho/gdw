@@ -3,6 +3,7 @@
  */
 
 import { getIntentSummary, getAnswersBySituation } from '../data/db';
+import { buildRelatedContext, formatRelatedContextForPrompt } from '../data/relationships';
 
 /**
  * @brief Context data for prompt generation
@@ -38,112 +39,117 @@ export function generatePrompt(template: string, context: PromptContext): string
 }
 
 /**
- * @brief Build context from database answers
+ * @brief Build context from database answers with relationships
  * 
  * @param situation - Current situation
- * @return Promise resolving to context object with relevant answers
+ * @return Promise resolving to context object with relevant answers and relationships
  * 
  * @pre situation is provided
- * @post Returns context with intent, problem, and other relevant data
+ * @post Returns context with intent, problem, and other relevant data including relationships
  */
 export async function buildPromptContext(situation: string): Promise<PromptContext> {
   const context: PromptContext = {};
   
   try {
-    const intentSummary = await getIntentSummary();
-    if (intentSummary) {
-      context.intent = intentSummary;
-    }
+    // Get related context using relationships
+    const relatedContext = await buildRelatedContext(situation);
     
-    const allAnswers = await getAnswersBySituation('IntentDefined');
-    const problemAnswers = await getAnswersBySituation('ProblemSelected');
-    const acceptanceAnswers = await getAnswersBySituation('AcceptanceDefined');
-    const designAnswers = await getAnswersBySituation('DesignReady');
-    const implementingAnswers = await getAnswersBySituation('Implementing');
-    const verifyingAnswers = await getAnswersBySituation('Verifying');
-    const verifiedAnswers = await getAnswersBySituation('Verified');
-    const releasedAnswers = await getAnswersBySituation('Released');
-    const feedbackAnswers = await getAnswersBySituation('FeedbackCollected');
-    const learnedAnswers = await getAnswersBySituation('Learned');
-    const currentAnswers = await getAnswersBySituation(situation);
-    
-    const allAnswerMap = new Map<string, string>();
-    
-    [...allAnswers, ...problemAnswers, ...acceptanceAnswers, ...designAnswers, 
-     ...implementingAnswers, ...verifyingAnswers, ...verifiedAnswers, 
-     ...releasedAnswers, ...feedbackAnswers, ...learnedAnswers, ...currentAnswers].forEach(a => {
-      if (!allAnswerMap.has(a.questionId)) {
-        allAnswerMap.set(a.questionId, a.answer);
-      }
-    });
-    
-    if (allAnswerMap.has('problem-boundaries-text')) {
-      context.problem = allAnswerMap.get('problem-boundaries-text') || null;
-    }
-    
-    if (allAnswerMap.has('criteria-text')) {
-      context.acceptanceCriteria = allAnswerMap.get('criteria-text') || null;
+    // Add intent
+    if (relatedContext.intent) {
+      context.intent = relatedContext.intent;
     } else {
-      const criteriaAnswers = [...acceptanceAnswers, ...currentAnswers].filter(a => 
-        a.questionId.includes('criteria') && a.answer !== 'true' && a.answer !== 'false'
-      );
-      if (criteriaAnswers.length > 0) {
-        context.acceptanceCriteria = criteriaAnswers.map(a => a.answer).join('\n');
+      const intentSummary = await getIntentSummary();
+      if (intentSummary) {
+        context.intent = intentSummary;
       }
     }
     
-    if (allAnswerMap.has('design-text')) {
-      context.design = allAnswerMap.get('design-text') || null;
-    } else {
-      const designAnswersText = [...designAnswers, ...currentAnswers].filter(a =>
-        a.questionId.includes('design') && a.answer !== 'true' && a.answer !== 'false'
-      );
-      if (designAnswersText.length > 0) {
-        context.design = designAnswersText.map(a => a.answer).join('\n');
+    // Add related data
+    if (relatedContext.problems && relatedContext.problems.length > 0) {
+      context.relatedProblems = relatedContext.problems.join('\n\n');
+    }
+    
+    if (relatedContext.design && relatedContext.design.length > 0) {
+      context.design = relatedContext.design.join('\n\n');
+    }
+    
+    if (relatedContext.acceptance && relatedContext.acceptance.length > 0) {
+      context.acceptanceCriteria = relatedContext.acceptance.join('\n\n');
+    }
+    
+    if (relatedContext.implementation && relatedContext.implementation.length > 0) {
+      context.implementation = relatedContext.implementation.join('\n\n');
+    }
+    
+    if (relatedContext.feedback && relatedContext.feedback.length > 0) {
+      context.feedback = relatedContext.feedback.join('\n\n');
+    }
+    
+    if (relatedContext.improvements && relatedContext.improvements.length > 0) {
+      context.improvements = relatedContext.improvements.join('\n\n');
+    }
+    
+    // Add formatted related context
+    context.relatedContext = formatRelatedContextForPrompt(relatedContext);
+    
+    // Also populate from allRelated map
+    if (relatedContext.allRelated) {
+      relatedContext.allRelated.forEach((value, key) => {
+        if (!context[key]) {
+          context[key] = value;
+        }
+      });
+    }
+    
+    // Fallback: Get all answers from current and related situations
+    const situations = [
+      'IntentDefined',
+      'ProblemSelected', 
+      'AcceptanceDefined',
+      'DesignReady',
+      'Implementing',
+      'Verifying',
+      'Verified',
+      'Released',
+      'FeedbackCollected',
+      'Learned',
+      situation
+    ];
+    
+    for (const sit of situations) {
+      try {
+        const answers = await getAnswersBySituation(sit);
+        answers.forEach(a => {
+          if (!['true', 'false'].includes(a.answer)) {
+            // Use question ID as key
+            if (!context[a.questionId]) {
+              context[a.questionId] = a.answer;
+            }
+            
+            // Also map common patterns to standard keys
+            if (a.questionId.includes('intent') && !context.intent) {
+              context.intent = a.answer;
+            }
+            if (a.questionId.includes('problem') && !context.problem) {
+              context.problem = a.answer;
+            }
+            if (a.questionId.includes('design') && !context.design) {
+              context.design = a.answer;
+            }
+            if (a.questionId.includes('acceptance') || a.questionId.includes('criteria')) {
+              if (!context.acceptanceCriteria) {
+                context.acceptanceCriteria = a.answer;
+              } else {
+                context.acceptanceCriteria += '\n\n' + a.answer;
+              }
+            }
+          }
+        });
+      } catch (error) {
+        console.error(`Error fetching answers for ${sit}:`, error);
       }
     }
     
-    if (allAnswerMap.has('tasks-text')) {
-      context.task = allAnswerMap.get('tasks-text') || null;
-    }
-    
-    if (allAnswerMap.has('task-implementation-text')) {
-      context['task-implementation-text'] = allAnswerMap.get('task-implementation-text') || null;
-    }
-    
-    if (allAnswerMap.has('verification-test-text')) {
-      context['verification-test-text'] = allAnswerMap.get('verification-test-text') || null;
-    }
-    
-    if (allAnswerMap.has('verification-decision-text')) {
-      context['verification-decision-text'] = allAnswerMap.get('verification-decision-text') || null;
-    }
-    
-    if (allAnswerMap.has('release-note-text')) {
-      context['release-note-text'] = allAnswerMap.get('release-note-text') || null;
-    }
-    
-    if (allAnswerMap.has('feedback-documented-text')) {
-      context['feedback-documented-text'] = allAnswerMap.get('feedback-documented-text') || null;
-    }
-    
-    if (allAnswerMap.has('learned-new-facts-text')) {
-      context['learned-new-facts-text'] = allAnswerMap.get('learned-new-facts-text') || null;
-    }
-    
-    if (allAnswerMap.has('learned-improvements-text')) {
-      context['learned-improvements-text'] = allAnswerMap.get('learned-improvements-text') || null;
-    }
-    
-    if (allAnswerMap.has('constraints-text')) {
-      context['constraints-text'] = allAnswerMap.get('constraints-text') || null;
-    }
-    
-    allAnswerMap.forEach((value, key) => {
-      if (value !== 'true' && value !== 'false' && !context[key]) {
-        context[key] = value;
-      }
-    });
   } catch (error) {
     console.error('Error building prompt context:', error);
   }

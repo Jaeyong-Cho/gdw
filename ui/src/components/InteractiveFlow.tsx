@@ -46,6 +46,7 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
   const [aiPromptInputs, setAiPromptInputs] = useState<Record<string, string>>({});
   const [selectableAnswers, setSelectableAnswers] = useState<Array<{id: string, text: string, timestamp: string}>>([]);
   const [selectedAnswerIds, setSelectedAnswerIds] = useState<string[]>([]);
+  const [copyStatus, setCopyStatus] = useState<'idle' | 'success' | 'error'>('idle');
   
   const currentQuestionIdRef = useRef<string | null>(null);
 
@@ -243,9 +244,12 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
   const handleCopyPrompt = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(aiPrompt);
-      alert('프롬프트가 클립보드에 복사되었습니다.');
+      setCopyStatus('success');
+      setTimeout(() => setCopyStatus('idle'), 1500);
     } catch (error) {
       console.error('Error copying prompt:', error);
+      setCopyStatus('error');
+      setTimeout(() => setCopyStatus('idle'), 1500);
     }
   }, [aiPrompt]);
 
@@ -647,14 +651,36 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
                       padding: '6px 12px',
                       fontSize: '12px',
                       fontWeight: '500',
-                      backgroundColor: '#3b82f6',
+                      backgroundColor: copyStatus === 'success' ? '#10b981' : copyStatus === 'error' ? '#ef4444' : '#3b82f6',
                       color: '#ffffff',
                       border: 'none',
                       borderRadius: '6px',
                       cursor: 'pointer',
+                      position: 'relative',
+                      overflow: 'hidden',
+                      transition: 'all 0.3s ease',
+                      transform: copyStatus === 'success' ? 'scale(1.05)' : 'scale(1)',
                     }}
                   >
-                    Copy
+                    <span style={{
+                      position: 'relative',
+                      zIndex: 1,
+                    }}>
+                      {copyStatus === 'success' ? '✓ Copied!' : copyStatus === 'error' ? '✗ Failed' : 'Copy'}
+                    </span>
+                    {copyStatus === 'success' && (
+                      <span style={{
+                        position: 'absolute',
+                        top: '50%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        fontSize: '40px',
+                        opacity: 0,
+                        animation: 'confetti 0.6s ease-out',
+                      }}>
+                        🎉
+                      </span>
+                    )}
                   </button>
                 </div>
                 <pre style={{
@@ -951,14 +977,36 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
                       padding: '6px 12px',
                       fontSize: '12px',
                       fontWeight: '500',
-                      backgroundColor: '#3b82f6',
+                      backgroundColor: copyStatus === 'success' ? '#10b981' : copyStatus === 'error' ? '#ef4444' : '#3b82f6',
                       color: '#ffffff',
                       border: 'none',
                       borderRadius: '6px',
                       cursor: 'pointer',
+                      position: 'relative',
+                      overflow: 'hidden',
+                      transition: 'all 0.3s ease',
+                      transform: copyStatus === 'success' ? 'scale(1.05)' : 'scale(1)',
                     }}
                   >
-                    Copy
+                    <span style={{
+                      position: 'relative',
+                      zIndex: 1,
+                    }}>
+                      {copyStatus === 'success' ? '✓ Copied!' : copyStatus === 'error' ? '✗ Failed' : 'Copy'}
+                    </span>
+                    {copyStatus === 'success' && (
+                      <span style={{
+                        position: 'absolute',
+                        top: '50%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        fontSize: '40px',
+                        opacity: 0,
+                        animation: 'confetti 0.6s ease-out',
+                      }}>
+                        🎉
+                      </span>
+                    )}
                   </button>
                 </div>
                 <pre style={{
@@ -1113,3 +1161,28 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
     </div>
   );
 };
+
+// Add confetti animation CSS
+const style = document.createElement('style');
+style.textContent = `
+  @keyframes confetti {
+    0% {
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(0) rotate(0deg);
+    }
+    50% {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1.5) rotate(180deg);
+    }
+    100% {
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(2) rotate(360deg);
+    }
+  }
+`;
+if (!document.head.querySelector('style[data-confetti-interactive]')) {
+  style.setAttribute('data-confetti-interactive', 'true');
+  document.head.appendChild(style);
+}
+
+export default InteractiveFlow;
