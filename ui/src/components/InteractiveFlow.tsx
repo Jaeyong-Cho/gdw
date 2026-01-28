@@ -5,6 +5,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Situation, QuestionAnswer, SituationFlow, QuestionDataDisplay } from '../types';
 import { getSituationFlows } from '../data/data-loader';
+import { generatePrompt, buildPromptContext } from '../utils/prompt-generator';
 
 /**
  * @brief Props for InteractiveFlow component
@@ -39,6 +40,8 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
   const [loading, setLoading] = useState<boolean>(true);
   const [displayData, setDisplayData] = useState<string | null>(null);
   const [displayDataLabel, setDisplayDataLabel] = useState<string>('');
+  const [showAIPrompt, setShowAIPrompt] = useState<boolean>(false);
+  const [aiPrompt, setAiPrompt] = useState<string>('');
 
   useEffect(() => {
     const loadFlow = async () => {
@@ -57,7 +60,27 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
           
           const startQuestion = situationFlow.questions.find(q => q.id === situationFlow.startQuestionId);
           if (startQuestion?.showData) {
-            await loadDisplayData(startQuestion.showData);
+            const db = await import('../data/db');
+            let data: string | null = null;
+
+            switch (startQuestion.showData.source) {
+              case 'getIntentSummary':
+                data = await db.getIntentSummary();
+                break;
+              case 'getIntentDocument':
+                data = await db.getIntentDocument();
+                break;
+              case 'getAnswerByQuestionId':
+                if (startQuestion.showData.sourceParam) {
+                  data = await db.getAnswerByQuestionId(startQuestion.showData.sourceParam);
+                }
+                break;
+              default:
+                data = null;
+            }
+
+            setDisplayData(data);
+            setDisplayDataLabel(startQuestion.showData.label);
           }
           
           const existingAnswer = await getAnswerByQuestionId(situationFlow.startQuestionId);
@@ -112,6 +135,47 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
     }
   }, []);
 
+  /**
+   * @brief Generate AI prompt from template
+   * 
+   * @pre currentQuestion has aiPromptTemplate
+   * @post AI prompt is generated and displayed
+   */
+  const handleGenerateAIPrompt = useCallback(async () => {
+    if (!flow || !currentQuestionId) {
+      return;
+    }
+    
+    const question = flow.questions.find(q => q.id === currentQuestionId);
+    if (!question?.aiPromptTemplate) {
+      return;
+    }
+
+    try {
+      const context = await buildPromptContext(situation);
+      const prompt = generatePrompt(question.aiPromptTemplate.template, context);
+      setAiPrompt(prompt);
+      setShowAIPrompt(true);
+    } catch (error) {
+      console.error('Error generating AI prompt:', error);
+    }
+  }, [flow, currentQuestionId, situation]);
+
+  /**
+   * @brief Copy prompt to clipboard
+   * 
+   * @pre aiPrompt is set
+   * @post Prompt is copied to clipboard
+   */
+  const handleCopyPrompt = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(aiPrompt);
+      alert('프롬프트가 클립보드에 복사되었습니다.');
+    } catch (error) {
+      console.error('Error copying prompt:', error);
+    }
+  }, [aiPrompt]);
+
   useEffect(() => {
     if (!flow || !currentQuestionId) {
       return;
@@ -124,6 +188,9 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
       setDisplayData(null);
       setDisplayDataLabel('');
     }
+    
+    setShowAIPrompt(false);
+    setAiPrompt('');
   }, [currentQuestionId, flow, loadDisplayData]);
 
   if (loading) {
@@ -251,6 +318,7 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
     switch (currentQuestion.type) {
       case 'yesno':
         const showDataForYesNo = currentQuestion.showData && displayData;
+        const hasAIPrompt = currentQuestion.aiPromptTemplate !== undefined;
         
         return (
           <div style={{ marginTop: '16px' }}>
@@ -271,7 +339,7 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
                 </div>
               </div>
             )}
-            <div style={{ display: 'flex', gap: '12px' }}>
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
               <button
                 onClick={() => handleAnswer(true)}
                 style={{
@@ -284,6 +352,7 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
                   borderRadius: '8px',
                   cursor: 'pointer',
                   flex: 1,
+                  minWidth: '120px',
                 }}
               >
                 예
@@ -300,16 +369,92 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
                   borderRadius: '8px',
                   cursor: 'pointer',
                   flex: 1,
+                  minWidth: '120px',
                 }}
               >
                 아니오
               </button>
+              {hasAIPrompt && (
+                <button
+                  onClick={handleGenerateAIPrompt}
+                  style={{
+                    padding: '12px 24px',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    backgroundColor: '#6366f1',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    flex: 1,
+                    minWidth: '160px',
+                  }}
+                >
+                  답변하기 어려워요
+                </button>
+              )}
             </div>
+            {showAIPrompt && aiPrompt && (
+              <div style={{
+                marginTop: '16px',
+                padding: '16px',
+                backgroundColor: '#f9fafb',
+                border: '1px solid #e5e7eb',
+                borderRadius: '8px',
+              }}>
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: '12px',
+                }}>
+                  <h4 style={{
+                    margin: 0,
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: '#374151',
+                  }}>
+                    AI 프롬프트
+                  </h4>
+                  <button
+                    onClick={handleCopyPrompt}
+                    style={{
+                      padding: '6px 12px',
+                      fontSize: '12px',
+                      fontWeight: '500',
+                      backgroundColor: '#3b82f6',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Copy
+                  </button>
+                </div>
+                <pre style={{
+                  margin: 0,
+                  padding: '12px',
+                  backgroundColor: '#ffffff',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '6px',
+                  fontSize: '13px',
+                  fontFamily: 'monospace',
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word',
+                  maxHeight: '300px',
+                  overflowY: 'auto',
+                }}>
+                  {aiPrompt}
+                </pre>
+              </div>
+            )}
           </div>
         );
 
       case 'text':
         const showDataForText = currentQuestion.showData && displayData;
+        const hasAIPromptForText = currentQuestion.aiPromptTemplate !== undefined;
         
         return (
           <div style={{ marginTop: '16px' }}>
@@ -345,24 +490,98 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
                 resize: 'vertical',
               }}
             />
-            <button
-              onClick={handleTextSubmit}
-              disabled={!textAnswer.trim()}
-              style={{
-                marginTop: '12px',
-                padding: '12px 24px',
-                fontSize: '16px',
-                fontWeight: '600',
-                backgroundColor: textAnswer.trim() ? '#3b82f6' : '#9ca3af',
-                color: '#ffffff',
-                border: 'none',
+            <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
+              <button
+                onClick={handleTextSubmit}
+                disabled={!textAnswer.trim()}
+                style={{
+                  padding: '12px 24px',
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  backgroundColor: textAnswer.trim() ? '#3b82f6' : '#9ca3af',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: textAnswer.trim() ? 'pointer' : 'not-allowed',
+                  flex: 1,
+                }}
+              >
+                저장하고 다음
+              </button>
+              {hasAIPromptForText && (
+                <button
+                  onClick={handleGenerateAIPrompt}
+                  style={{
+                    padding: '12px 24px',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    backgroundColor: '#6366f1',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  답변하기 어려워요
+                </button>
+              )}
+            </div>
+            {showAIPrompt && aiPrompt && (
+              <div style={{
+                marginTop: '16px',
+                padding: '16px',
+                backgroundColor: '#f9fafb',
+                border: '1px solid #e5e7eb',
                 borderRadius: '8px',
-                cursor: textAnswer.trim() ? 'pointer' : 'not-allowed',
-                width: '100%',
-              }}
-            >
-              저장하고 다음
-            </button>
+              }}>
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: '12px',
+                }}>
+                  <h4 style={{
+                    margin: 0,
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: '#374151',
+                  }}>
+                    AI 프롬프트
+                  </h4>
+                  <button
+                    onClick={handleCopyPrompt}
+                    style={{
+                      padding: '6px 12px',
+                      fontSize: '12px',
+                      fontWeight: '500',
+                      backgroundColor: '#3b82f6',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Copy
+                  </button>
+                </div>
+                <pre style={{
+                  margin: 0,
+                  padding: '12px',
+                  backgroundColor: '#ffffff',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '6px',
+                  fontSize: '13px',
+                  fontFamily: 'monospace',
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word',
+                  maxHeight: '300px',
+                  overflowY: 'auto',
+                }}>
+                  {aiPrompt}
+                </pre>
+              </div>
+            )}
           </div>
         );
 

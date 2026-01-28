@@ -143,6 +143,14 @@ export interface QuestionDataDisplay {
 }
 
 /**
+ * AI prompt template for questions
+ */
+export interface AIPromptTemplate {
+  template: string;
+  variables?: string[];
+}
+
+/**
  * Question in the interactive flow
  */
 export interface Question {
@@ -159,6 +167,7 @@ export interface Question {
   onYesNextSituation?: Situation;
   onNoNextSituation?: Situation;
   showData?: QuestionDataDisplay;
+  aiPromptTemplate?: AIPromptTemplate;
 }
 
 /**
