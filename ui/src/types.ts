@@ -153,12 +153,22 @@ export interface AIPromptInputField {
 }
 
 /**
+ * Selectable previous answers configuration
+ */
+export interface SelectableAnswers {
+  questionId: string;
+  label: string;
+  variableName: string;
+}
+
+/**
  * AI prompt template for questions
  */
 export interface AIPromptTemplate {
   template: string;
   variables?: string[];
   inputFields?: AIPromptInputField[];
+  selectableAnswers?: SelectableAnswers;
 }
 
 /**

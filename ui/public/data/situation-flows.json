@@ -97,7 +97,12 @@
         "required": true,
         "nextQuestionId": "problem-distinct",
         "aiPromptTemplate": {
-          "template": "# 문제 선택 및 경계 정의 도움\n\n## [INPUT – Human]\n\n1. Final intent sentence:\n- {{intent}}\n\n## [AI PROMPT]\n\nYou are performing problem decomposition.\n\nRules:\n- No solution framing.\n- No implementation hints.\n\nTasks:\n1. Enumerate all problems implied by the intent.\n2. Rank them by urgency, impact, and dependency depth.\n3. Select exactly ONE problem.\n4. Rewrite it as a single precise question.\n5. If oversized, decompose and select the smallest viable unit.\n\n## [EXIT CONDITION]\n\n- One problem only\n- Expressed as a question\n- Solvable independently"
+          "template": "# 문제 선택 및 경계 정의 도움\n\n## [INPUT – Human]\n\n1. Final intent sentence:\n- {{intent}}\n\n2. Previous improvement points (선택적):\n{{improvements}}\n\n## [AI PROMPT]\n\nYou are performing problem decomposition.\n\nRules:\n- No solution framing.\n- No implementation hints.\n\nTasks:\n1. Enumerate all problems implied by the intent.\n2. Rank them by urgency, impact, and dependency depth.\n3. Select exactly ONE problem.\n4. Rewrite it as a single precise question.\n5. If oversized, decompose and select the smallest viable unit.\n6. If improvement points are provided, consider them in problem selection.\n\n## [EXIT CONDITION]\n\n- One problem only\n- Expressed as a question\n- Solvable independently",
+          "selectableAnswers": {
+            "questionId": "learned-improvements-text",
+            "label": "이전 개선점 선택",
+            "variableName": "improvements"
+          }
         }
       },
       {

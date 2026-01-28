@@ -44,6 +44,8 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
   const [aiPrompt, setAiPrompt] = useState<string>('');
   const [showAIPromptInputs, setShowAIPromptInputs] = useState<boolean>(false);
   const [aiPromptInputs, setAiPromptInputs] = useState<Record<string, string>>({});
+  const [selectableAnswers, setSelectableAnswers] = useState<Array<{id: string, text: string, timestamp: string}>>([]);
+  const [selectedAnswerIds, setSelectedAnswerIds] = useState<string[]>([]);
   
   const currentQuestionIdRef = useRef<string | null>(null);
 
@@ -161,6 +163,16 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
         });
       }
       
+      if (question.aiPromptTemplate.selectableAnswers && selectedAnswerIds.length > 0) {
+        const selectedTexts = selectableAnswers
+          .filter(ans => selectedAnswerIds.includes(ans.id))
+          .map(ans => `- ${ans.text}`)
+          .join('\n');
+        context[question.aiPromptTemplate.selectableAnswers.variableName] = selectedTexts || null;
+      } else if (question.aiPromptTemplate.selectableAnswers) {
+        context[question.aiPromptTemplate.selectableAnswers.variableName] = null;
+      }
+      
       const prompt = generatePrompt(question.aiPromptTemplate.template, context);
       setAiPrompt(prompt);
       setShowAIPrompt(true);
@@ -168,7 +180,7 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
     } catch (error) {
       console.error('Error generating AI prompt:', error);
     }
-  }, [flow, currentQuestionId, situation]);
+  }, [flow, currentQuestionId, situation, selectableAnswers, selectedAnswerIds]);
 
   /**
    * @brief Show AI prompt input form
@@ -176,7 +188,7 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
    * @pre currentQuestion has aiPromptTemplate
    * @post Input form is displayed
    */
-  const handleShowAIPromptInputs = useCallback(() => {
+  const handleShowAIPromptInputs = useCallback(async () => {
     if (!flow || !currentQuestionId) {
       return;
     }
@@ -186,14 +198,37 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
       return;
     }
 
-    if (question.aiPromptTemplate.inputFields && question.aiPromptTemplate.inputFields.length > 0) {
+    const hasInputFields = question.aiPromptTemplate.inputFields && question.aiPromptTemplate.inputFields.length > 0;
+    const hasSelectableAnswers = question.aiPromptTemplate.selectableAnswers !== undefined;
+
+    if (hasInputFields || hasSelectableAnswers) {
       setShowAIPromptInputs(true);
       setShowAIPrompt(false);
-      const initialInputs: Record<string, string> = {};
-      question.aiPromptTemplate.inputFields.forEach(field => {
-        initialInputs[field.id] = '';
-      });
-      setAiPromptInputs(initialInputs);
+      
+      if (hasInputFields) {
+        const initialInputs: Record<string, string> = {};
+        question.aiPromptTemplate.inputFields!.forEach(field => {
+          initialInputs[field.id] = '';
+        });
+        setAiPromptInputs(initialInputs);
+      }
+      
+      if (hasSelectableAnswers && question.aiPromptTemplate.selectableAnswers) {
+        try {
+          const { getAllAnswersByQuestionId } = await import('../data/db');
+          const answers = await getAllAnswersByQuestionId(question.aiPromptTemplate.selectableAnswers.questionId);
+          const formattedAnswers = answers.map((ans, idx) => ({
+            id: `${ans.answeredAt}-${idx}`,
+            text: ans.answer,
+            timestamp: ans.answeredAt
+          }));
+          setSelectableAnswers(formattedAnswers);
+          setSelectedAnswerIds([]);
+        } catch (error) {
+          console.error('Error loading selectable answers:', error);
+          setSelectableAnswers([]);
+        }
+      }
     } else {
       handleGenerateAIPrompt();
     }
@@ -227,6 +262,8 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
     setAiPrompt('');
     setShowAIPromptInputs(false);
     setAiPromptInputs({});
+    setSelectableAnswers([]);
+    setSelectedAnswerIds([]);
     
     setTextAnswer('');
     
@@ -428,7 +465,7 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
                   프롬프트에 필요한 정보 입력
                 </h4>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {currentQuestion.aiPromptTemplate.inputFields.map(field => (
+                  {currentQuestion.aiPromptTemplate.inputFields?.map(field => (
                     <div key={field.id}>
                       <label style={{
                         display: 'block',
@@ -457,6 +494,85 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
                       />
                     </div>
                   ))}
+                  
+                  {currentQuestion.aiPromptTemplate.selectableAnswers && (
+                    <div>
+                      <label style={{
+                        display: 'block',
+                        marginBottom: '8px',
+                        fontSize: '13px',
+                        fontWeight: '500',
+                        color: '#374151',
+                      }}>
+                        {currentQuestion.aiPromptTemplate.selectableAnswers.label}
+                      </label>
+                      {selectableAnswers.length === 0 ? (
+                        <div style={{
+                          padding: '12px',
+                          fontSize: '13px',
+                          color: '#9ca3af',
+                          fontStyle: 'italic',
+                          backgroundColor: '#f3f4f6',
+                          borderRadius: '6px',
+                        }}>
+                          선택 가능한 이전 답변이 없습니다.
+                        </div>
+                      ) : (
+                        <div style={{
+                          maxHeight: '200px',
+                          overflowY: 'auto',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '6px',
+                          backgroundColor: '#ffffff',
+                        }}>
+                          {selectableAnswers.map(ans => (
+                            <label key={ans.id} style={{
+                              display: 'flex',
+                              alignItems: 'flex-start',
+                              padding: '10px 12px',
+                              cursor: 'pointer',
+                              borderBottom: '1px solid #f3f4f6',
+                              backgroundColor: selectedAnswerIds.includes(ans.id) ? '#eff6ff' : '#ffffff',
+                            }}>
+                              <input
+                                type="checkbox"
+                                checked={selectedAnswerIds.includes(ans.id)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedAnswerIds([...selectedAnswerIds, ans.id]);
+                                  } else {
+                                    setSelectedAnswerIds(selectedAnswerIds.filter(id => id !== ans.id));
+                                  }
+                                }}
+                                style={{
+                                  marginTop: '2px',
+                                  marginRight: '10px',
+                                  cursor: 'pointer',
+                                }}
+                              />
+                              <div style={{ flex: 1 }}>
+                                <div style={{
+                                  fontSize: '13px',
+                                  color: '#374151',
+                                  marginBottom: '4px',
+                                  lineHeight: '1.4',
+                                }}>
+                                  {ans.text}
+                                </div>
+                                <div style={{
+                                  fontSize: '11px',
+                                  color: '#9ca3af',
+                                }}>
+                                  {new Date(ans.timestamp).toLocaleString('ko-KR')}
+                                </div>
+                              </div>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
                   <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
                     <button
                       onClick={() => handleGenerateAIPrompt(aiPromptInputs)}
@@ -484,6 +600,7 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
                       onClick={() => {
                         setShowAIPromptInputs(false);
                         setAiPromptInputs({});
+                        setSelectedAnswerIds([]);
                       }}
                       style={{
                         padding: '8px 16px',
@@ -623,19 +740,19 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
                     padding: '12px 24px',
                     fontSize: '14px',
                     fontWeight: '500',
-                    backgroundColor: '#6366f1',
-                    color: '#ffffff',
-                    border: 'none',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
+                  backgroundColor: '#6366f1',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                }}
+              >
                   답변하기 어려워요
                 </button>
               )}
             </div>
-            {showAIPromptInputs && currentQuestion.aiPromptTemplate?.inputFields && (
+            {showAIPromptInputs && currentQuestion.aiPromptTemplate && (
               <div style={{
                 marginTop: '16px',
                 padding: '16px',
@@ -652,7 +769,7 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
                   프롬프트에 필요한 정보 입력
                 </h4>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {currentQuestion.aiPromptTemplate.inputFields.map(field => (
+                  {currentQuestion.aiPromptTemplate.inputFields?.map(field => (
                     <div key={field.id}>
                       <label style={{
                         display: 'block',
@@ -681,6 +798,85 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
                       />
                     </div>
                   ))}
+                  
+                  {currentQuestion.aiPromptTemplate.selectableAnswers && (
+                    <div>
+                      <label style={{
+                        display: 'block',
+                        marginBottom: '8px',
+                        fontSize: '13px',
+                        fontWeight: '500',
+                        color: '#374151',
+                      }}>
+                        {currentQuestion.aiPromptTemplate.selectableAnswers.label}
+                      </label>
+                      {selectableAnswers.length === 0 ? (
+                        <div style={{
+                          padding: '12px',
+                          fontSize: '13px',
+                          color: '#9ca3af',
+                          fontStyle: 'italic',
+                          backgroundColor: '#f3f4f6',
+                          borderRadius: '6px',
+                        }}>
+                          선택 가능한 이전 답변이 없습니다.
+                        </div>
+                      ) : (
+                        <div style={{
+                          maxHeight: '200px',
+                          overflowY: 'auto',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '6px',
+                          backgroundColor: '#ffffff',
+                        }}>
+                          {selectableAnswers.map(ans => (
+                            <label key={ans.id} style={{
+                              display: 'flex',
+                              alignItems: 'flex-start',
+                              padding: '10px 12px',
+                              cursor: 'pointer',
+                              borderBottom: '1px solid #f3f4f6',
+                              backgroundColor: selectedAnswerIds.includes(ans.id) ? '#eff6ff' : '#ffffff',
+                            }}>
+                              <input
+                                type="checkbox"
+                                checked={selectedAnswerIds.includes(ans.id)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedAnswerIds([...selectedAnswerIds, ans.id]);
+                                  } else {
+                                    setSelectedAnswerIds(selectedAnswerIds.filter(id => id !== ans.id));
+                                  }
+                                }}
+                                style={{
+                                  marginTop: '2px',
+                                  marginRight: '10px',
+                                  cursor: 'pointer',
+                                }}
+                              />
+                              <div style={{ flex: 1 }}>
+                                <div style={{
+                                  fontSize: '13px',
+                                  color: '#374151',
+                                  marginBottom: '4px',
+                                  lineHeight: '1.4',
+                                }}>
+                                  {ans.text}
+                                </div>
+                                <div style={{
+                                  fontSize: '11px',
+                                  color: '#9ca3af',
+                                }}>
+                                  {new Date(ans.timestamp).toLocaleString('ko-KR')}
+                                </div>
+                              </div>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
                   <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
                     <button
                       onClick={() => handleGenerateAIPrompt(aiPromptInputs)}
@@ -708,6 +904,7 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
                       onClick={() => {
                         setShowAIPromptInputs(false);
                         setAiPromptInputs({});
+                        setSelectedAnswerIds([]);
                       }}
                       style={{
                         padding: '8px 16px',

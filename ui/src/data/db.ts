@@ -173,25 +173,28 @@ export async function getAnswerByQuestionId(questionId: string): Promise<string 
  * @brief Get all answers for a specific question ID
  * 
  * @param questionId - ID of the question to retrieve answers for
- * @return Promise resolving to array of answers (most recent first)
+ * @return Promise resolving to array of answers with timestamps (most recent first)
  * 
  * @pre Database is initialized, questionId is provided
  * @post Returns array of all answers for the question
  */
-export async function getAllAnswersByQuestionId(questionId: string): Promise<string[]> {
+export async function getAllAnswersByQuestionId(questionId: string): Promise<Array<{ answer: string; answeredAt: string }>> {
   await initDatabase();
   
   if (!db) {
     throw new Error('Database not initialized');
   }
 
-  const stmt = db.prepare('SELECT answer FROM question_answers WHERE question_id = ? ORDER BY answered_at DESC');
+  const stmt = db.prepare('SELECT answer, answered_at FROM question_answers WHERE question_id = ? ORDER BY answered_at DESC');
   stmt.bind([questionId]);
   
-  const answers: string[] = [];
+  const answers: Array<{ answer: string; answeredAt: string }> = [];
   while (stmt.step()) {
     const row = stmt.getAsObject();
-    answers.push(row.answer as string);
+    answers.push({
+      answer: row.answer as string,
+      answeredAt: row.answered_at as string
+    });
   }
   
   stmt.free();
