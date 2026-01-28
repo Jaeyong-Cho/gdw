@@ -87,11 +87,11 @@ This document provides an explicit definition of the `Undetermined` state, which
 - Work can proceed even when the situation is unclear
 - The goal is to clarify the situation over time, not to block work
 
-## Checklist for Undetermined
+## Conditions for Undetermined
 
-From `situation-checklist.md`, the required facts for `Undetermined` are:
+From `situation-checklist.md`, the "다음 단계 조건" (conditions to proceed) for `Undetermined` are:
 
-- [ ] Current situation does not match any defined situation's checklist
+- [ ] Current situation does not match any defined situation's conditions
 - [ ] Multiple situations partially match but none fully match
 - [ ] Required information to determine situation is missing
 - [ ] Situation is ambiguous or unclear

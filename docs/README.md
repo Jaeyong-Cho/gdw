@@ -32,7 +32,7 @@ DecisionRecord → SituationSelection
 ### Core Definitions
 
 - `situations.md`: Complete list of development situations extracted from the workflow diagram
-- `situation-checklist.md`: Required facts checklist for each situation (3-5 facts per situation)
+- `situation-checklist.md`: Intuitive, actionable guidance for each situation (what to do, conditions to proceed, failure signs, tips)
 - `workstate-schema.md`: Complete list of all WorkState fact items (deduplicated from checklists)
 - `workstate-format.md`: Format specification for recording WorkState facts (JSON format)
 
@@ -50,7 +50,7 @@ DecisionRecord → SituationSelection
 
 1. **Review situations**: Read `situations.md` to understand available situations
 2. **Record WorkState**: Use `workstate-schema.md` and `workstate-format.md` to record facts
-3. **Compare checklists**: Review `situation-checklist.md` to see what facts are required for each situation
+3. **Review situation guide**: Review `situation-checklist.md` for actionable guidance on what to do, conditions to proceed, and tips for each situation
 4. **Select situation**: Manually select a situation based on WorkState facts (see `rules.md`)
 5. **Record decision**: Create a DecisionRecord documenting your selection (see `decision-record-schema.md`)
 

@@ -46,9 +46,9 @@ This document defines the rules for selecting and managing the current developme
 
 Before selecting a situation, the user should review the current WorkState to understand what facts are known.
 
-### Step 2: Review Situation Checklists
+### Step 2: Review Situation Guide
 
-The user should review the checklists in `situation-checklist.md` to understand what facts are required for each situation.
+The user should review the guide in `situation-checklist.md` to understand what to do, conditions to proceed, failure signs, and tips for each situation. The guide includes quick check sections (30 seconds) to determine if ready to proceed to the next step.
 
 ### Step 3: Compare WorkState to Checklists
 

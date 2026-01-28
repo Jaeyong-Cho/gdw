@@ -153,7 +153,7 @@ DecisionRecord serves to:
 - **Format**: Map of checklist item descriptions to boolean values
 - **Required**: Yes
 - **Purpose**: Indicates which required facts from the situation's checklist are satisfied
-- **Note**: This can reference the checklist items from `situation-checklist.md`
+- **Note**: This can reference the "다음 단계 조건" (conditions to proceed) items from `situation-checklist.md`
 
 ### alternatives_considered (Optional)
 
@@ -196,7 +196,7 @@ The `rationale` field must contain at least one sentence explaining the decision
 
 ### Rule 5: Checklist Alignment
 
-The `checklist_satisfaction` object should reference facts from the selected situation's checklist in `situation-checklist.md`. However, it is acceptable if not all checklist items are included, as long as the rationale explains the selection.
+The `checklist_satisfaction` object should reference facts from the selected situation's "다음 단계 조건" (conditions to proceed) section in `situation-checklist.md`. However, it is acceptable if not all conditions are included, as long as the rationale explains the selection.
 
 ## Example DecisionRecord
 

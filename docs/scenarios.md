@@ -31,8 +31,8 @@ This document provides example scenarios demonstrating the complete workflow fro
 ```
 
 **Situation Selection**: 
-- Review `situation-checklist.md`
-- Check `IntentDefined` checklist:
+- Review `situation-checklist.md` for IntentDefined guidance
+- Check "다음 단계 조건" (conditions to proceed):
   - ✅ A written document or note exists describing the development intent
   - ✅ The intent statement is clear and unambiguous
   - ✅ The intent has been reviewed and confirmed
@@ -101,7 +101,8 @@ This document provides example scenarios demonstrating the complete workflow fro
 
 **Situation Selection**:
 - Previous selection: `IntentDefined`
-- Review `ProblemSelected` checklist:
+- Review `situation-checklist.md` for ProblemSelected guidance
+- Check "다음 단계 조건" (conditions to proceed):
   - ✅ A specific problem statement exists in written form
   - ✅ The problem is distinct from the general intent
   - ✅ The problem has clear boundaries
@@ -174,7 +175,8 @@ This document provides example scenarios demonstrating the complete workflow fro
 
 **Situation Selection**:
 - Previous selection: `ProblemSelected`
-- Review `AcceptanceDefined` checklist:
+- Review `situation-checklist.md` for AcceptanceDefined guidance
+- Check "다음 단계 조건" (conditions to proceed):
   - ✅ Acceptance criteria exist in written form
   - ✅ Each criterion is measurable
   - ✅ Acceptance criteria are linked to a specific problem
@@ -206,14 +208,14 @@ This document provides example scenarios demonstrating the complete workflow fro
 
 ### Situation Selection Process
 
-1. **Review IntentDefined checklist**:
+1. **Review IntentDefined guidance** (from `situation-checklist.md`):
    - ✅ A written document exists
    - ❌ The intent statement is clear (false - `CLARITY_INTENT_CLEAR: false`)
    - ❌ The intent has been reviewed and confirmed (unknown)
    - ❌ The scope is bounded (unknown)
    - **Result**: Not fully satisfied
 
-2. **Review ProblemSelected checklist**:
+2. **Review ProblemSelected guidance** (from `situation-checklist.md`):
    - ✅ A specific problem statement exists
    - ✅ The problem is distinct from intent (unknown, but likely)
    - ❌ The problem has clear boundaries (false - `CLARITY_PROBLEM_BOUNDARIES_DEFINED: false`)
@@ -301,7 +303,8 @@ This document provides example scenarios demonstrating the complete workflow fro
 
 **Situation Selection**:
 - Previous selection: `Implementing`
-- Review `Implementing` checklist:
+- Review `situation-checklist.md` for Implementing guidance
+- Check "다음 단계 조건" (conditions to proceed):
   - ✅ A specific task has been selected
   - ✅ Implementation has started
   - ✅ The task is not yet complete (`IMPL_COMPLETE: false` confirms `IMPL_TASK_INCOMPLETE: true`)

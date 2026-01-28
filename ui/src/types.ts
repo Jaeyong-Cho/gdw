@@ -68,12 +68,45 @@ export interface RequiredFact {
 }
 
 /**
- * Situation definition with checklist
+ * Situation guide section with content
+ */
+export interface SituationGuideSection {
+  title: string;
+  content: string | string[];
+}
+
+/**
+ * Quick check item
+ */
+export interface QuickCheckItem {
+  question: string;
+}
+
+/**
+ * Situation guide with all sections
+ */
+export interface SituationGuide {
+  whatToDo: string;
+  conditionsToProceed: string[];
+  failure: string[];
+  goBackTo: string;
+  warning: string;
+  tip: string;
+  aiUsage: string;
+  quickCheck: {
+    items: QuickCheckItem[];
+    nextStep: string;
+  };
+}
+
+/**
+ * Situation definition with checklist and guide
  */
 export interface SituationDefinition {
   name: Situation;
   description: string;
   required_facts: RequiredFact[];
+  guide?: SituationGuide;
 }
 
 /**

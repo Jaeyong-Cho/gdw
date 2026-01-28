@@ -88,7 +88,7 @@ For more details, see [ui/README.md](ui/README.md)
 All documentation is in the `docs/` directory:
 
 - `docs/situations.md`: Complete list of development situations
-- `docs/situation-checklist.md`: Required facts checklist for each situation
+- `docs/situation-checklist.md`: Intuitive, actionable guidance for each situation (what to do, conditions to proceed, failure signs, tips)
 - `docs/workstate-schema.md`: Complete list of all WorkState fact items
 - `docs/workstate-format.md`: Format specification for recording WorkState facts
 - `docs/rules.md`: Rules for SituationSelection
