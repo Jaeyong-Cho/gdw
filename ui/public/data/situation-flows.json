@@ -463,7 +463,7 @@
         "question": "사용자/이해관계자가 접근 가능한가요?",
         "type": "yesno",
         "required": true,
-        "onYesNextQuestionId": "release-artifacts",
+        "onYesNextQuestionId": "release-announced",
         "onNoNextSituation": "Verified"
       },
       {

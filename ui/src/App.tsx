@@ -21,7 +21,7 @@ import { LayoutSelector } from './components/LayoutSelector';
  */
 const App: React.FC = () => {
   const [selectedSituation, setSelectedSituation] = useState<Situation | null>(null);
-  const [layoutType, setLayoutType] = useState<LayoutType>('dagre');
+  const [layoutType, setLayoutType] = useState<LayoutType>('circle');
   const [sidebarWidth, setSidebarWidth] = useState<number>(400);
   const [isResizing, setIsResizing] = useState<boolean>(false);
   const [startX, setStartX] = useState<number>(0);
