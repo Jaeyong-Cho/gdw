@@ -2,7 +2,7 @@
  * @fileoverview Utility for generating AI prompts from templates
  */
 
-import { getIntentSummary, getAnswersBySituation, getAnswersBySituation as getAllAnswersBySituation } from '../data/db';
+import { getIntentSummary, getAnswersBySituation } from '../data/db';
 
 /**
  * @brief Context data for prompt generation

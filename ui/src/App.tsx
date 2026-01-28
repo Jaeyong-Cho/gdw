@@ -7,6 +7,7 @@ import { Situation, LayoutType } from './types';
 import { CytoscapeDiagram } from './components/CytoscapeDiagram';
 import { SituationInfoPanel } from './components/SituationInfoPanel';
 import { LayoutSelector } from './components/LayoutSelector';
+import { DatabaseSettings } from './components/DatabaseSettings';
 
 /**
  * @brief Main application component
@@ -30,6 +31,7 @@ const App: React.FC = () => {
   const [startWidth, setStartWidth] = useState<number>(() => {
     return typeof window !== 'undefined' ? window.innerWidth / 2 : 400;
   });
+  const [showSettings, setShowSettings] = useState<boolean>(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
 
   const handleNodeClick = useCallback((situation: Situation) => {
@@ -95,21 +97,42 @@ const App: React.FC = () => {
         backgroundColor: '#1f2937',
         color: '#ffffff',
         boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
       }}>
-        <h1 style={{
-          margin: 0,
-          fontSize: '24px',
-          fontWeight: '600',
-        }}>
-          Development Workflow Tracker
-        </h1>
-        <p style={{
-          margin: '4px 0 0 0',
-          fontSize: '14px',
-          color: '#9ca3af',
-        }}>
-          Visualize and track your current position in the software development workflow
-        </p>
+        <div>
+          <h1 style={{
+            margin: 0,
+            fontSize: '24px',
+            fontWeight: '600',
+          }}>
+            Development Workflow Tracker
+          </h1>
+          <p style={{
+            margin: '4px 0 0 0',
+            fontSize: '14px',
+            color: '#9ca3af',
+          }}>
+            Visualize and track your current position in the software development workflow
+          </p>
+        </div>
+        <button
+          onClick={() => setShowSettings(!showSettings)}
+          style={{
+            padding: '10px 20px',
+            fontSize: '14px',
+            fontWeight: '500',
+            backgroundColor: showSettings ? '#3b82f6' : '#4b5563',
+            color: '#ffffff',
+            border: 'none',
+            borderRadius: '6px',
+            cursor: 'pointer',
+            transition: 'background-color 0.2s',
+          }}
+        >
+          {showSettings ? '워크플로우 보기' : '데이터베이스 설정'}
+        </button>
       </header>
 
       <div style={{
@@ -118,42 +141,52 @@ const App: React.FC = () => {
         overflow: 'hidden',
         position: 'relative',
       }}>
-        <div style={{
-          flex: 1,
-          backgroundColor: '#f3f4f6',
-          position: 'relative',
-          display: 'flex',
-          flexDirection: 'column',
-          minWidth: 0,
-          overflow: 'hidden',
-        }}>
-          <LayoutSelector
-            selectedLayout={layoutType}
-            onLayoutChange={handleLayoutChange}
-          />
-          <div style={{ flex: 1, position: 'relative' }}>
-            <CytoscapeDiagram
-              selectedSituation={selectedSituation}
-              layoutType={layoutType}
-              onNodeClick={handleNodeClick}
-            />
-          </div>
-        </div>
-
-        <div
-          ref={sidebarRef}
-          style={{
-            width: `${sidebarWidth}px`,
-            display: 'flex',
-            position: 'relative',
+        {showSettings ? (
+          <div style={{
+            flex: 1,
+            overflow: 'auto',
             backgroundColor: '#ffffff',
-            borderLeft: '1px solid #e5e7eb',
-            flexShrink: 0,
-            zIndex: 100,
-          }}
-        >
-          <div
-            onMouseDown={handleMouseDown}
+          }}>
+            <DatabaseSettings />
+          </div>
+        ) : (
+          <>
+            <div style={{
+              flex: 1,
+              backgroundColor: '#f3f4f6',
+              position: 'relative',
+              display: 'flex',
+              flexDirection: 'column',
+              minWidth: 0,
+              overflow: 'hidden',
+            }}>
+              <LayoutSelector
+                selectedLayout={layoutType}
+                onLayoutChange={handleLayoutChange}
+              />
+              <div style={{ flex: 1, position: 'relative' }}>
+                <CytoscapeDiagram
+                  selectedSituation={selectedSituation}
+                  layoutType={layoutType}
+                  onNodeClick={handleNodeClick}
+                />
+              </div>
+            </div>
+
+            <div
+              ref={sidebarRef}
+              style={{
+                width: `${sidebarWidth}px`,
+                display: 'flex',
+                position: 'relative',
+                backgroundColor: '#ffffff',
+                borderLeft: '1px solid #e5e7eb',
+                flexShrink: 0,
+                zIndex: 100,
+              }}
+            >
+              <div
+                onMouseDown={handleMouseDown}
             style={{
               position: 'absolute',
               left: '-2px',
@@ -177,17 +210,19 @@ const App: React.FC = () => {
               }
             }}
           />
-          <aside style={{
-            width: '100%',
-            padding: '24px',
-            overflowY: 'auto',
-          }}>
-            <SituationInfoPanel 
-              situation={selectedSituation} 
-              onSituationChange={setSelectedSituation}
-            />
-          </aside>
-        </div>
+              <aside style={{
+                width: '100%',
+                padding: '24px',
+                overflowY: 'auto',
+              }}>
+                <SituationInfoPanel 
+                  situation={selectedSituation} 
+                  onSituationChange={setSelectedSituation}
+                />
+              </aside>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
