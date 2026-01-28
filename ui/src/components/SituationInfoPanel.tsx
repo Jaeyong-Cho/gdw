@@ -3,10 +3,10 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Situation, QuestionAnswer } from '../types';
+import { Situation, QuestionAnswer, SituationGuide } from '../types';
 import { situationDefinitions } from '../data/situations';
 import { InteractiveFlow } from './InteractiveFlow';
-import { situationFlows } from '../data/situation-flows';
+import { getSituationGuides, getSituationFlows } from '../data/data-loader';
 
 /**
  * @brief Props for SituationInfoPanel component
@@ -29,8 +29,10 @@ export const SituationInfoPanel: React.FC<SituationInfoPanelProps> = ({
   situation, 
   onSituationChange 
 }) => {
-  const hasFlow = situationFlows[situation || ''] !== undefined;
-  const [showFlow, setShowFlow] = useState<boolean>(hasFlow);
+  const [guide, setGuide] = useState<SituationGuide | undefined>(undefined);
+  const [hasFlow, setHasFlow] = useState<boolean>(false);
+  const [showFlow, setShowFlow] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
 
   const handleAnswerSave = (answer: QuestionAnswer) => {
     const storageKey = `situation-answers-${situation}`;
@@ -49,8 +51,31 @@ export const SituationInfoPanel: React.FC<SituationInfoPanelProps> = ({
   };
 
   useEffect(() => {
-    const hasFlowForSituation = situationFlows[situation || ''] !== undefined;
-    setShowFlow(hasFlowForSituation);
+    const loadData = async () => {
+      if (!situation) {
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const [guides, flows] = await Promise.all([
+          getSituationGuides(),
+          getSituationFlows(),
+        ]);
+
+        setGuide(guides[situation]);
+        const hasFlowForSituation = flows[situation] !== undefined;
+        setHasFlow(hasFlowForSituation);
+        setShowFlow(hasFlowForSituation);
+      } catch (error) {
+        console.error('Error loading data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
   }, [situation]);
 
   if (!situation) {
@@ -71,7 +96,6 @@ export const SituationInfoPanel: React.FC<SituationInfoPanelProps> = ({
   }
 
   const definition = situationDefinitions[situation];
-  const guide = definition.guide;
 
   const sectionStyle = {
     marginTop: '24px',
@@ -145,7 +169,17 @@ export const SituationInfoPanel: React.FC<SituationInfoPanelProps> = ({
         {definition.description}
       </p>
 
-      {hasFlow && showFlow && (
+      {loading && (
+        <div style={{
+          padding: '24px',
+          textAlign: 'center',
+          color: '#6b7280',
+        }}>
+          데이터 로딩 중...
+        </div>
+      )}
+
+      {!loading && hasFlow && showFlow && (
         <div style={{ marginBottom: '32px' }}>
           <InteractiveFlow
             situation={situation}

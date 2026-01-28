@@ -3,7 +3,6 @@
  */
 
 import { Situation, SituationDefinition, NodePosition } from '../types';
-import { situationGuides } from './situation-guides';
 
 /**
  * @brief Situation definitions with descriptions
@@ -19,7 +18,6 @@ export const situationDefinitions: Record<Situation, SituationDefinition> = {
       { description: 'The intent has been reviewed and confirmed (by self or team)' },
       { description: 'The scope of the intent is bounded (not infinite)' },
     ],
-    guide: situationGuides.IntentDefined,
   },
   IntentDefinedFail: {
     name: 'IntentDefinedFail',
@@ -30,7 +28,6 @@ export const situationDefinitions: Record<Situation, SituationDefinition> = {
       { description: 'Multiple conflicting interpretations of the intent exist' },
       { description: 'The intent cannot be expressed in a single, clear statement' },
     ],
-    guide: situationGuides.IntentDefinedFail,
   },
   ProblemSelected: {
     name: 'ProblemSelected',
@@ -41,7 +38,6 @@ export const situationDefinitions: Record<Situation, SituationDefinition> = {
       { description: 'The problem has clear boundaries (what is in scope, what is out)' },
       { description: 'The problem is actionable (not just a wish or abstract goal)' },
     ],
-    guide: situationGuides.ProblemSelected,
   },
   AcceptanceDefined: {
     name: 'AcceptanceDefined',
@@ -52,7 +48,6 @@ export const situationDefinitions: Record<Situation, SituationDefinition> = {
       { description: 'Acceptance criteria are linked to a specific problem' },
       { description: 'The criteria define "done" for the problem' },
     ],
-    guide: situationGuides.AcceptanceDefined,
   },
   FeasibilityChecked: {
     name: 'FeasibilityChecked',
@@ -63,7 +58,6 @@ export const situationDefinitions: Record<Situation, SituationDefinition> = {
       { description: 'Resource requirements have been estimated' },
       { description: 'A decision has been made: feasible, too hard, or problem too big' },
     ],
-    guide: situationGuides.FeasibilityChecked,
   },
   DesignReady: {
     name: 'DesignReady',
@@ -74,7 +68,6 @@ export const situationDefinitions: Record<Situation, SituationDefinition> = {
       { description: 'Component interactions are specified' },
       { description: 'The design addresses the acceptance criteria' },
     ],
-    guide: situationGuides.DesignReady,
   },
   TaskBreakdown: {
     name: 'TaskBreakdown',
@@ -85,7 +78,6 @@ export const situationDefinitions: Record<Situation, SituationDefinition> = {
       { description: 'Task dependencies are identified' },
       { description: 'Each task can be completed in a single work session (90 minutes or less)' },
     ],
-    guide: situationGuides.TaskBreakdown,
   },
   Implementing: {
     name: 'Implementing',
@@ -96,7 +88,6 @@ export const situationDefinitions: Record<Situation, SituationDefinition> = {
       { description: 'The task is not yet complete' },
       { description: 'No verification has been performed yet' },
     ],
-    guide: situationGuides.Implementing,
   },
   Verifying: {
     name: 'Verifying',
@@ -107,7 +98,6 @@ export const situationDefinitions: Record<Situation, SituationDefinition> = {
       { description: 'Acceptance criteria are being checked against implementation' },
       { description: 'Verification result is not yet determined' },
     ],
-    guide: situationGuides.Verifying,
   },
   Verified: {
     name: 'Verified',
@@ -118,7 +108,6 @@ export const situationDefinitions: Record<Situation, SituationDefinition> = {
       { description: 'No blocking bugs remain' },
       { description: 'The implementation is ready for the next step (release or integration)' },
     ],
-    guide: situationGuides.Verified,
   },
   Released: {
     name: 'Released',
@@ -129,7 +118,6 @@ export const situationDefinitions: Record<Situation, SituationDefinition> = {
       { description: 'Release artifacts exist (deployment, PR, package, etc.)' },
       { description: 'Release has been announced or made visible' },
     ],
-    guide: situationGuides.Released,
   },
   FeedbackCollected: {
     name: 'FeedbackCollected',
@@ -140,7 +128,6 @@ export const situationDefinitions: Record<Situation, SituationDefinition> = {
       { description: 'Feedback relates to the released work' },
       { description: 'Feedback collection process is complete' },
     ],
-    guide: situationGuides.FeedbackCollected,
   },
   Learned: {
     name: 'Learned',
@@ -151,7 +138,6 @@ export const situationDefinitions: Record<Situation, SituationDefinition> = {
       { description: 'Learning outcomes are documented' },
       { description: 'Next actions based on learning have been identified' },
     ],
-    guide: situationGuides.Learned,
   },
 };
 

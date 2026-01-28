@@ -3,8 +3,8 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Situation, QuestionAnswer } from '../types';
-import { situationFlows } from '../data/situation-flows';
+import { Situation, QuestionAnswer, SituationFlow } from '../types';
+import { getSituationFlows } from '../data/data-loader';
 
 /**
  * @brief Props for InteractiveFlow component
@@ -31,22 +31,47 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
   onComplete,
   onAnswerSave,
 }) => {
-  const flow = situationFlows[situation];
-  const [currentQuestionId, setCurrentQuestionId] = useState<string | null>(
-    flow?.startQuestionId || null
-  );
+  const [flow, setFlow] = useState<SituationFlow | null>(null);
+  const [currentQuestionId, setCurrentQuestionId] = useState<string | null>(null);
   const [answers, setAnswers] = useState<Record<string, string | boolean>>({});
   const [textAnswer, setTextAnswer] = useState<string>('');
   const [questionHistory, setQuestionHistory] = useState<string[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    if (flow) {
-      setCurrentQuestionId(flow.startQuestionId);
-      setAnswers({});
-      setTextAnswer('');
-      setQuestionHistory([flow.startQuestionId]);
-    }
-  }, [situation, flow]);
+    const loadFlow = async () => {
+      setLoading(true);
+      try {
+        const flows = await getSituationFlows();
+        const situationFlow = flows[situation];
+        if (situationFlow) {
+          setFlow(situationFlow);
+          setCurrentQuestionId(situationFlow.startQuestionId);
+          setAnswers({});
+          setTextAnswer('');
+          setQuestionHistory([situationFlow.startQuestionId]);
+        }
+      } catch (error) {
+        console.error('Error loading flow:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadFlow();
+  }, [situation]);
+
+  if (loading) {
+    return (
+      <div style={{
+        padding: '24px',
+        textAlign: 'center',
+        color: '#6b7280',
+      }}>
+        질문 로딩 중...
+      </div>
+    );
+  }
 
   if (!flow || !currentQuestionId) {
     return null;
