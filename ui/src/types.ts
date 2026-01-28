@@ -152,6 +152,7 @@ export interface Question {
   required?: boolean;
   options?: string[];
   nextQuestionId?: string;
+  nextSituation?: Situation;
   onYesNextQuestionId?: string;
   onNoNextQuestionId?: string;
   onAnswerNextSituation?: Situation;

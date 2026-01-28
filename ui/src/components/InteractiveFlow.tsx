@@ -171,6 +171,14 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
       } else if (answer === false && currentQuestion.onNoNextSituation) {
         nextSituation = currentQuestion.onNoNextSituation;
       }
+    } else if (currentQuestion.type === 'text') {
+      if (currentQuestion.onAnswerNextSituation) {
+        nextSituation = currentQuestion.onAnswerNextSituation;
+      } else if (currentQuestion.nextQuestionId) {
+        nextQuestionId = currentQuestion.nextQuestionId;
+      } else if (currentQuestion.nextSituation) {
+        nextSituation = currentQuestion.nextSituation;
+      }
     } else if (currentQuestion.onAnswerNextSituation) {
       nextSituation = currentQuestion.onAnswerNextSituation;
     } else if (currentQuestion.nextQuestionId) {
