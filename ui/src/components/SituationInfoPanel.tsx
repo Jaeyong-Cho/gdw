@@ -2,15 +2,18 @@
  * @fileoverview Panel displaying information about the selected situation
  */
 
-import React from 'react';
-import { Situation } from '../types';
+import React, { useState, useEffect } from 'react';
+import { Situation, QuestionAnswer } from '../types';
 import { situationDefinitions } from '../data/situations';
+import { InteractiveFlow } from './InteractiveFlow';
+import { situationFlows } from '../data/situation-flows';
 
 /**
  * @brief Props for SituationInfoPanel component
  */
 interface SituationInfoPanelProps {
   situation: Situation | null;
+  onSituationChange?: (situation: Situation) => void;
 }
 
 /**
@@ -22,7 +25,34 @@ interface SituationInfoPanelProps {
  * @pre situation must be a valid Situation or null
  * @post Panel displays situation information or placeholder if none selected
  */
-export const SituationInfoPanel: React.FC<SituationInfoPanelProps> = ({ situation }) => {
+export const SituationInfoPanel: React.FC<SituationInfoPanelProps> = ({ 
+  situation, 
+  onSituationChange 
+}) => {
+  const hasFlow = situationFlows[situation || ''] !== undefined;
+  const [showFlow, setShowFlow] = useState<boolean>(hasFlow);
+
+  const handleAnswerSave = (answer: QuestionAnswer) => {
+    const storageKey = `situation-answers-${situation}`;
+    const existingAnswers = localStorage.getItem(storageKey);
+    const answers = existingAnswers ? JSON.parse(existingAnswers) : [];
+    answers.push(answer);
+    localStorage.setItem(storageKey, JSON.stringify(answers));
+  };
+
+  const handleFlowComplete = (nextSituation: Situation | null) => {
+    if (nextSituation && onSituationChange) {
+      onSituationChange(nextSituation);
+    } else {
+      setShowFlow(false);
+    }
+  };
+
+  useEffect(() => {
+    const hasFlowForSituation = situationFlows[situation || ''] !== undefined;
+    setShowFlow(hasFlowForSituation);
+  }, [situation]);
+
   if (!situation) {
     return (
       <div style={{
@@ -115,24 +145,64 @@ export const SituationInfoPanel: React.FC<SituationInfoPanelProps> = ({ situatio
         {definition.description}
       </p>
 
+      {hasFlow && showFlow && (
+        <div style={{ marginBottom: '32px' }}>
+          <InteractiveFlow
+            situation={situation}
+            onComplete={handleFlowComplete}
+            onAnswerSave={handleAnswerSave}
+          />
+        </div>
+      )}
+
       {guide && (
-        <>
+        <div style={{
+          marginTop: '32px',
+          paddingTop: '24px',
+          borderTop: '2px solid #e5e7eb',
+        }}>
+          <h3 style={{
+            marginTop: 0,
+            marginBottom: '16px',
+            color: '#6b7280',
+            fontSize: '14px',
+            fontWeight: '600',
+            textTransform: 'uppercase',
+            letterSpacing: '0.5px',
+          }}>
+            참고 정보
+          </h3>
+
           <div style={sectionStyle}>
-            <h3 style={sectionTitleStyle}>
+            <h4 style={{
+              ...sectionTitleStyle,
+              fontSize: '14px',
+              color: '#6b7280',
+            }}>
               해야 할 것
-            </h3>
-            <p style={contentStyle}>
+            </h4>
+            <p style={{
+              ...contentStyle,
+              fontSize: '13px',
+            }}>
               {guide.whatToDo}
             </p>
           </div>
 
           <div style={sectionStyle}>
-            <h3 style={sectionTitleStyle}>
+            <h4 style={{
+              ...sectionTitleStyle,
+              fontSize: '14px',
+              color: '#6b7280',
+            }}>
               다음 단계 조건
-            </h3>
+            </h4>
             <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
               {guide.conditionsToProceed.map((condition, index) => (
-                <li key={index} style={listItemStyle}>
+                <li key={index} style={{
+                  ...listItemStyle,
+                  fontSize: '13px',
+                }}>
                   <span style={{ color: '#3b82f6', marginRight: '8px' }}>✓</span>
                   {condition}
                 </li>
@@ -141,12 +211,19 @@ export const SituationInfoPanel: React.FC<SituationInfoPanelProps> = ({ situatio
           </div>
 
           <div style={sectionStyle}>
-            <h3 style={sectionTitleStyle}>
+            <h4 style={{
+              ...sectionTitleStyle,
+              fontSize: '14px',
+              color: '#6b7280',
+            }}>
               실패
-            </h3>
+            </h4>
             <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
               {guide.failure.map((item, index) => (
-                <li key={index} style={listItemStyle}>
+                <li key={index} style={{
+                  ...listItemStyle,
+                  fontSize: '13px',
+                }}>
                   <span style={{ color: '#ef4444', marginRight: '8px' }}>✗</span>
                   {item}
                 </li>
@@ -155,21 +232,33 @@ export const SituationInfoPanel: React.FC<SituationInfoPanelProps> = ({ situatio
           </div>
 
           <div style={sectionStyle}>
-            <h3 style={sectionTitleStyle}>
+            <h4 style={{
+              ...sectionTitleStyle,
+              fontSize: '14px',
+              color: '#6b7280',
+            }}>
               되돌아갈 곳
-            </h3>
-            <p style={contentStyle}>
+            </h4>
+            <p style={{
+              ...contentStyle,
+              fontSize: '13px',
+            }}>
               {guide.goBackTo}
             </p>
           </div>
 
           <div style={sectionStyle}>
-            <h3 style={sectionTitleStyle}>
+            <h4 style={{
+              ...sectionTitleStyle,
+              fontSize: '14px',
+              color: '#6b7280',
+            }}>
               주의
-            </h3>
+            </h4>
             <p style={{
               ...contentStyle,
-              padding: '12px',
+              fontSize: '13px',
+              padding: '10px',
               backgroundColor: '#fef3c7',
               borderLeft: '3px solid #f59e0b',
               borderRadius: '4px',
@@ -179,12 +268,17 @@ export const SituationInfoPanel: React.FC<SituationInfoPanelProps> = ({ situatio
           </div>
 
           <div style={sectionStyle}>
-            <h3 style={sectionTitleStyle}>
+            <h4 style={{
+              ...sectionTitleStyle,
+              fontSize: '14px',
+              color: '#6b7280',
+            }}>
               팁
-            </h3>
+            </h4>
             <p style={{
               ...contentStyle,
-              padding: '12px',
+              fontSize: '13px',
+              padding: '10px',
               backgroundColor: '#dbeafe',
               borderLeft: '3px solid #3b82f6',
               borderRadius: '4px',
@@ -194,31 +288,42 @@ export const SituationInfoPanel: React.FC<SituationInfoPanelProps> = ({ situatio
           </div>
 
           <div style={sectionStyle}>
-            <h3 style={sectionTitleStyle}>
+            <h4 style={{
+              ...sectionTitleStyle,
+              fontSize: '14px',
+              color: '#6b7280',
+            }}>
               AI 활용
-            </h3>
-            <p style={contentStyle}>
+            </h4>
+            <p style={{
+              ...contentStyle,
+              fontSize: '13px',
+            }}>
               {guide.aiUsage}
             </p>
           </div>
 
           <div style={{
             ...sectionStyle,
-            padding: '16px',
+            padding: '12px',
             backgroundColor: '#f0fdf4',
             borderLeft: '3px solid #10b981',
             borderRadius: '4px',
           }}>
-            <h3 style={{
+            <h4 style={{
               ...sectionTitleStyle,
+              fontSize: '14px',
               color: '#059669',
-              marginBottom: '12px',
+              marginBottom: '10px',
             }}>
               빠른 체크 (30초)
-            </h3>
+            </h4>
             <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
               {guide.quickCheck.items.map((item, index) => (
-                <li key={index} style={quickCheckItemStyle}>
+                <li key={index} style={{
+                  ...quickCheckItemStyle,
+                  fontSize: '13px',
+                }}>
                   <input
                     type="checkbox"
                     style={{
@@ -232,14 +337,15 @@ export const SituationInfoPanel: React.FC<SituationInfoPanelProps> = ({ situatio
             </ul>
             <p style={{
               ...contentStyle,
-              marginTop: '12px',
+              marginTop: '10px',
               fontWeight: '600',
+              fontSize: '13px',
               color: '#059669',
             }}>
               → {guide.quickCheck.nextStep}
             </p>
           </div>
-        </>
+        </div>
       )}
     </div>
   );

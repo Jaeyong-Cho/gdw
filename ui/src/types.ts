@@ -126,3 +126,43 @@ export interface SituationNodeData {
   isSelected: boolean;
   isTerminal?: boolean;
 }
+
+/**
+ * Question type for interactive flow
+ */
+export type QuestionType = 'text' | 'yesno' | 'multiple';
+
+/**
+ * Question in the interactive flow
+ */
+export interface Question {
+  id: string;
+  question: string;
+  type: QuestionType;
+  required?: boolean;
+  options?: string[];
+  nextQuestionId?: string;
+  onYesNextQuestionId?: string;
+  onNoNextQuestionId?: string;
+  onAnswerNextSituation?: Situation;
+  onYesNextSituation?: Situation;
+  onNoNextSituation?: Situation;
+}
+
+/**
+ * Interactive flow for a situation
+ */
+export interface SituationFlow {
+  situation: Situation;
+  questions: Question[];
+  startQuestionId: string;
+}
+
+/**
+ * User answer to a question
+ */
+export interface QuestionAnswer {
+  questionId: string;
+  answer: string | boolean;
+  answeredAt: string;
+}

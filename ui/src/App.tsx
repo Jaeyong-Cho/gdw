@@ -178,7 +178,10 @@ const App: React.FC = () => {
             padding: '24px',
             overflowY: 'auto',
           }}>
-            <SituationInfoPanel situation={selectedSituation} />
+            <SituationInfoPanel 
+              situation={selectedSituation} 
+              onSituationChange={setSelectedSituation}
+            />
           </aside>
         </div>
       </div>
