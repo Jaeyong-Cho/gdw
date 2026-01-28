@@ -2,7 +2,7 @@
  * @fileoverview Interactive question flow component
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Situation, QuestionAnswer, SituationFlow, QuestionDataDisplay } from '../types';
 import { getSituationFlows } from '../data/data-loader';
 import { generatePrompt, buildPromptContext } from '../utils/prompt-generator';
@@ -44,6 +44,8 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
   const [aiPrompt, setAiPrompt] = useState<string>('');
   const [showAIPromptInputs, setShowAIPromptInputs] = useState<boolean>(false);
   const [aiPromptInputs, setAiPromptInputs] = useState<Record<string, string>>({});
+  
+  const currentQuestionIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     const loadFlow = async () => {
@@ -52,15 +54,15 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
         const flows = await getSituationFlows();
         const situationFlow = flows[situation];
         if (situationFlow) {
+          const startQuestionId = situationFlow.startQuestionId;
           setFlow(situationFlow);
-          setCurrentQuestionId(situationFlow.startQuestionId);
           setAnswers({});
           setTextAnswer('');
-          setQuestionHistory([situationFlow.startQuestionId]);
+          setQuestionHistory([startQuestionId]);
+          currentQuestionIdRef.current = startQuestionId;
+          setCurrentQuestionId(startQuestionId);
           
-          const { getAnswerByQuestionId } = await import('../data/db');
-          
-          const startQuestion = situationFlow.questions.find(q => q.id === situationFlow.startQuestionId);
+          const startQuestion = situationFlow.questions.find(q => q.id === startQuestionId);
           if (startQuestion?.showData) {
             const db = await import('../data/db');
             let data: string | null = null;
@@ -81,13 +83,10 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
                 data = null;
             }
 
-            setDisplayData(data);
-            setDisplayDataLabel(startQuestion.showData.label);
-          }
-          
-          const existingAnswer = await getAnswerByQuestionId(situationFlow.startQuestionId);
-          if (existingAnswer && typeof existingAnswer === 'string') {
-            setTextAnswer(existingAnswer);
+            if (currentQuestionIdRef.current === startQuestionId) {
+              setDisplayData(data);
+              setDisplayDataLabel(startQuestion.showData.label);
+            }
           }
         }
       } catch (error) {
@@ -221,17 +220,22 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
     }
     
     const question = flow.questions.find(q => q.id === currentQuestionId);
+    
+    currentQuestionIdRef.current = currentQuestionId;
+    
+    setShowAIPrompt(false);
+    setAiPrompt('');
+    setShowAIPromptInputs(false);
+    setAiPromptInputs({});
+    
+    setTextAnswer('');
+    
     if (question?.showData) {
       loadDisplayData(question.showData);
     } else {
       setDisplayData(null);
       setDisplayDataLabel('');
     }
-    
-    setShowAIPrompt(false);
-    setAiPrompt('');
-    setShowAIPromptInputs(false);
-    setAiPromptInputs({});
   }, [currentQuestionId, flow, loadDisplayData]);
 
   if (loading) {
@@ -265,6 +269,10 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
 
     setAnswers({ ...answers, [currentQuestion.id]: answer });
     onAnswerSave(answerRecord);
+    
+    if (currentQuestion.type === 'text') {
+      setTextAnswer('');
+    }
 
     let nextQuestionId: string | undefined;
     let nextSituation: Situation | undefined;
@@ -300,32 +308,6 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
     } else if (nextQuestionId) {
       setQuestionHistory([...questionHistory, nextQuestionId]);
       setCurrentQuestionId(nextQuestionId);
-      
-      const loadExistingAnswer = async () => {
-        try {
-          const { getAnswerByQuestionId } = await import('../data/db');
-          const nextQuestion = flow.questions.find(q => q.id === nextQuestionId);
-          
-          const existingAnswer = await getAnswerByQuestionId(nextQuestionId);
-          if (existingAnswer && typeof existingAnswer === 'string') {
-            setTextAnswer(existingAnswer);
-          } else {
-            setTextAnswer('');
-          }
-          
-          if (nextQuestion?.showData) {
-            await loadDisplayData(nextQuestion.showData);
-          } else {
-            setDisplayData(null);
-            setDisplayDataLabel('');
-          }
-        } catch (error) {
-          console.error('Error loading existing answer:', error);
-          setTextAnswer('');
-        }
-      };
-      
-      loadExistingAnswer();
     } else {
       onComplete(null);
     }
@@ -338,12 +320,6 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
       const previousQuestionId = newHistory[newHistory.length - 1];
       setQuestionHistory(newHistory);
       setCurrentQuestionId(previousQuestionId);
-      setTextAnswer('');
-      
-      const previousAnswer = answers[previousQuestionId];
-      if (previousAnswer && typeof previousAnswer === 'string') {
-        setTextAnswer(previousAnswer);
-      }
     }
   };
 
