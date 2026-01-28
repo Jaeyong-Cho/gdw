@@ -2,8 +2,8 @@
  * @fileoverview Interactive question flow component
  */
 
-import React, { useState, useEffect } from 'react';
-import { Situation, QuestionAnswer, SituationFlow } from '../types';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Situation, QuestionAnswer, SituationFlow, QuestionDataDisplay } from '../types';
 import { getSituationFlows } from '../data/data-loader';
 
 /**
@@ -37,6 +37,8 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
   const [textAnswer, setTextAnswer] = useState<string>('');
   const [questionHistory, setQuestionHistory] = useState<string[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [displayData, setDisplayData] = useState<string | null>(null);
+  const [displayDataLabel, setDisplayDataLabel] = useState<string>('');
 
   useEffect(() => {
     const loadFlow = async () => {
@@ -50,6 +52,18 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
           setAnswers({});
           setTextAnswer('');
           setQuestionHistory([situationFlow.startQuestionId]);
+          
+          const { getAnswerByQuestionId } = await import('../data/db');
+          
+          const startQuestion = situationFlow.questions.find(q => q.id === situationFlow.startQuestionId);
+          if (startQuestion?.showData) {
+            await loadDisplayData(startQuestion.showData);
+          }
+          
+          const existingAnswer = await getAnswerByQuestionId(situationFlow.startQuestionId);
+          if (existingAnswer && typeof existingAnswer === 'string') {
+            setTextAnswer(existingAnswer);
+          }
         }
       } catch (error) {
         console.error('Error loading flow:', error);
@@ -60,6 +74,57 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
 
     loadFlow();
   }, [situation]);
+
+  /**
+   * @brief Load display data based on question configuration
+   * 
+   * @param showData - Data display configuration
+   * @pre showData is provided
+   * @post Display data is loaded and stored in state
+   */
+  const loadDisplayData = useCallback(async (showData: QuestionDataDisplay): Promise<void> => {
+    try {
+      const db = await import('../data/db');
+      let data: string | null = null;
+
+      switch (showData.source) {
+        case 'getIntentSummary':
+          data = await db.getIntentSummary();
+          break;
+        case 'getIntentDocument':
+          data = await db.getIntentDocument();
+          break;
+        case 'getAnswerByQuestionId':
+          if (showData.sourceParam) {
+            data = await db.getAnswerByQuestionId(showData.sourceParam);
+          }
+          break;
+        default:
+          data = null;
+      }
+
+      setDisplayData(data);
+      setDisplayDataLabel(showData.label);
+    } catch (error) {
+      console.error('Error loading display data:', error);
+      setDisplayData(null);
+      setDisplayDataLabel('');
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!flow || !currentQuestionId) {
+      return;
+    }
+    
+    const question = flow.questions.find(q => q.id === currentQuestionId);
+    if (question?.showData) {
+      loadDisplayData(question.showData);
+    } else {
+      setDisplayData(null);
+      setDisplayDataLabel('');
+    }
+  }, [currentQuestionId, flow, loadDisplayData]);
 
   if (loading) {
     return (
@@ -119,7 +184,32 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
     } else if (nextQuestionId) {
       setQuestionHistory([...questionHistory, nextQuestionId]);
       setCurrentQuestionId(nextQuestionId);
-      setTextAnswer('');
+      
+      const loadExistingAnswer = async () => {
+        try {
+          const { getAnswerByQuestionId } = await import('../data/db');
+          const nextQuestion = flow.questions.find(q => q.id === nextQuestionId);
+          
+          const existingAnswer = await getAnswerByQuestionId(nextQuestionId);
+          if (existingAnswer && typeof existingAnswer === 'string') {
+            setTextAnswer(existingAnswer);
+          } else {
+            setTextAnswer('');
+          }
+          
+          if (nextQuestion?.showData) {
+            await loadDisplayData(nextQuestion.showData);
+          } else {
+            setDisplayData(null);
+            setDisplayDataLabel('');
+          }
+        } catch (error) {
+          console.error('Error loading existing answer:', error);
+          setTextAnswer('');
+        }
+      };
+      
+      loadExistingAnswer();
     } else {
       onComplete(null);
     }
@@ -152,50 +242,90 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
   const renderQuestion = () => {
     switch (currentQuestion.type) {
       case 'yesno':
+        const showDataForYesNo = currentQuestion.showData && displayData;
+        
         return (
-          <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
-            <button
-              onClick={() => handleAnswer(true)}
-              style={{
-                padding: '12px 24px',
-                fontSize: '16px',
-                fontWeight: '600',
-                backgroundColor: '#10b981',
-                color: '#ffffff',
-                border: 'none',
+          <div style={{ marginTop: '16px' }}>
+            {showDataForYesNo && (
+              <div style={{
+                marginBottom: '16px',
+                padding: '12px',
+                backgroundColor: '#f3f4f6',
+                border: '1px solid #d1d5db',
                 borderRadius: '8px',
-                cursor: 'pointer',
-                flex: 1,
-              }}
-            >
-              예
-            </button>
-            <button
-              onClick={() => handleAnswer(false)}
-              style={{
-                padding: '12px 24px',
-                fontSize: '16px',
-                fontWeight: '600',
-                backgroundColor: '#ef4444',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                flex: 1,
-              }}
-            >
-              아니오
-            </button>
+                fontSize: '14px',
+              }}>
+                <div style={{ fontWeight: '600', marginBottom: '8px', color: '#374151' }}>
+                  {displayDataLabel}:
+                </div>
+                <div style={{ color: '#6b7280', fontStyle: 'italic' }}>
+                  {displayData}
+                </div>
+              </div>
+            )}
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                onClick={() => handleAnswer(true)}
+                style={{
+                  padding: '12px 24px',
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  backgroundColor: '#10b981',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  flex: 1,
+                }}
+              >
+                예
+              </button>
+              <button
+                onClick={() => handleAnswer(false)}
+                style={{
+                  padding: '12px 24px',
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  backgroundColor: '#ef4444',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  flex: 1,
+                }}
+              >
+                아니오
+              </button>
+            </div>
           </div>
         );
 
       case 'text':
+        const showDataForText = currentQuestion.showData && displayData;
+        
         return (
           <div style={{ marginTop: '16px' }}>
+            {showDataForText && (
+              <div style={{
+                marginBottom: '16px',
+                padding: '12px',
+                backgroundColor: '#f3f4f6',
+                border: '1px solid #d1d5db',
+                borderRadius: '8px',
+                fontSize: '14px',
+              }}>
+                <div style={{ fontWeight: '600', marginBottom: '8px', color: '#374151' }}>
+                  {displayDataLabel}:
+                </div>
+                <div style={{ color: '#6b7280', fontStyle: 'italic' }}>
+                  {displayData}
+                </div>
+              </div>
+            )}
             <textarea
               value={textAnswer}
               onChange={(e) => setTextAnswer(e.target.value)}
-              placeholder="답변을 입력하세요..."
+              placeholder={showDataForText ? `${displayDataLabel}를 참고하여 답변을 입력하세요...` : "답변을 입력하세요..."}
               style={{
                 width: '100%',
                 minHeight: '100px',

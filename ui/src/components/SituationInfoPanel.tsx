@@ -6,6 +6,7 @@ import React, { useState, useEffect } from 'react';
 import { Situation, QuestionAnswer, SituationGuide } from '../types';
 import { situationDefinitions } from '../data/situations';
 import { InteractiveFlow } from './InteractiveFlow';
+import { SituationAnswers } from './SituationAnswers';
 import { getSituationGuides, getSituationFlows } from '../data/data-loader';
 
 /**
@@ -34,12 +35,25 @@ export const SituationInfoPanel: React.FC<SituationInfoPanelProps> = ({
   const [showFlow, setShowFlow] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
 
-  const handleAnswerSave = (answer: QuestionAnswer) => {
-    const storageKey = `situation-answers-${situation}`;
-    const existingAnswers = localStorage.getItem(storageKey);
-    const answers = existingAnswers ? JSON.parse(existingAnswers) : [];
-    answers.push(answer);
-    localStorage.setItem(storageKey, JSON.stringify(answers));
+  const [answersUpdated, setAnswersUpdated] = useState<number>(0);
+
+  const handleAnswerSave = async (answer: QuestionAnswer) => {
+    if (!situation) {
+      return;
+    }
+    
+    try {
+      const { saveAnswer } = await import('../data/db');
+      await saveAnswer(
+        answer.questionId,
+        situation,
+        answer.answer,
+        answer.answeredAt
+      );
+      setAnswersUpdated(prev => prev + 1);
+    } catch (error) {
+      console.error('Failed to save answer to database:', error);
+    }
   };
 
   const handleFlowComplete = (nextSituation: Situation | null) => {
@@ -134,15 +148,6 @@ export const SituationInfoPanel: React.FC<SituationInfoPanelProps> = ({
     gap: '8px',
   };
 
-  const badgeStyle = {
-    display: 'inline-block',
-    padding: '4px 8px',
-    borderRadius: '4px',
-    fontSize: '12px',
-    fontWeight: '500',
-    marginLeft: '8px',
-  };
-
   return (
     <div style={{
       padding: '24px',
@@ -186,6 +191,12 @@ export const SituationInfoPanel: React.FC<SituationInfoPanelProps> = ({
             onComplete={handleFlowComplete}
             onAnswerSave={handleAnswerSave}
           />
+        </div>
+      )}
+
+      {!loading && situation && (
+        <div style={{ marginBottom: '32px' }}>
+          <SituationAnswers situation={situation} refreshTrigger={answersUpdated} />
         </div>
       )}
 

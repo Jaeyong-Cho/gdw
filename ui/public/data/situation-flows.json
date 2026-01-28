@@ -24,7 +24,12 @@
         "question": "한 문장으로 요약해주세요",
         "type": "text",
         "required": true,
-        "nextQuestionId": "intent-consistent"
+        "nextQuestionId": "intent-consistent",
+        "showData": {
+          "type": "intent-summary",
+          "label": "기존 Intent 요약",
+          "source": "getIntentSummary"
+        }
       },
       {
         "id": "intent-consistent",
@@ -98,7 +103,12 @@
         "type": "yesno",
         "required": true,
         "onYesNextQuestionId": "problem-boundaries",
-        "onNoNextSituation": "IntentDefined"
+        "onNoNextSituation": "IntentDefined",
+        "showData": {
+          "type": "intent-summary",
+          "label": "기존 Intent 요약",
+          "source": "getIntentSummary"
+        }
       },
       {
         "id": "problem-boundaries",

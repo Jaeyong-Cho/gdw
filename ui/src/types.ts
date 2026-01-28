@@ -133,6 +133,16 @@ export interface SituationNodeData {
 export type QuestionType = 'text' | 'yesno' | 'multiple';
 
 /**
+ * Data display configuration for a question
+ */
+export interface QuestionDataDisplay {
+  type: 'intent-summary' | 'intent-document' | 'answer' | 'custom';
+  label: string;
+  source: 'getIntentSummary' | 'getIntentDocument' | 'getAnswerByQuestionId' | 'getAnswersBySituation';
+  sourceParam?: string;
+}
+
+/**
  * Question in the interactive flow
  */
 export interface Question {
@@ -147,6 +157,7 @@ export interface Question {
   onAnswerNextSituation?: Situation;
   onYesNextSituation?: Situation;
   onNoNextSituation?: Situation;
+  showData?: QuestionDataDisplay;
 }
 
 /**
