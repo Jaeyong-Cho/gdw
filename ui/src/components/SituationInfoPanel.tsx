@@ -241,53 +241,6 @@ export const SituationInfoPanel: React.FC<SituationInfoPanelProps> = ({ situatio
           </div>
         </>
       )}
-
-      <div style={{ marginTop: '32px', paddingTop: '24px', borderTop: '1px solid #e5e7eb' }}>
-        <h3 style={{
-          marginTop: 0,
-          marginBottom: '16px',
-          color: '#374151',
-          fontSize: '18px',
-          fontWeight: '600',
-        }}>
-          Required Facts
-        </h3>
-        <ul style={{
-          listStyle: 'none',
-          padding: 0,
-          margin: 0,
-        }}>
-          {definition.required_facts.map((fact, index) => (
-            <li
-              key={index}
-              style={{
-                padding: '12px',
-                marginBottom: '8px',
-                backgroundColor: '#f9fafb',
-                borderRadius: '6px',
-                borderLeft: '3px solid #3b82f6',
-              }}
-            >
-              <div style={{
-                display: 'flex',
-                alignItems: 'flex-start',
-                gap: '8px',
-              }}>
-                <span style={{
-                  color: '#3b82f6',
-                  fontWeight: '600',
-                  marginRight: '8px',
-                }}>
-                  •
-                </span>
-                <span style={{ color: '#4b5563', lineHeight: '1.5' }}>
-                  {fact.description}
-                </span>
-              </div>
-            </li>
-          ))}
-        </ul>
-      </div>
     </div>
   );
 };
