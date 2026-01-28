@@ -143,11 +143,22 @@ export interface QuestionDataDisplay {
 }
 
 /**
+ * Input field for AI prompt
+ */
+export interface AIPromptInputField {
+  id: string;
+  label: string;
+  placeholder?: string;
+  required?: boolean;
+}
+
+/**
  * AI prompt template for questions
  */
 export interface AIPromptTemplate {
   template: string;
   variables?: string[];
+  inputFields?: AIPromptInputField[];
 }
 
 /**

@@ -42,6 +42,8 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
   const [displayDataLabel, setDisplayDataLabel] = useState<string>('');
   const [showAIPrompt, setShowAIPrompt] = useState<boolean>(false);
   const [aiPrompt, setAiPrompt] = useState<string>('');
+  const [showAIPromptInputs, setShowAIPromptInputs] = useState<boolean>(false);
+  const [aiPromptInputs, setAiPromptInputs] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const loadFlow = async () => {
@@ -136,12 +138,12 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
   }, []);
 
   /**
-   * @brief Generate AI prompt from template
+   * @brief Generate AI prompt from template with user inputs
    * 
    * @pre currentQuestion has aiPromptTemplate
    * @post AI prompt is generated and displayed
    */
-  const handleGenerateAIPrompt = useCallback(async () => {
+  const handleGenerateAIPrompt = useCallback(async (userInputs?: Record<string, string>) => {
     if (!flow || !currentQuestionId) {
       return;
     }
@@ -153,13 +155,50 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
 
     try {
       const context = await buildPromptContext(situation);
+      
+      if (userInputs) {
+        Object.keys(userInputs).forEach(key => {
+          context[key] = userInputs[key] || null;
+        });
+      }
+      
       const prompt = generatePrompt(question.aiPromptTemplate.template, context);
       setAiPrompt(prompt);
       setShowAIPrompt(true);
+      setShowAIPromptInputs(false);
     } catch (error) {
       console.error('Error generating AI prompt:', error);
     }
   }, [flow, currentQuestionId, situation]);
+
+  /**
+   * @brief Show AI prompt input form
+   * 
+   * @pre currentQuestion has aiPromptTemplate
+   * @post Input form is displayed
+   */
+  const handleShowAIPromptInputs = useCallback(() => {
+    if (!flow || !currentQuestionId) {
+      return;
+    }
+    
+    const question = flow.questions.find(q => q.id === currentQuestionId);
+    if (!question?.aiPromptTemplate) {
+      return;
+    }
+
+    if (question.aiPromptTemplate.inputFields && question.aiPromptTemplate.inputFields.length > 0) {
+      setShowAIPromptInputs(true);
+      setShowAIPrompt(false);
+      const initialInputs: Record<string, string> = {};
+      question.aiPromptTemplate.inputFields.forEach(field => {
+        initialInputs[field.id] = '';
+      });
+      setAiPromptInputs(initialInputs);
+    } else {
+      handleGenerateAIPrompt();
+    }
+  }, [flow, currentQuestionId, handleGenerateAIPrompt]);
 
   /**
    * @brief Copy prompt to clipboard
@@ -191,6 +230,8 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
     
     setShowAIPrompt(false);
     setAiPrompt('');
+    setShowAIPromptInputs(false);
+    setAiPromptInputs({});
   }, [currentQuestionId, flow, loadDisplayData]);
 
   if (loading) {
@@ -376,7 +417,7 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
               </button>
               {hasAIPrompt && (
                 <button
-                  onClick={handleGenerateAIPrompt}
+                  onClick={handleShowAIPromptInputs}
                   style={{
                     padding: '12px 24px',
                     fontSize: '14px',
@@ -394,6 +435,97 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
                 </button>
               )}
             </div>
+            {showAIPromptInputs && currentQuestion.aiPromptTemplate?.inputFields && (
+              <div style={{
+                marginTop: '16px',
+                padding: '16px',
+                backgroundColor: '#f9fafb',
+                border: '1px solid #e5e7eb',
+                borderRadius: '8px',
+              }}>
+                <h4 style={{
+                  margin: '0 0 12px 0',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  color: '#374151',
+                }}>
+                  프롬프트에 필요한 정보 입력
+                </h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {currentQuestion.aiPromptTemplate.inputFields.map(field => (
+                    <div key={field.id}>
+                      <label style={{
+                        display: 'block',
+                        marginBottom: '6px',
+                        fontSize: '13px',
+                        fontWeight: '500',
+                        color: '#374151',
+                      }}>
+                        {field.label}
+                        {field.required && <span style={{ color: '#ef4444' }}> *</span>}
+                      </label>
+                      <textarea
+                        value={aiPromptInputs[field.id] || ''}
+                        onChange={(e) => setAiPromptInputs({ ...aiPromptInputs, [field.id]: e.target.value })}
+                        placeholder={field.placeholder || `${field.label}을(를) 입력하세요...`}
+                        style={{
+                          width: '100%',
+                          minHeight: '60px',
+                          padding: '8px 12px',
+                          fontSize: '13px',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '6px',
+                          fontFamily: 'inherit',
+                          resize: 'vertical',
+                        }}
+                      />
+                    </div>
+                  ))}
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                    <button
+                      onClick={() => handleGenerateAIPrompt(aiPromptInputs)}
+                      disabled={currentQuestion.aiPromptTemplate.inputFields?.some(f => 
+                        f.required && !aiPromptInputs[f.id]?.trim()
+                      )}
+                      style={{
+                        padding: '8px 16px',
+                        fontSize: '13px',
+                        fontWeight: '500',
+                        backgroundColor: currentQuestion.aiPromptTemplate.inputFields?.some(f => 
+                          f.required && !aiPromptInputs[f.id]?.trim()
+                        ) ? '#9ca3af' : '#3b82f6',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: currentQuestion.aiPromptTemplate.inputFields?.some(f => 
+                          f.required && !aiPromptInputs[f.id]?.trim()
+                        ) ? 'not-allowed' : 'pointer',
+                      }}
+                    >
+                      프롬프트 생성
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowAIPromptInputs(false);
+                        setAiPromptInputs({});
+                      }}
+                      style={{
+                        padding: '8px 16px',
+                        fontSize: '13px',
+                        fontWeight: '500',
+                        backgroundColor: '#ffffff',
+                        color: '#374151',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      취소
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
             {showAIPrompt && aiPrompt && (
               <div style={{
                 marginTop: '16px',
@@ -510,7 +642,7 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
               </button>
               {hasAIPromptForText && (
                 <button
-                  onClick={handleGenerateAIPrompt}
+                  onClick={handleShowAIPromptInputs}
                   style={{
                     padding: '12px 24px',
                     fontSize: '14px',
@@ -527,6 +659,97 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
                 </button>
               )}
             </div>
+            {showAIPromptInputs && currentQuestion.aiPromptTemplate?.inputFields && (
+              <div style={{
+                marginTop: '16px',
+                padding: '16px',
+                backgroundColor: '#f9fafb',
+                border: '1px solid #e5e7eb',
+                borderRadius: '8px',
+              }}>
+                <h4 style={{
+                  margin: '0 0 12px 0',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  color: '#374151',
+                }}>
+                  프롬프트에 필요한 정보 입력
+                </h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {currentQuestion.aiPromptTemplate.inputFields.map(field => (
+                    <div key={field.id}>
+                      <label style={{
+                        display: 'block',
+                        marginBottom: '6px',
+                        fontSize: '13px',
+                        fontWeight: '500',
+                        color: '#374151',
+                      }}>
+                        {field.label}
+                        {field.required && <span style={{ color: '#ef4444' }}> *</span>}
+                      </label>
+                      <textarea
+                        value={aiPromptInputs[field.id] || ''}
+                        onChange={(e) => setAiPromptInputs({ ...aiPromptInputs, [field.id]: e.target.value })}
+                        placeholder={field.placeholder || `${field.label}을(를) 입력하세요...`}
+                        style={{
+                          width: '100%',
+                          minHeight: '60px',
+                          padding: '8px 12px',
+                          fontSize: '13px',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '6px',
+                          fontFamily: 'inherit',
+                          resize: 'vertical',
+                        }}
+                      />
+                    </div>
+                  ))}
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                    <button
+                      onClick={() => handleGenerateAIPrompt(aiPromptInputs)}
+                      disabled={currentQuestion.aiPromptTemplate.inputFields?.some(f => 
+                        f.required && !aiPromptInputs[f.id]?.trim()
+                      )}
+                      style={{
+                        padding: '8px 16px',
+                        fontSize: '13px',
+                        fontWeight: '500',
+                        backgroundColor: currentQuestion.aiPromptTemplate.inputFields?.some(f => 
+                          f.required && !aiPromptInputs[f.id]?.trim()
+                        ) ? '#9ca3af' : '#3b82f6',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: currentQuestion.aiPromptTemplate.inputFields?.some(f => 
+                          f.required && !aiPromptInputs[f.id]?.trim()
+                        ) ? 'not-allowed' : 'pointer',
+                      }}
+                    >
+                      프롬프트 생성
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowAIPromptInputs(false);
+                        setAiPromptInputs({});
+                      }}
+                      style={{
+                        padding: '8px 16px',
+                        fontSize: '13px',
+                        fontWeight: '500',
+                        backgroundColor: '#ffffff',
+                        color: '#374151',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      취소
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
             {showAIPrompt && aiPrompt && (
               <div style={{
                 marginTop: '16px',

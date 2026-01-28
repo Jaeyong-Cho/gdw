@@ -15,7 +15,21 @@
           "source": "getIntentSummary"
         },
         "aiPromptTemplate": {
-          "template": "# 개발 의도(Intent) 작성 도움\n\n## [INPUT – Human]\n\n1. Who is suffering:\n- {{intent}}\n\n2. What pain exists:\n- \n\n3. Why this matters now:\n- \n\n## [AI PROMPT]\n\nYou are acting as a critical systems analyst.\n\nRules:\n- Do NOT propose solutions, features, or implementations.\n- Do NOT use technical language.\n- Focus only on intent clarity and assumptions.\n\nTasks:\n1. Ask clarifying questions until the intent is logically stable.\n2. Produce exactly ONE intent sentence.\n3. Extract 3 hidden assumptions.\n4. Identify ambiguity or contradiction.\n\n## [EXIT CONDITION]\n\n- Intent is one sentence\n- No solution language\n- Assumptions are explicit\n\n위 프롬프트를 AI에게 제공하여 개발 의도를 명확하게 작성하세요."
+          "template": "# 개발 의도(Intent) 작성 도움\n\n## [INPUT – Human]\n\n1. Who is suffering:\n- {{intent}}\n\n2. What pain exists:\n- {{pain-exists}}\n\n3. Why this matters now:\n- {{why-now}}\n\n## [AI PROMPT]\n\nYou are acting as a critical systems analyst.\n\nRules:\n- Do NOT propose solutions, features, or implementations.\n- Do NOT use technical language.\n- Focus only on intent clarity and assumptions.\n\nTasks:\n1. Ask clarifying questions until the intent is logically stable.\n2. Produce exactly ONE intent sentence.\n3. Extract 3 hidden assumptions.\n4. Identify ambiguity or contradiction.\n\n## [EXIT CONDITION]\n\n- Intent is one sentence\n- No solution language\n- Assumptions are explicit\n\n위 프롬프트를 AI에게 제공하여 개발 의도를 명확하게 작성하세요.",
+          "inputFields": [
+            {
+              "id": "pain-exists",
+              "label": "What pain exists",
+              "placeholder": "어떤 고통이나 문제가 존재하나요?",
+              "required": false
+            },
+            {
+              "id": "why-now",
+              "label": "Why this matters now",
+              "placeholder": "왜 지금 이 문제가 중요한가요?",
+              "required": false
+            }
+          ]
         }
       },
       {
