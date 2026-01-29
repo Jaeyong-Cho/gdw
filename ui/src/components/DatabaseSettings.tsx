@@ -201,17 +201,46 @@ export const DatabaseSettings: React.FC = () => {
   };
 
   /**
-   * @brief Copy storage location to clipboard
+   * @brief Copy storage location to clipboard with fallback for cross-platform compatibility
    * 
    * @pre dbInfo is loaded
    * @post Storage location is copied to clipboard
    */
-  const handleCopyLocation = () => {
+  const handleCopyLocation = async () => {
     if (!dbInfo) return;
     
     const locationInfo = `Storage Type: ${dbInfo.storageType}\nLocation: ${dbInfo.storageLocation}`;
-    navigator.clipboard.writeText(locationInfo);
-    alert('저장 위치 정보가 클립보드에 복사되었습니다.');
+    
+    try {
+      // Try modern Clipboard API first (works on HTTPS/localhost)
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(locationInfo);
+        alert('저장 위치 정보가 클립보드에 복사되었습니다.');
+        return;
+      }
+      
+      // Fallback: Use execCommand for older browsers and cross-platform compatibility
+      const textArea = document.createElement('textarea');
+      textArea.value = locationInfo;
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-999999px';
+      textArea.style.top = '-999999px';
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      
+      const successful = document.execCommand('copy');
+      document.body.removeChild(textArea);
+      
+      if (successful) {
+        alert('저장 위치 정보가 클립보드에 복사되었습니다.');
+      } else {
+        throw new Error('execCommand copy failed');
+      }
+    } catch (error) {
+      console.error('Error copying location:', error);
+      alert('클립보드 복사에 실패했습니다. 수동으로 복사해주세요.');
+    }
   };
 
   /**

@@ -273,16 +273,40 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
   }, [flow, currentQuestionId, handleGenerateAIPrompt]);
 
   /**
-   * @brief Copy prompt to clipboard
+   * @brief Copy prompt to clipboard with fallback for cross-platform compatibility
    * 
    * @pre aiPrompt is set
    * @post Prompt is copied to clipboard
    */
   const handleCopyPrompt = useCallback(async () => {
     try {
-      await navigator.clipboard.writeText(aiPrompt);
-      setCopyStatus('success');
-      setTimeout(() => setCopyStatus('idle'), 1500);
+      // Try modern Clipboard API first (works on HTTPS/localhost)
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(aiPrompt);
+        setCopyStatus('success');
+        setTimeout(() => setCopyStatus('idle'), 1500);
+        return;
+      }
+      
+      // Fallback: Use execCommand for older browsers and cross-platform compatibility
+      const textArea = document.createElement('textarea');
+      textArea.value = aiPrompt;
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-999999px';
+      textArea.style.top = '-999999px';
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      
+      const successful = document.execCommand('copy');
+      document.body.removeChild(textArea);
+      
+      if (successful) {
+        setCopyStatus('success');
+        setTimeout(() => setCopyStatus('idle'), 1500);
+      } else {
+        throw new Error('execCommand copy failed');
+      }
     } catch (error) {
       console.error('Error copying prompt:', error);
       setCopyStatus('error');
