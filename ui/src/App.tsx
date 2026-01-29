@@ -27,7 +27,7 @@ import { createCycle, getCurrentCycleId, activateCycle, recordUnconsciousEntry, 
  * @post Application is rendered with graph and info panel
  */
 const App: React.FC = () => {
-  const [selectedSituation, setSelectedSituation] = useState<Situation | null>(null);
+  const [selectedSituation, setSelectedSituation] = useState<Situation | null>('Unconscious');
   const [layoutType, setLayoutType] = useState<LayoutType>('circle');
   const [sidebarWidth, setSidebarWidth] = useState<number>(() => {
     return typeof window !== 'undefined' ? window.innerWidth / 2 : 400;
