@@ -1089,13 +1089,25 @@ export async function clearDatabase(): Promise<void> {
   }
 
   // Clear all tables in correct order (respect foreign key constraints)
-  db.run('DELETE FROM cycle_context');
-  db.run('DELETE FROM unconscious_periods');
-  db.run('DELETE FROM state_entries');
-  db.run('DELETE FROM question_answers');
-  db.run('DELETE FROM cycles');
-  db.run('DELETE FROM workflow_states');
-  db.run('DELETE FROM transition_counts');
+  // Use try-catch for each table in case it doesn't exist
+  const tables = [
+    'cycle_context',
+    'unconscious_periods', 
+    'state_entries',
+    'question_answers',
+    'cycles',
+    'workflow_states',
+    'transition_counts'
+  ];
+  
+  for (const table of tables) {
+    try {
+      db.run(`DELETE FROM ${table}`);
+    } catch (e) {
+      // Table might not exist, ignore error
+      console.log(`Table ${table} does not exist, skipping`);
+    }
+  }
   
   await saveDatabase();
 }
