@@ -300,8 +300,15 @@
         "question": "막혔나요? (15분 이상 고민 중)",
         "type": "yesno",
         "required": true,
-        "onYesNextSituation": "TaskBreakdown",
+        "onYesNextQuestionId": "task-stuck-reason",
         "onNoNextQuestionId": "task-complete"
+      },
+      {
+        "id": "task-stuck-reason",
+        "question": "막힌 이유를 선택하세요",
+        "type": "multiple",
+        "required": true,
+        "options": ["작업 분해 필요", "새로운 문제 발견", "기술적 제약 발견"]
       }
     ]
   },
