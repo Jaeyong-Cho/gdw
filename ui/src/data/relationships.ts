@@ -50,7 +50,7 @@ export async function buildRelatedContext(currentSituation: string): Promise<{
       
       // Get the intent itself
       const intentAnswers = intentRelated.filter(a => 
-        a.situation === 'IntentDefined' && a.questionId.includes('intent-')
+        a.situation === 'DefiningIntent' && a.questionId.includes('intent-')
       );
       if (intentAnswers.length > 0) {
         context.intent = intentAnswers[0].answer;
@@ -59,7 +59,7 @@ export async function buildRelatedContext(currentSituation: string): Promise<{
 
       // Get all problems under this intent
       const problemAnswers = intentRelated.filter(a => 
-        a.situation === 'ProblemSelected' && a.questionId.includes('problem-')
+        a.situation === 'SelectingProblem' && a.questionId.includes('problem-')
       );
       if (problemAnswers.length > 0) {
         context.problems = problemAnswers.map(a => a.answer);
@@ -67,7 +67,7 @@ export async function buildRelatedContext(currentSituation: string): Promise<{
 
       // Get designs
       const designAnswers = intentRelated.filter(a => 
-        a.situation === 'DesignReady' && !['true', 'false'].includes(a.answer)
+        a.situation === 'Designing' && !['true', 'false'].includes(a.answer)
       );
       if (designAnswers.length > 0) {
         context.design = designAnswers.map(a => a.answer);
@@ -75,7 +75,7 @@ export async function buildRelatedContext(currentSituation: string): Promise<{
 
       // Get acceptance criteria
       const acceptanceAnswers = intentRelated.filter(a => 
-        a.situation === 'AcceptanceDefined' && !['true', 'false'].includes(a.answer)
+        a.situation === 'DefiningAcceptance' && !['true', 'false'].includes(a.answer)
       );
       if (acceptanceAnswers.length > 0) {
         context.acceptance = acceptanceAnswers.map(a => a.answer);
@@ -91,7 +91,7 @@ export async function buildRelatedContext(currentSituation: string): Promise<{
 
       // Get feedback
       const feedbackAnswers = intentRelated.filter(a => 
-        a.situation === 'FeedbackCollected' && !['true', 'false'].includes(a.answer)
+        a.situation === 'CollectingFeedback' && !['true', 'false'].includes(a.answer)
       );
       if (feedbackAnswers.length > 0) {
         context.feedback = feedbackAnswers.map(a => a.answer);
@@ -99,7 +99,7 @@ export async function buildRelatedContext(currentSituation: string): Promise<{
 
       // Get improvements
       const improvementAnswers = intentRelated.filter(a => 
-        a.situation === 'Learned' && a.questionId.includes('improvements')
+        a.situation === 'Learning' && a.questionId.includes('improvements')
       );
       if (improvementAnswers.length > 0) {
         context.improvements = improvementAnswers.map(a => a.answer);

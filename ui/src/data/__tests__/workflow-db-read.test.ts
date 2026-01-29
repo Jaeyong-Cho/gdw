@@ -43,7 +43,7 @@ describe('T1: WorkflowDB Read Access', () => {
   beforeAll(async () => {
     await initDatabase();
     // Insert test data
-    await saveAnswer('test-question-1', 'test answer', 'IntentDefined');
+    await saveAnswer('test-question-1', 'test answer', 'DefiningIntent');
   });
 
   it('should connect to database and read workflow data', async () => {
@@ -78,9 +78,9 @@ describe('T2: Current State Identification Rule', () => {
   beforeAll(async () => {
     await initDatabase();
     // Insert multiple state records
-    await saveAnswer('question-1', 'answer 1', 'IntentDefined');
-    await saveAnswer('question-2', 'answer 2', 'ProblemSelected');
-    await saveAnswer('question-3', 'answer 3', 'AcceptanceDefined');
+    await saveAnswer('question-1', 'answer 1', 'DefiningIntent');
+    await saveAnswer('question-2', 'answer 2', 'SelectingProblem');
+    await saveAnswer('question-3', 'answer 3', 'DefiningAcceptance');
   });
 
   it('should determine current state based on latest timestamp', async () => {
@@ -95,7 +95,7 @@ describe('T2: Current State Identification Rule', () => {
     
     // Verification: Can determine exactly 1 current state
     expect(currentState).toBeDefined();
-    expect(currentState.situation).toBe('AcceptanceDefined');
+    expect(currentState.situation).toBe('DefiningAcceptance');
   });
 
   it('should fail if state determination is impossible', async () => {
@@ -127,7 +127,7 @@ describe('T3: State History Sorting Rule', () => {
 
   it('should sort state history by timestamp in ascending order', async () => {
     // Get all answers across situations
-    const situations = ['IntentDefined', 'ProblemSelected', 'AcceptanceDefined'];
+    const situations = ['DefiningIntent', 'SelectingProblem', 'DefiningAcceptance'];
     const allAnswers = [];
     
     for (const situation of situations) {

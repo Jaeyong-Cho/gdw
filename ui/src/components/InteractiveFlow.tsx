@@ -1034,23 +1034,23 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
           <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {currentQuestion.options?.map((option, index) => {
               const validSituations: Situation[] = [
-                'IntentDefined', 'IntentDefinedFail', 'ProblemSelected', 'AcceptanceDefined',
-                'FeasibilityChecked', 'DesignReady', 'TaskBreakdown', 'Implementing',
-                'Verifying', 'Verified', 'Released', 'FeedbackCollected', 'Learned'
+                'DefiningIntent', 'FailingIntent', 'SelectingProblem', 'DefiningAcceptance',
+                'CheckingFeasibility', 'Designing', 'BreakingTasks', 'Implementing',
+                'Verifying', 'Verified', 'Releasing', 'CollectingFeedback', 'Learning'
               ];
               
               let nextSituation: Situation | undefined;
               
               if (option === '새로운 문제 선택') {
-                nextSituation = 'ProblemSelected';
+                nextSituation = 'SelectingProblem';
               } else if (option === '같은 문제 심화') {
-                nextSituation = 'AcceptanceDefined';
+                nextSituation = 'DefiningAcceptance';
               } else if (option === 'Intent 조정') {
-                nextSituation = 'IntentDefined';
+                nextSituation = 'DefiningIntent';
               } else if (option === 'feasible') {
-                nextSituation = 'DesignReady';
+                nextSituation = 'Designing';
               } else if (option === 'too hard' || option === 'problem too big') {
-                nextSituation = 'ProblemSelected';
+                nextSituation = 'SelectingProblem';
               } else if (validSituations.includes(option as Situation)) {
                 nextSituation = option as Situation;
               }

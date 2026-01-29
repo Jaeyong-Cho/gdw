@@ -1,5 +1,5 @@
 {
-  "IntentDefined": {
+  "DefiningIntent": {
     "whatToDo": "누가, 왜, 무엇을 해결할지 5-10줄로 작성. 기능이나 기술 언급은 금지. 예상 소요 시간: 5-15분.",
     "conditionsToProceed": [
       "Intent를 한 문장으로 요약 가능",
@@ -27,7 +27,7 @@
       "nextStep": "모두 \"예\"면 ProblemSelected로 진행 가능"
     }
   },
-  "IntentDefinedFail": {
+  "FailingIntent": {
     "whatToDo": "Intent 정의를 시도했지만 불명확한 상태. 무엇이 불명확한지 구체적으로 파악하고, 모호한 부분을 명확히 하기 위한 질문 작성. 예상 소요 시간: 3-10분.",
     "conditionsToProceed": [
       "불명확한 부분이 구체적으로 식별됨",
@@ -80,7 +80,7 @@
       "nextStep": "모두 \"예\"면 AcceptanceDefined로 진행 가능"
     }
   },
-  "AcceptanceDefined": {
+  "DefiningAcceptance": {
     "whatToDo": "선택한 문제에 대한 완료 기준을 작성. 각 기준은 측정 가능해야 하며, 문제와 연결되어야 함. 예상 소요 시간: 10-20분.",
     "conditionsToProceed": [
       "완료 기준이 문서로 작성되어 있음",
@@ -136,7 +136,7 @@
       "nextStep": "\"feasible\"이면 DesignReady로 진행 가능"
     }
   },
-  "DesignReady": {
+  "Designing": {
     "whatToDo": "상태 전이(있는 경우) 정의, 컴포넌트 상호작용 명시, 완료 기준을 다루는 설계 문서 작성. 예상 소요 시간: 30-60분.",
     "conditionsToProceed": [
       "설계 문서나 다이어그램이 존재함",
@@ -165,7 +165,7 @@
       "nextStep": "모두 \"예\"면 TaskBreakdown으로 진행 가능"
     }
   },
-  "TaskBreakdown": {
+  "BreakingTasks": {
     "whatToDo": "설계에서 작업을 분해하여 각 작업이 독립적으로 실행 가능하고, 의존성이 식별되며, 한 세션(90분 이하)에 완료 가능하도록 작성. 예상 소요 시간: 15-30분.",
     "conditionsToProceed": [
       "작업이 설계에서 분해됨",
@@ -277,7 +277,7 @@
       "nextStep": "모두 \"예\"면 Released로 진행 가능"
     }
   },
-  "Released": {
+  "Releasing": {
     "whatToDo": "작업을 배포, 병합, 또는 공유하여 의도한 사용자/이해관계자가 접근 가능하게 함. 예상 소요 시간: 5-30분 (배포 방법에 따라 다름).",
     "conditionsToProceed": [
       "작업이 배포/병합/공유됨",
@@ -333,7 +333,7 @@
       "nextStep": "모두 \"예\"면 Learned로 진행 가능"
     }
   },
-  "Learned": {
+  "Learning": {
     "whatToDo": "피드백을 분석하고, 통찰이나 교훈을 추출하고, 학습 결과를 문서화하고, 학습 기반 다음 행동을 식별. 예상 소요 시간: 30-60분.",
     "conditionsToProceed": [
       "피드백이 분석됨",

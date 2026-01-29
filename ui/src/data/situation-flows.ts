@@ -9,7 +9,7 @@ import { SituationFlow } from '../types';
  * @return Question flow definition
  */
 export const learnedFlow: SituationFlow = {
-  situation: 'Learned',
+  situation: 'Learning',
   startQuestionId: 'learned-new-facts',
   questions: [
     {
@@ -65,5 +65,5 @@ export const learnedFlow: SituationFlow = {
  * @return Map of situation names to their flows
  */
 export const situationFlows: Record<string, SituationFlow> = {
-  Learned: learnedFlow,
+  Learning: learnedFlow,
 };

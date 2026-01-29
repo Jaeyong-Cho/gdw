@@ -9,7 +9,7 @@ import { SituationGuide } from '../types';
  * @return Map of situation names to their guides
  */
 export const situationGuides: Record<string, SituationGuide> = {
-  IntentDefined: {
+  DefiningIntent: {
     whatToDo: '누가, 왜, 무엇을 해결할지 5-10줄로 작성. 기능이나 기술 언급은 금지. 예상 소요 시간: 5-15분.',
     conditionsToProceed: [
       'Intent를 한 문장으로 요약 가능',
@@ -23,7 +23,7 @@ export const situationGuides: Record<string, SituationGuide> = {
       '한 문장으로 요약 불가능',
       '여러 해석이 가능함',
     ],
-    goBackTo: 'Intent 다시 작성 (IntentDefinedFail 상태에서 돌아옴)',
+    goBackTo: 'Intent 다시 작성 (FailingIntent 상태에서 돌아옴)',
     warning: '구현 가능성은 고려하지 말 것. Intent는 "무엇을"에 집중, "어떻게"는 나중 단계.',
     tip: 'Intent는 살아 있는 기준점. 나중에 변경될 수 있지만, 지금은 명확해야 함. "사용자가 X를 할 수 있게 하기 위해 Y 문제를 해결한다" 형식이 도움됨.',
     aiUsage: '초안 생성 요청, 취약한 가정 지적 요청, 한 문장 요약 강제 요청. "이 Intent를 한 문장으로 요약해줘"로 검증.',
@@ -34,10 +34,10 @@ export const situationGuides: Record<string, SituationGuide> = {
         { question: '기능이나 기술을 언급하지 않았나요?' },
         { question: '설명할 때마다 내용이 일관되나요?' },
       ],
-      nextStep: '모두 "예"면 ProblemSelected로 진행 가능',
+      nextStep: '모두 "예"면 SelectingProblem로 진행 가능',
     },
   },
-  IntentDefinedFail: {
+  FailingIntent: {
     whatToDo: 'Intent 정의를 시도했지만 불명확한 상태. 무엇이 불명확한지 구체적으로 파악하고, 모호한 부분을 명확히 하기 위한 질문 작성. 예상 소요 시간: 3-10분.',
     conditionsToProceed: [
       '불명확한 부분이 구체적으로 식별됨',
@@ -49,8 +49,8 @@ export const situationGuides: Record<string, SituationGuide> = {
       '모호한 부분을 구체화하지 않음',
       '여러 해석이 여전히 존재함',
     ],
-    goBackTo: 'IntentDefined (명확한 Intent 작성 후)',
-    warning: '이 상태에서 오래 머물지 말 것. 빠르게 문제를 파악하고 IntentDefined로 돌아가야 함.',
+    goBackTo: 'DefiningIntent (명확한 Intent 작성 후)',
+    warning: '이 상태에서 오래 머물지 말 것. 빠르게 문제를 파악하고 DefiningIntent로 돌아가야 함.',
     tip: '"누가", "왜", "무엇을" 중 어느 부분이 불명확한지 먼저 파악. AI에게 "이 Intent의 모호한 부분을 지적해줘" 요청.',
     aiUsage: '모호한 부분 지적 요청, 명확화를 위한 질문 생성 요청, 여러 해석 비교 분석 요청.',
     quickCheck: {
@@ -59,10 +59,10 @@ export const situationGuides: Record<string, SituationGuide> = {
         { question: '명확히 하기 위한 질문이 있나요?' },
         { question: 'Intent를 다시 작성할 준비가 되었나요?' },
       ],
-      nextStep: '모두 "예"면 IntentDefined로 돌아가서 재작성',
+      nextStep: '모두 "예"면 DefiningIntent로 돌아가서 재작성',
     },
   },
-  ProblemSelected: {
+  SelectingProblem: {
     whatToDo: 'Intent에서 구체적인 문제 하나를 선택하여 작성. 문제는 Intent와 구별되어야 하며, 범위가 명확하고 실행 가능해야 함. 예상 소요 시간: 5-15분.',
     conditionsToProceed: [
       '문제 진술이 문서로 작성되어 있음',
@@ -76,7 +76,7 @@ export const situationGuides: Record<string, SituationGuide> = {
       '실행 불가능함 (너무 추상적이거나 희망사항)',
       '문제가 Intent에서 벗어남 (drift)',
     ],
-    goBackTo: 'IntentDefined (문제가 Intent에서 벗어났을 때) 또는 ProblemSelected 재작성',
+    goBackTo: 'DefiningIntent (문제가 Intent에서 벗어났을 때) 또는 SelectingProblem 재작성',
     warning: '하나의 문제만 선택. 여러 문제를 동시에 다루지 말 것. 문제는 "현재 상태"와 "원하는 상태"의 차이로 표현.',
     tip: '"사용자는 X를 할 수 없어서 Y를 못하고 있다" 형식이 도움됨. 문제는 측정 가능해야 함 (문제가 해결되었는지 알 수 있어야 함). **우선순위 원칙: 변경이 거의 없는 문제를 먼저 해결해야 함. 안정적인 요구사항, 명확한 경계, 최소한의 예상 변경을 가진 문제를 먼저 선택하면 재작업을 줄이고 견고한 기반을 마련할 수 있음.**',
     aiUsage: 'Intent에서 문제 추출 요청, 문제 범위 검증 요청, 문제가 실행 가능한지 확인 요청. "이 문제를 해결했는지 어떻게 알 수 있나요?" 질문으로 검증. **문제의 변경 빈도 평가 요청: "이 문제는 얼마나 자주 변경될 것으로 예상되나요? 안정적인 문제인가요, 아니면 진화하는 문제인가요?"**',
@@ -87,10 +87,10 @@ export const situationGuides: Record<string, SituationGuide> = {
         { question: '문제를 해결했는지 알 수 있나요? (측정 가능한가요?)' },
         { question: '하나의 문제만 선택했나요?' },
       ],
-      nextStep: '모두 "예"면 AcceptanceDefined로 진행 가능',
+      nextStep: '모두 "예"면 DefiningAcceptance로 진행 가능',
     },
   },
-  AcceptanceDefined: {
+  DefiningAcceptance: {
     whatToDo: '선택한 문제에 대한 완료 기준을 작성. 각 기준은 측정 가능해야 하며, 문제와 연결되어야 함. 예상 소요 시간: 10-20분.',
     conditionsToProceed: [
       '완료 기준이 문서로 작성되어 있음',
@@ -104,7 +104,7 @@ export const situationGuides: Record<string, SituationGuide> = {
       '완료를 정의하지 못함',
       '기준이 너무 많거나 적음',
     ],
-    goBackTo: 'ProblemSelected (기준이 모호할 때) 또는 AcceptanceDefined 재작성',
+    goBackTo: 'SelectingProblem (기준이 모호할 때) 또는 DefiningAcceptance 재작성',
     warning: '기준은 구현 방법이 아닌 결과에 집중. "사용자가 X를 할 수 있다"가 "Y 기능이 구현되어 있다"보다 좋음.',
     tip: '"Given-When-Then" 형식이 도움됨. 각 기준은 독립적으로 검증 가능해야 함. 3-7개의 기준이 적절함.',
     aiUsage: '문제에서 완료 기준 생성 요청, 기준의 측정 가능성 검증 요청, 기준이 완료를 정의하는지 확인 요청. "이 기준으로 완료를 알 수 있나요?" 질문으로 검증.',
@@ -115,10 +115,10 @@ export const situationGuides: Record<string, SituationGuide> = {
         { question: '기준으로 "완료"를 알 수 있나요?' },
         { question: '기준이 3-7개 정도인가요?' },
       ],
-      nextStep: '모두 "예"면 FeasibilityChecked로 진행 가능',
+      nextStep: '모두 "예"면 CheckingFeasibility로 진행 가능',
     },
   },
-  FeasibilityChecked: {
+  CheckingFeasibility: {
     whatToDo: '기술적 제약사항 식별, 리소스 요구사항 추정, 실행 가능성 판단 (feasible/too hard/problem too big). 예상 소요 시간: 15-30분.',
     conditionsToProceed: [
       '실행 가능성 평가가 수행됨',
@@ -132,7 +132,7 @@ export const situationGuides: Record<string, SituationGuide> = {
       '결정을 내리지 않음',
       '과도하게 낙관적이거나 비관적',
     ],
-    goBackTo: 'AcceptanceDefined (too hard일 때), ProblemSelected (problem too big일 때)',
+    goBackTo: 'DefiningAcceptance (too hard일 때), SelectingProblem (problem too big일 때)',
     warning: '구현 방법을 설계하지 말 것. 실행 가능성만 판단. "할 수 있는가?"에 집중, "어떻게 할 것인가?"는 다음 단계.',
     tip: '명확하지 않으면 "feasible"로 가정하고 진행. 과도한 분석은 시간 낭비. 30분 이상 걸리면 "feasible"로 가정하고 Design 단계로.',
     aiUsage: '기술적 제약사항 식별 요청, 리소스 추정 도움 요청, 실행 가능성 판단 지원 요청. "이 문제를 해결하는 데 필요한 기술적 제약사항은?" 질문으로 검증.',
@@ -143,10 +143,10 @@ export const situationGuides: Record<string, SituationGuide> = {
         { question: '결정을 내렸나요? (feasible/too hard/problem too big)' },
         { question: '30분 이상 걸렸나요? → 그럼 "feasible"로 가정하고 진행' },
       ],
-      nextStep: '"feasible"이면 DesignReady로 진행 가능',
+      nextStep: '"feasible"이면 Designing로 진행 가능',
     },
   },
-  DesignReady: {
+  Designing: {
     whatToDo: '상태 전이(있는 경우) 정의, 컴포넌트 상호작용 명시, 완료 기준을 다루는 설계 문서 작성. 예상 소요 시간: 30-60분.',
     conditionsToProceed: [
       '설계 문서나 다이어그램이 존재함',
@@ -160,7 +160,7 @@ export const situationGuides: Record<string, SituationGuide> = {
       '컴포넌트 상호작용이 명시되지 않음',
       '완료 기준을 다루지 않음',
     ],
-    goBackTo: 'AcceptanceDefined (설계가 복잡할 때) 또는 DesignReady 재작성',
+    goBackTo: 'DefiningAcceptance (설계가 복잡할 때) 또는 Designing 재작성',
     warning: '완벽한 설계를 만들지 말 것. 구현을 시작할 수 있을 정도면 충분. 과도한 설계는 시간 낭비.',
     tip: '간단한 다이어그램이나 텍스트로 충분. 상태 전이는 상태 머신이나 플로우차트로 표현. 각 컴포넌트의 책임을 명확히. **우선순위 원칙: 변경이 거의 없는 컴포넌트를 먼저 설계해야 함. 안정적인 인터페이스, 명확한 책임, 최소한의 예상 변경을 가진 컴포넌트를 먼저 설계하면 재설계 작업을 줄이고 견고한 아키텍처 기반을 마련할 수 있음.**',
     aiUsage: '설계 초안 생성 요청, 상태 전이 다이어그램 생성 요청, 설계 복잡도 검증 요청. "이 설계를 더 단순화할 수 있나요?" 질문으로 검증. **컴포넌트의 변경 빈도 평가 요청: "각 컴포넌트는 얼마나 자주 변경될 것으로 예상되나요? 안정적인 컴포넌트인가요, 아니면 진화하는 컴포넌트인가요?"**',
@@ -172,10 +172,10 @@ export const situationGuides: Record<string, SituationGuide> = {
         { question: '설계가 완료 기준을 다루나요?' },
         { question: '구현을 시작할 수 있을 정도인가요?' },
       ],
-      nextStep: '모두 "예"면 TaskBreakdown으로 진행 가능',
+      nextStep: '모두 "예"면 BreakingTasks로 진행 가능',
     },
   },
-  TaskBreakdown: {
+  BreakingTasks: {
     whatToDo: '설계에서 작업을 분해하여 각 작업이 독립적으로 실행 가능하고, 의존성이 식별되며, 한 세션(90분 이하)에 완료 가능하도록 작성. 예상 소요 시간: 15-30분.',
     conditionsToProceed: [
       '작업이 설계에서 분해됨',
@@ -189,7 +189,7 @@ export const situationGuides: Record<string, SituationGuide> = {
       '의존성이 식별되지 않음',
       '작업이 독립적으로 실행 불가능함',
     ],
-    goBackTo: 'DesignReady (작업이 불명확할 때) 또는 TaskBreakdown 재작성',
+    goBackTo: 'Designing (작업이 불명확할 때) 또는 BreakingTasks 재작성',
     warning: '작업은 구현 방법이 아닌 결과에 집중. "X 기능 구현"보다 "사용자가 Y를 할 수 있게 함"이 더 나음.',
     tip: '작업은 동사로 시작. "구현", "추가", "수정" 등. 각 작업은 하나의 결과만 가져야 함. 의존성 그래프를 그려보면 도움됨. **우선순위 원칙: 변경이 거의 없는 구현을 먼저 수행해야 함. 안정적인 컴포넌트, 인터페이스, 또는 핵심 기능을 구현하는 작업을 먼저 실행하면 재작업을 줄이고 견고한 기반을 마련할 수 있음.**',
     aiUsage: '설계에서 작업 분해 요청, 작업 크기 검증 요청, 의존성 식별 요청. "이 작업을 90분 안에 완료할 수 있나요?" 질문으로 검증. **작업의 변경 빈도 평가 요청: "각 작업은 얼마나 자주 변경될 것으로 예상되나요? 안정적인 구현인가요, 아니면 실험적인 기능인가요?"**',
@@ -217,16 +217,16 @@ export const situationGuides: Record<string, SituationGuide> = {
       '작업 범위를 벗어남',
       '완료 기준을 잊음',
     ],
-    goBackTo: 'TaskBreakdown (막혔을 때) 또는 Implementing 계속',
+    goBackTo: 'BreakingTasks (막혔을 때) 또는 Implementing 계속',
     warning: '완료 기준을 잊지 말 것. 구현 중에도 기준을 확인. 완벽한 코드를 만들지 말 것. 동작하는 코드가 먼저.',
-    tip: '작은 단위로 커밋. 테스트를 작성하면서 구현 (TDD). 막히면 15분 이상 고민하지 말고 TaskBreakdown으로 돌아가 작업을 더 작게 분해.',
+    tip: '작은 단위로 커밋. 테스트를 작성하면서 구현 (TDD). 막히면 15분 이상 고민하지 말고 BreakingTasks으로 돌아가 작업을 더 작게 분해.',
     aiUsage: '구현 초안 생성 요청, 막힌 부분 해결 요청, 코드 리뷰 요청. "이 작업의 완료 기준을 만족하나요?" 질문으로 검증.',
     quickCheck: {
       items: [
         { question: '특정 작업을 선택했나요?' },
         { question: '코드나 파일을 생성/수정했나요?' },
         { question: '작업이 완료되었나요?' },
-        { question: '막혔나요? → 15분 이상 고민했다면 TaskBreakdown으로 돌아가기' },
+        { question: '막혔나요? → 15분 이상 고민했다면 BreakingTasks으로 돌아가기' },
       ],
       nextStep: '작업 완료 시 Verifying으로 진행 가능',
     },
@@ -245,7 +245,7 @@ export const situationGuides: Record<string, SituationGuide> = {
       '버그를 무시함',
       '검증 방법이 잘못됨',
     ],
-    goBackTo: 'Implementing (버그 발견 시), AcceptanceDefined (검증 방법이 잘못되었을 때)',
+    goBackTo: 'Implementing (버그 발견 시), DefiningAcceptance (검증 방법이 잘못되었을 때)',
     warning: '검증은 완료 기준에 집중. 완료 기준을 만족하는지 확인. 추가 기능은 나중에.',
     tip: '자동화된 테스트가 있으면 실행. 수동 테스트도 필요. 각 완료 기준을 하나씩 확인. 버그는 즉시 기록.',
     aiUsage: '테스트 케이스 생성 요청, 검증 방법 제안 요청, 버그 분석 요청. "이 구현이 완료 기준을 만족하나요?" 질문으로 검증.',
@@ -273,7 +273,7 @@ export const situationGuides: Record<string, SituationGuide> = {
       '다음 단계 준비가 안 됨',
       '검증이 불완전함',
     ],
-    goBackTo: 'Verifying (검증 재수행), Implementing (버그 수정), AcceptanceDefined (기준 문제)',
+    goBackTo: 'Verifying (검증 재수행), Implementing (버그 수정), DefiningAcceptance (기준 문제)',
     warning: '완벽을 추구하지 말 것. 차단 버그만 없으면 됨. 작은 버그는 나중에 수정 가능.',
     tip: '릴리스 노트 작성. 변경사항 문서화. 다음 단계 준비 확인.',
     aiUsage: '검증 결과 요약 요청, 릴리스 노트 생성 요청, 다음 단계 준비 확인 요청. "다음 단계로 진행할 준비가 되었나요?" 질문으로 검증.',
@@ -284,10 +284,10 @@ export const situationGuides: Record<string, SituationGuide> = {
         { question: '차단 버그가 없나요?' },
         { question: '다음 단계 준비가 되었나요?' },
       ],
-      nextStep: '모두 "예"면 Released로 진행 가능',
+      nextStep: '모두 "예"면 Releasing로 진행 가능',
     },
   },
-  Released: {
+  Releasing: {
     whatToDo: '작업을 배포, 병합, 또는 공유하여 의도한 사용자/이해관계자가 접근 가능하게 함. 예상 소요 시간: 5-30분 (배포 방법에 따라 다름).',
     conditionsToProceed: [
       '작업이 배포/병합/공유됨',
@@ -301,7 +301,7 @@ export const situationGuides: Record<string, SituationGuide> = {
       '릴리스 아티팩트가 없음',
       '공지되지 않음',
     ],
-    goBackTo: 'Verified (문제 발견 시) 또는 Released 재시도',
+    goBackTo: 'Verified (문제 발견 시) 또는 Releasing 재시도',
     warning: '완벽한 릴리스를 기다리지 말 것. 작동하는 버전을 먼저 릴리스. 피드백을 받기 위해 빠르게 릴리스.',
     tip: '작은 변경사항도 릴리스. 피드백을 빠르게 받는 것이 중요. 릴리스 노트 작성.',
     aiUsage: '릴리스 노트 생성 요청, 배포 체크리스트 확인 요청, 릴리스 준비 확인 요청. "릴리스 준비가 되었나요?" 질문으로 검증.',
@@ -312,10 +312,10 @@ export const situationGuides: Record<string, SituationGuide> = {
         { question: '릴리스 아티팩트가 있나요? (배포, PR, 패키지 등)' },
         { question: '릴리스가 공지되었나요?' },
       ],
-      nextStep: '모두 "예"면 FeedbackCollected로 진행 가능',
+      nextStep: '모두 "예"면 CollectingFeedback로 진행 가능',
     },
   },
-  FeedbackCollected: {
+  CollectingFeedback: {
     whatToDo: '릴리스된 작업에 대한 피드백을 적극적으로 수집하거나 받고, 문서화. 예상 소요 시간: 1-7일 (피드백 수집 기간).',
     conditionsToProceed: [
       '피드백이 적극적으로 수집되거나 받아짐',
@@ -329,7 +329,7 @@ export const situationGuides: Record<string, SituationGuide> = {
       '피드백이 작업과 무관함',
       '수집 프로세스가 완료되지 않음',
     ],
-    goBackTo: 'Released (피드백 수집 재시도) 또는 FeedbackCollected 계속',
+    goBackTo: 'Releasing (피드백 수집 재시도) 또는 CollectingFeedback 계속',
     warning: '피드백을 기다리지 말 것. 적극적으로 요청. 부정적 피드백도 가치 있음.',
     tip: '피드백 요청 질문 준비. 사용자 관찰. 정량적 데이터 수집. 피드백을 즉시 기록.',
     aiUsage: '피드백 요청 질문 생성 요청, 피드백 분석 요청, 피드백 요약 요청. "수집한 피드백을 요약해줘" 요청으로 검증.',
@@ -340,10 +340,10 @@ export const situationGuides: Record<string, SituationGuide> = {
         { question: '피드백이 릴리스된 작업과 관련이 있나요?' },
         { question: '수집 프로세스가 완료되었나요?' },
       ],
-      nextStep: '모두 "예"면 Learned로 진행 가능',
+      nextStep: '모두 "예"면 Learning로 진행 가능',
     },
   },
-  Learned: {
+  Learning: {
     whatToDo: '피드백을 분석하고, 통찰이나 교훈을 추출하고, 학습 결과를 문서화하고, 학습 기반 다음 행동을 식별. 예상 소요 시간: 30-60분.',
     conditionsToProceed: [
       '피드백이 분석됨',
@@ -357,7 +357,7 @@ export const situationGuides: Record<string, SituationGuide> = {
       '학습 결과가 문서화되지 않음',
       '다음 행동이 식별되지 않음',
     ],
-    goBackTo: 'FeedbackCollected (피드백 재분석), ProblemSelected (새 문제), AcceptanceDefined (같은 문제 심화), IntentDefined (Intent 조정)',
+    goBackTo: 'CollectingFeedback (피드백 재분석), SelectingProblem (새 문제), DefiningAcceptance (같은 문제 심화), DefiningIntent (Intent 조정)',
     warning: '학습을 건너뛰지 말 것. 피드백에서 배우는 것이 중요. 다음 행동을 명확히 해야 함.',
     tip: '"무엇이 잘 되었나?", "무엇을 개선할 수 있나?", "다음에 무엇을 할까?" 질문에 답. 학습 결과를 팀과 공유. 바로 구현할 수 있는 명확한 작업이 떠오르면 Implementing으로 바로 진행 가능.',
     aiUsage: '피드백 분석 요청, 통찰 추출 요청, 다음 행동 제안 요청. "이 피드백에서 무엇을 배웠나요?" 질문으로 검증.',
@@ -369,7 +369,7 @@ export const situationGuides: Record<string, SituationGuide> = {
         { question: '다음 행동이 식별되었나요?' },
         { question: '바로 구현할 수 있는 명확한 작업이 떠오르나요?' },
       ],
-      nextStep: '모두 "예"면 다음 행동에 따라 ProblemSelected/AcceptanceDefined/IntentDefined/Implementing으로 진행 (명확한 구현 작업이 있으면 Implementing으로 바로 진행)',
+      nextStep: '모두 "예"면 다음 행동에 따라 SelectingProblem/DefiningAcceptance/DefiningIntent/Implementing으로 진행 (명확한 구현 작업이 있으면 Implementing으로 바로 진행)',
     },
   },
   Undetermined: {

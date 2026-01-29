@@ -89,6 +89,9 @@ export async function buildPromptContext(situation: string): Promise<PromptConte
       context.improvements = relatedContext.improvements.join('\n\n');
     }
     
+    // Handle list answers for prompt context (especially for learned-feedback-issues-list)
+    // This is handled in the main loop below, but we ensure list format is properly converted
+    
     // Add formatted related context
     context.relatedContext = formatRelatedContextForPrompt(relatedContext);
     
@@ -103,16 +106,16 @@ export async function buildPromptContext(situation: string): Promise<PromptConte
     
     // Fallback: Get all answers from current and related situations
     const situations = [
-      'IntentDefined',
-      'ProblemSelected', 
-      'AcceptanceDefined',
-      'DesignReady',
+      'DefiningIntent',
+      'SelectingProblem', 
+      'DefiningAcceptance',
+      'Designing',
       'Implementing',
       'Verifying',
       'Verified',
-      'Released',
-      'FeedbackCollected',
-      'Learned',
+      'Releasing',
+      'CollectingFeedback',
+      'Learning',
       situation
     ];
     

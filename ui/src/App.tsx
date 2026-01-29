@@ -36,7 +36,7 @@ const App: React.FC = () => {
   const [showSettings, setShowSettings] = useState<boolean>(false);
   const [showStateManager, setShowStateManager] = useState<boolean>(false);
   const [showDataViewer, setShowDataViewer] = useState<boolean>(false);
-  const [currentSituation, setCurrentSituation] = useState<Situation>('IntentDefinedFail');
+  const [currentSituation, setCurrentSituation] = useState<Situation>('FailingIntent');
   const sidebarRef = useRef<HTMLDivElement>(null);
 
   const handleNodeClick = useCallback((situation: Situation) => {

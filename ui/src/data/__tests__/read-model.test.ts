@@ -37,18 +37,19 @@ class WorkflowReadModel implements ReadModel {
     
     // Get all situations in order
     const situations = [
-      'IntentDefined',
-      'ProblemSelected',
-      'AcceptanceDefined',
-      'FeasibilityChecked',
-      'DesignReady',
-      'TaskBreakdown',
+      'DefiningIntent',
+      'FailingIntent',
+      'SelectingProblem',
+      'DefiningAcceptance',
+      'CheckingFeasibility',
+      'Designing',
+      'BreakingTasks',
       'Implementing',
       'Verifying',
       'Verified',
-      'Released',
-      'FeedbackCollected',
-      'Learned'
+      'Releasing',
+      'CollectingFeedback',
+      'Learning'
     ];
     
     // Find the latest situation with data
@@ -68,18 +69,19 @@ class WorkflowReadModel implements ReadModel {
     questionId: string;
   }>> {
     const situations = [
-      'IntentDefined',
-      'ProblemSelected',
-      'AcceptanceDefined',
-      'FeasibilityChecked',
-      'DesignReady',
-      'TaskBreakdown',
+      'DefiningIntent',
+      'FailingIntent',
+      'SelectingProblem',
+      'DefiningAcceptance',
+      'CheckingFeasibility',
+      'Designing',
+      'BreakingTasks',
       'Implementing',
       'Verifying',
       'Verified',
-      'Released',
-      'FeedbackCollected',
-      'Learned'
+      'Releasing',
+      'CollectingFeedback',
+      'Learning'
     ];
     
     const history = [];
@@ -117,8 +119,8 @@ describe('T4: ReadModel current_state Query', () => {
     readModel = new WorkflowReadModel();
     
     // Insert test workflow states
-    await saveAnswer('intent-q1', 'intent answer', 'IntentDefined');
-    await saveAnswer('problem-q1', 'problem answer', 'ProblemSelected');
+    await saveAnswer('intent-q1', 'intent answer', 'DefiningIntent');
+    await saveAnswer('problem-q1', 'problem answer', 'SelectingProblem');
   });
 
   it('should return current_state as explicit value', async () => {
@@ -127,7 +129,7 @@ describe('T4: ReadModel current_state Query', () => {
     // Verification (AC-1): Can compare DB original value 1:1 with ReadModel result
     expect(currentState).toBeDefined();
     expect(typeof currentState).toBe('string');
-    expect(['IntentDefined', 'ProblemSelected']).toContain(currentState);
+    expect(['DefiningIntent', 'SelectingProblem']).toContain(currentState);
   });
 
   it('should match DB original current_state value', async () => {
@@ -154,11 +156,11 @@ describe('T5: ReadModel state_history Query', () => {
     readModel = new WorkflowReadModel();
     
     // Insert multiple states
-    await saveAnswer('q1', 'a1', 'IntentDefined');
+    await saveAnswer('q1', 'a1', 'DefiningIntent');
     await new Promise(resolve => setTimeout(resolve, 10));
-    await saveAnswer('q2', 'a2', 'ProblemSelected');
+    await saveAnswer('q2', 'a2', 'SelectingProblem');
     await new Promise(resolve => setTimeout(resolve, 10));
-    await saveAnswer('q3', 'a3', 'AcceptanceDefined');
+    await saveAnswer('q3', 'a3', 'DefiningAcceptance');
   });
 
   it('should return state_history with values and timestamps', async () => {

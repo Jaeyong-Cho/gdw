@@ -60,7 +60,7 @@ function getLayoutConfig(layoutType: LayoutType): LayoutOptions {
         ...baseConfig,
         name: 'breadthfirst',
         directed: true,
-        roots: ['IntentDefined'],
+        roots: ['DefiningIntent'],
         spacingFactor: 2.0, // Increased from 1.5
         padding: 50, // Add padding around graph
       };
@@ -97,9 +97,9 @@ function getLayoutConfig(layoutType: LayoutType): LayoutOptions {
         padding: 50,
         concentric: (node: any) => {
           const id = node.data('id');
-          const order = ['IntentDefined', 'ProblemSelected', 'AcceptanceDefined', 'FeasibilityChecked', 
-                        'DesignReady', 'TaskBreakdown', 'Implementing', 'Verifying', 'Verified', 
-                        'Released', 'FeedbackCollected', 'Learned'].indexOf(id);
+          const order = ['DefiningIntent', 'SelectingProblem', 'DefiningAcceptance', 'CheckingFeasibility', 
+                        'Designing', 'BreakingTasks', 'Implementing', 'Verifying', 'Verified', 
+                        'Releasing', 'CollectingFeedback', 'Learning'].indexOf(id);
           return order >= 0 ? order : 99;
         },
         levelWidth: () => 250, // Increased from 200

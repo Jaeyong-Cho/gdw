@@ -59,18 +59,18 @@ class SimpleDataViewer implements DataViewer {
     const { getAnswersBySituation } = await import('../db');
     
     const situations = [
-      'Learned',
-      'FeedbackCollected',
-      'Released',
+      'Learning',
+      'CollectingFeedback',
+      'Releasing',
       'Verified',
       'Verifying',
       'Implementing',
-      'TaskBreakdown',
-      'DesignReady',
-      'FeasibilityChecked',
-      'AcceptanceDefined',
-      'ProblemSelected',
-      'IntentDefined'
+      'BreakingTasks',
+      'Designing',
+      'CheckingFeasibility',
+      'DefiningAcceptance',
+      'SelectingProblem',
+      'DefiningIntent'
     ];
     
     for (const situation of situations) {
@@ -134,9 +134,9 @@ describe('T6: DataViewer Basic Query Interface', () => {
     dataViewer = new SimpleDataViewer();
     
     // Insert test workflow data
-    await saveAnswer('q1', 'a1', 'IntentDefined');
+    await saveAnswer('q1', 'a1', 'DefiningIntent');
     await new Promise(resolve => setTimeout(resolve, 10));
-    await saveAnswer('q2', 'a2', 'ProblemSelected');
+    await saveAnswer('q2', 'a2', 'SelectingProblem');
   });
 
   it('should list workflows without SQL', async () => {

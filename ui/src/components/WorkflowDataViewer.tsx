@@ -88,19 +88,19 @@ export const WorkflowDataViewer: React.FC<WorkflowDataViewerProps> = ({ onClose 
    */
   const getSituationColor = (situation: Situation): string => {
     const colors: Record<string, string> = {
-      'IntentDefined': '#10b981',
-      'IntentDefinedFail': '#ef4444',
-      'ProblemSelected': '#3b82f6',
-      'AcceptanceDefined': '#8b5cf6',
-      'FeasibilityChecked': '#f59e0b',
-      'DesignReady': '#06b6d4',
-      'TaskBreakdown': '#ec4899',
+      'DefiningIntent': '#10b981',
+      'FailingIntent': '#ef4444',
+      'SelectingProblem': '#3b82f6',
+      'DefiningAcceptance': '#8b5cf6',
+      'CheckingFeasibility': '#f59e0b',
+      'Designing': '#06b6d4',
+      'BreakingTasks': '#ec4899',
       'Implementing': '#6366f1',
       'Verifying': '#f97316',
       'Verified': '#14b8a6',
-      'Released': '#84cc16',
-      'FeedbackCollected': '#a855f7',
-      'Learned': '#22c55e'
+      'Releasing': '#84cc16',
+      'CollectingFeedback': '#a855f7',
+      'Learning': '#22c55e'
     };
     return colors[situation] || '#6b7280';
   };

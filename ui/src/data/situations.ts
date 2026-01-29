@@ -9,8 +9,8 @@ import { Situation, SituationDefinition, NodePosition } from '../types';
  * @return Map of situation names to their definitions
  */
 export const situationDefinitions: Record<Situation, SituationDefinition> = {
-  IntentDefined: {
-    name: 'IntentDefined',
+  DefiningIntent: {
+    name: 'DefiningIntent',
     description: 'The development intent has been clearly defined',
     required_facts: [
       { description: 'A written document or note exists describing the development intent' },
@@ -19,8 +19,8 @@ export const situationDefinitions: Record<Situation, SituationDefinition> = {
       { description: 'The scope of the intent is bounded (not infinite)' },
     ],
   },
-  IntentDefinedFail: {
-    name: 'IntentDefinedFail',
+  FailingIntent: {
+    name: 'FailingIntent',
     description: 'The intent is unclear and needs clarification',
     required_facts: [
       { description: 'An attempt was made to define intent' },
@@ -29,8 +29,8 @@ export const situationDefinitions: Record<Situation, SituationDefinition> = {
       { description: 'The intent cannot be expressed in a single, clear statement' },
     ],
   },
-  ProblemSelected: {
-    name: 'ProblemSelected',
+  SelectingProblem: {
+    name: 'SelectingProblem',
     description: 'A specific problem has been selected to work on',
     required_facts: [
       { description: 'A specific problem statement exists in written form' },
@@ -39,8 +39,8 @@ export const situationDefinitions: Record<Situation, SituationDefinition> = {
       { description: 'The problem is actionable (not just a wish or abstract goal)' },
     ],
   },
-  AcceptanceDefined: {
-    name: 'AcceptanceDefined',
+  DefiningAcceptance: {
+    name: 'DefiningAcceptance',
     description: 'Acceptance criteria have been defined for the problem',
     required_facts: [
       { description: 'Acceptance criteria exist in written form' },
@@ -49,8 +49,8 @@ export const situationDefinitions: Record<Situation, SituationDefinition> = {
       { description: 'The criteria define "done" for the problem' },
     ],
   },
-  FeasibilityChecked: {
-    name: 'FeasibilityChecked',
+  CheckingFeasibility: {
+    name: 'CheckingFeasibility',
     description: 'Feasibility of the solution has been checked',
     required_facts: [
       { description: 'A feasibility assessment has been performed' },
@@ -59,8 +59,8 @@ export const situationDefinitions: Record<Situation, SituationDefinition> = {
       { description: 'A decision has been made: feasible, too hard, or problem too big' },
     ],
   },
-  DesignReady: {
-    name: 'DesignReady',
+  Designing: {
+    name: 'Designing',
     description: 'Design with state transitions has been completed',
     required_facts: [
       { description: 'A design document or diagram exists' },
@@ -69,8 +69,8 @@ export const situationDefinitions: Record<Situation, SituationDefinition> = {
       { description: 'The design addresses the acceptance criteria' },
     ],
   },
-  TaskBreakdown: {
-    name: 'TaskBreakdown',
+  BreakingTasks: {
+    name: 'BreakingTasks',
     description: 'Tasks have been broken down into executable units',
     required_facts: [
       { description: 'Tasks have been decomposed from the design' },
@@ -109,8 +109,8 @@ export const situationDefinitions: Record<Situation, SituationDefinition> = {
       { description: 'The implementation is ready for the next step (release or integration)' },
     ],
   },
-  Released: {
-    name: 'Released',
+  Releasing: {
+    name: 'Releasing',
     description: 'The work has been released/delivered',
     required_facts: [
       { description: 'The work has been delivered (deployed, merged, or shared)' },
@@ -119,8 +119,8 @@ export const situationDefinitions: Record<Situation, SituationDefinition> = {
       { description: 'Release has been announced or made visible' },
     ],
   },
-  FeedbackCollected: {
-    name: 'FeedbackCollected',
+  CollectingFeedback: {
+    name: 'CollectingFeedback',
     description: 'Feedback has been collected after release',
     required_facts: [
       { description: 'Feedback has been actively sought or received' },
@@ -129,8 +129,8 @@ export const situationDefinitions: Record<Situation, SituationDefinition> = {
       { description: 'Feedback collection process is complete' },
     ],
   },
-  Learned: {
-    name: 'Learned',
+  Learning: {
+    name: 'Learning',
     description: 'Learning from feedback has been completed',
     required_facts: [
       { description: 'Feedback has been analyzed' },
@@ -153,23 +153,23 @@ export const situationDefinitions: Record<Situation, SituationDefinition> = {
  */
 export const nodePositions: Record<Situation, NodePosition> = {
   // Column 0: Start (x=200)
-  IntentDefined: { x: 200, y: 300 },
-  IntentDefinedFail: { x: 200, y: 150 },
+  DefiningIntent: { x: 200, y: 300 },
+  FailingIntent: { x: 200, y: 150 },
   
   // Column 1: Problem (x=600)
-  ProblemSelected: { x: 600, y: 300 },
+  SelectingProblem: { x: 600, y: 300 },
   
   // Column 2: Acceptance (x=1000)
-  AcceptanceDefined: { x: 1000, y: 300 },
+  DefiningAcceptance: { x: 1000, y: 300 },
   
   // Column 3: Feasibility (x=1400)
-  FeasibilityChecked: { x: 1400, y: 300 },
+  CheckingFeasibility: { x: 1400, y: 300 },
   
   // Column 4: Design (x=1800)
-  DesignReady: { x: 1800, y: 300 },
+  Designing: { x: 1800, y: 300 },
   
   // Column 5: Task Breakdown (x=2200)
-  TaskBreakdown: { x: 2200, y: 300 },
+  BreakingTasks: { x: 2200, y: 300 },
   
   // Column 6: Implementation (x=2600)
   Implementing: { x: 2600, y: 300 },
@@ -181,9 +181,9 @@ export const nodePositions: Record<Situation, NodePosition> = {
   Verified: { x: 3400, y: 300 },
   
   // Column 9: Release and Feedback (x=3800)
-  Released: { x: 3800, y: 200 },
-  FeedbackCollected: { x: 3800, y: 300 },
-  Learned: { x: 3800, y: 400 },
+  Releasing: { x: 3800, y: 200 },
+  CollectingFeedback: { x: 3800, y: 300 },
+  Learning: { x: 3800, y: 400 },
 };
 
 /**
@@ -191,33 +191,33 @@ export const nodePositions: Record<Situation, NodePosition> = {
  * @return Array of transitions: [from, to, label]
  */
 export const stateTransitions: Array<[Situation, Situation, string]> = [
-  ['IntentDefined', 'ProblemSelected', 'intent clear'],
-  ['IntentDefined', 'IntentDefinedFail', 'intent unclear'],
-  ['IntentDefinedFail', 'IntentDefined', ''],
-  ['ProblemSelected', 'AcceptanceDefined', 'problem focused'],
-  ['ProblemSelected', 'IntentDefined', 'problem drifting'],
-  ['AcceptanceDefined', 'FeasibilityChecked', 'criteria measurable'],
-  ['AcceptanceDefined', 'ProblemSelected', 'criteria vague'],
-  ['FeasibilityChecked', 'DesignReady', 'feasible'],
-  ['FeasibilityChecked', 'AcceptanceDefined', 'too hard'],
-  ['FeasibilityChecked', 'ProblemSelected', 'problem too big'],
-  ['DesignReady', 'TaskBreakdown', 'state transitions defined'],
-  ['DesignReady', 'AcceptanceDefined', 'design complex'],
-  ['TaskBreakdown', 'Implementing', 'tasks executable'],
-  ['TaskBreakdown', 'DesignReady', 'tasks unclear'],
+  ['DefiningIntent', 'SelectingProblem', 'intent clear'],
+  ['DefiningIntent', 'FailingIntent', 'intent unclear'],
+  ['FailingIntent', 'DefiningIntent', ''],
+  ['SelectingProblem', 'DefiningAcceptance', 'problem focused'],
+  ['SelectingProblem', 'DefiningIntent', 'problem drifting'],
+  ['DefiningAcceptance', 'CheckingFeasibility', 'criteria measurable'],
+  ['DefiningAcceptance', 'SelectingProblem', 'criteria vague'],
+  ['CheckingFeasibility', 'Designing', 'feasible'],
+  ['CheckingFeasibility', 'DefiningAcceptance', 'too hard'],
+  ['CheckingFeasibility', 'SelectingProblem', 'problem too big'],
+  ['Designing', 'BreakingTasks', 'state transitions defined'],
+  ['Designing', 'DefiningAcceptance', 'design complex'],
+  ['BreakingTasks', 'Implementing', 'tasks executable'],
+  ['BreakingTasks', 'Designing', 'tasks unclear'],
   ['Implementing', 'Verifying', 'task completed'],
-  ['Implementing', 'TaskBreakdown', 'stuck: need breakdown'],
-  ['Implementing', 'ProblemSelected', 'stuck: new problem found'],
+  ['Implementing', 'BreakingTasks', 'stuck: need breakdown'],
+  ['Implementing', 'SelectingProblem', 'stuck: new problem found'],
   ['Verifying', 'Verified', 'acceptance met'],
   ['Verifying', 'Implementing', 'bug'],
-  ['Verifying', 'AcceptanceDefined', 'test invalid'],
-  ['Verified', 'Released', 'ready for release'],
-  ['Verified', 'AcceptanceDefined', 'criteria issue'],
-  ['Released', 'FeedbackCollected', 'delivered'],
-  ['Released', 'Verified', 'issues found'],
-  ['FeedbackCollected', 'Learned', 'feedback collected'],
-  ['Learned', 'ProblemSelected', 'same intent, new problem'],
-  ['Learned', 'AcceptanceDefined', 'deepen same problem'],
-  ['Learned', 'IntentDefined', 'adjust intent'],
-  ['Learned', 'Implementing', 'clear implementation task'],
+  ['Verifying', 'DefiningAcceptance', 'test invalid'],
+  ['Verified', 'Releasing', 'ready for release'],
+  ['Verified', 'DefiningAcceptance', 'criteria issue'],
+  ['Releasing', 'CollectingFeedback', 'delivered'],
+  ['Releasing', 'Verified', 'issues found'],
+  ['CollectingFeedback', 'Learning', 'feedback collected'],
+  ['Learning', 'SelectingProblem', 'same intent, new problem'],
+  ['Learning', 'DefiningAcceptance', 'deepen same problem'],
+  ['Learning', 'DefiningIntent', 'adjust intent'],
+  ['Learning', 'Implementing', 'clear implementation task'],
 ];

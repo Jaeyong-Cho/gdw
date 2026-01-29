@@ -72,18 +72,18 @@ class WorkflowTestVerifier implements TestVerifier {
 
   private async getCurrentState(): Promise<string | null> {
     const situations = [
-      'Learned',
-      'FeedbackCollected',
-      'Released',
+      'Learning',
+      'CollectingFeedback',
+      'Releasing',
       'Verified',
       'Verifying',
       'Implementing',
-      'TaskBreakdown',
-      'DesignReady',
-      'FeasibilityChecked',
-      'AcceptanceDefined',
-      'ProblemSelected',
-      'IntentDefined'
+      'BreakingTasks',
+      'Designing',
+      'CheckingFeasibility',
+      'DefiningAcceptance',
+      'SelectingProblem',
+      'DefiningIntent'
     ];
 
     for (const situation of situations) {
@@ -113,7 +113,7 @@ describe('T7: TestVerifier Expected State Definition', () => {
 
   it('should define expected state with explicit criteria', () => {
     const expectedState: ExpectedState = {
-      situation: 'IntentDefined',
+      situation: 'DefiningIntent',
       questionId: 'intent-summary-text',
       answerExists: true
     };
@@ -122,16 +122,16 @@ describe('T7: TestVerifier Expected State Definition', () => {
     
     // Verification: Can specify expected_state for 1 test case
     expect(expectedState).toHaveProperty('situation');
-    expect(expectedState.situation).toBe('IntentDefined');
+    expect(expectedState.situation).toBe('DefiningIntent');
   });
 
   it('should support multiple expected state formats', () => {
     const minimalState: ExpectedState = {
-      situation: 'ProblemSelected'
+      situation: 'SelectingProblem'
     };
 
     const detailedState: ExpectedState = {
-      situation: 'AcceptanceDefined',
+      situation: 'DefiningAcceptance',
       questionId: 'criteria-text',
       answerExists: true
     };
@@ -160,7 +160,7 @@ describe('T8: TestVerifier State Comparison', () => {
 
   it('should pass when expected state matches actual state', async () => {
     // Setup: Insert data for IntentDefined
-    await saveAnswer('intent-q1', 'intent answer', 'IntentDefined');
+    await saveAnswer('intent-q1', 'intent answer', 'DefiningIntent');
 
     // Define expected state
     verifier.defineExpectedState({
@@ -171,8 +171,8 @@ describe('T8: TestVerifier State Comparison', () => {
     const result = await verifier.verifyState();
 
     expect(result.passed).toBe(true);
-    expect(result.actual).toBe('IntentDefined');
-    expect(result.expected.situation).toBe('IntentDefined');
+    expect(result.actual).toBe('DefiningIntent');
+    expect(result.expected.situation).toBe('DefiningIntent');
   });
 
   it('should detect mismatch when states differ', async () => {
@@ -190,17 +190,17 @@ describe('T8: TestVerifier State Comparison', () => {
 
     // Verification (AC-4): Detects failure when expected vs DB state mismatch
     expect(result.passed).toBe(false);
-    expect(result.expected.situation).toBe('IntentDefined');
-    expect(result.actual).toBe('ProblemSelected');
+    expect(result.expected.situation).toBe('DefiningIntent');
+    expect(result.actual).toBe('SelectingProblem');
     expect(result.message).toContain('mismatch');
   });
 
   it('should provide detailed failure information', async () => {
     await initDatabase();
-    await saveAnswer('acc-q1', 'acceptance answer', 'AcceptanceDefined');
+    await saveAnswer('acc-q1', 'acceptance answer', 'DefiningAcceptance');
 
     verifier.defineExpectedState({
-      situation: 'DesignReady'
+      situation: 'Designing'
     });
 
     const result = await verifier.verifyState();
@@ -211,7 +211,7 @@ describe('T8: TestVerifier State Comparison', () => {
     expect(result).toHaveProperty('message');
     
     expect(result.passed).toBe(false);
-    expect(result.message).toContain('expected DesignReady');
-    expect(result.message).toContain('got AcceptanceDefined');
+    expect(result.message).toContain('expected Designing');
+    expect(result.message).toContain('got DefiningAcceptance');
   });
 });

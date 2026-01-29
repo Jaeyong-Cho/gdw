@@ -1,6 +1,6 @@
 {
-  "IntentDefined": {
-    "situation": "IntentDefined",
+  "DefiningIntent": {
+    "situation": "DefiningIntent",
     "startQuestionId": "intent-summary-text",
     "questions": [
       {
@@ -38,20 +38,20 @@
         "type": "yesno",
         "required": true,
         "onYesNextQuestionId": "intent-no-tech",
-        "onNoNextSituation": "IntentDefinedFail"
+        "onNoNextSituation": "FailingIntent"
       },
       {
         "id": "intent-no-tech",
         "question": "기능이나 기술을 언급하지 않았나요?",
         "type": "yesno",
         "required": true,
-        "onYesNextSituation": "ProblemSelected",
-        "onNoNextSituation": "IntentDefinedFail"
+        "onYesNextSituation": "SelectingProblem",
+        "onNoNextSituation": "FailingIntent"
       }
     ]
   },
-  "IntentDefinedFail": {
-    "situation": "IntentDefinedFail",
+  "FailingIntent": {
+    "situation": "FailingIntent",
     "startQuestionId": "intent-unclear-what",
     "questions": [
       {
@@ -81,13 +81,13 @@
         "question": "Intent를 다시 작성할 준비가 되었나요?",
         "type": "yesno",
         "required": true,
-        "onYesNextSituation": "IntentDefined",
+        "onYesNextSituation": "DefiningIntent",
         "onNoNextQuestionId": "intent-ready-rewrite"
       }
     ]
   },
-  "ProblemSelected": {
-    "situation": "ProblemSelected",
+  "SelectingProblem": {
+    "situation": "SelectingProblem",
     "startQuestionId": "problem-boundaries-text",
     "questions": [
       {
@@ -111,7 +111,7 @@
         "type": "yesno",
         "required": true,
         "onYesNextQuestionId": "problem-measurable",
-        "onNoNextSituation": "IntentDefined",
+        "onNoNextSituation": "DefiningIntent",
         "showData": {
           "type": "intent-summary",
           "label": "기존 Intent 요약",
@@ -123,13 +123,13 @@
         "question": "문제를 해결했는지 알 수 있나요? (측정 가능한가요?)",
         "type": "yesno",
         "required": true,
-        "onYesNextSituation": "AcceptanceDefined",
+        "onYesNextSituation": "DefiningAcceptance",
         "onNoNextQuestionId": "problem-measurable"
       }
     ]
   },
-  "AcceptanceDefined": {
-    "situation": "AcceptanceDefined",
+  "DefiningAcceptance": {
+    "situation": "DefiningAcceptance",
     "startQuestionId": "criteria-text",
     "questions": [
       {
@@ -148,7 +148,7 @@
         "type": "yesno",
         "required": true,
         "onYesNextQuestionId": "criteria-linked",
-        "onNoNextSituation": "ProblemSelected"
+        "onNoNextSituation": "SelectingProblem"
       },
       {
         "id": "criteria-linked",
@@ -156,7 +156,7 @@
         "type": "yesno",
         "required": true,
         "onYesNextQuestionId": "criteria-define-done",
-        "onNoNextSituation": "ProblemSelected"
+        "onNoNextSituation": "SelectingProblem"
       },
       {
         "id": "criteria-define-done",
@@ -164,20 +164,20 @@
         "type": "yesno",
         "required": true,
         "onYesNextQuestionId": "criteria-count",
-        "onNoNextSituation": "ProblemSelected"
+        "onNoNextSituation": "SelectingProblem"
       },
       {
         "id": "criteria-count",
         "question": "기준이 3-7개 정도인가요?",
         "type": "yesno",
         "required": true,
-        "onYesNextSituation": "FeasibilityChecked",
+        "onYesNextSituation": "CheckingFeasibility",
         "onNoNextQuestionId": "criteria-count"
       }
     ]
   },
-  "FeasibilityChecked": {
-    "situation": "FeasibilityChecked",
+  "CheckingFeasibility": {
+    "situation": "CheckingFeasibility",
     "startQuestionId": "constraints-text",
     "questions": [
       {
@@ -209,8 +209,8 @@
       }
     ]
   },
-  "DesignReady": {
-    "situation": "DesignReady",
+  "Designing": {
+    "situation": "Designing",
     "startQuestionId": "design-text",
     "questions": [
       {
@@ -229,20 +229,20 @@
         "type": "yesno",
         "required": true,
         "onYesNextQuestionId": "design-ready-to-implement",
-        "onNoNextSituation": "AcceptanceDefined"
+        "onNoNextSituation": "DefiningAcceptance"
       },
       {
         "id": "design-ready-to-implement",
         "question": "구현을 시작할 수 있을 정도인가요?",
         "type": "yesno",
         "required": true,
-        "onYesNextSituation": "TaskBreakdown",
-        "onNoNextSituation": "AcceptanceDefined"
+        "onYesNextSituation": "BreakingTasks",
+        "onNoNextSituation": "DefiningAcceptance"
       }
     ]
   },
-  "TaskBreakdown": {
-    "situation": "TaskBreakdown",
+  "BreakingTasks": {
+    "situation": "BreakingTasks",
     "startQuestionId": "tasks-text",
     "questions": [
       {
@@ -261,7 +261,7 @@
         "type": "yesno",
         "required": true,
         "onYesNextQuestionId": "tasks-session-sized",
-        "onNoNextSituation": "DesignReady"
+        "onNoNextSituation": "Designing"
       },
       {
         "id": "tasks-session-sized",
@@ -363,13 +363,13 @@
         "question": "다음 단계(릴리스) 준비가 되었나요?",
         "type": "yesno",
         "required": true,
-        "onYesNextSituation": "Released",
+        "onYesNextSituation": "Releasing",
         "onNoNextQuestionId": "ready-for-release"
       }
     ]
   },
-  "Released": {
-    "situation": "Released",
+  "Releasing": {
+    "situation": "Releasing",
     "startQuestionId": "release-note-text",
     "questions": [
       {
@@ -387,13 +387,13 @@
         "question": "릴리스가 공지되었나요?",
         "type": "yesno",
         "required": true,
-        "onYesNextSituation": "FeedbackCollected",
+        "onYesNextSituation": "CollectingFeedback",
         "onNoNextQuestionId": "release-announced"
       }
     ]
   },
-  "FeedbackCollected": {
-    "situation": "FeedbackCollected",
+  "CollectingFeedback": {
+    "situation": "CollectingFeedback",
     "startQuestionId": "feedback-documented-text",
     "questions": [
       {
@@ -401,15 +401,15 @@
         "question": "피드백을 작성해주세요",
         "type": "text",
         "required": true,
-        "nextSituation": "Learned",
+        "nextSituation": "Learning",
         "aiPromptTemplate": {
           "template": "# 피드백 수집 및 문서화 도움\n\n## [INPUT – Human]\n\n1. Feedback and observations:\n- Intent: {{intent}}\n- Released solution: {{problem}}\n- Release note: {{release-note-text}}\n\n## [AI PROMPT]\n\nYou are extracting learning.\n\nTasks:\n1. Compare expectation versus reality.\n2. Identify incorrect assumptions.\n3. Propose updates to:\n   - intent\n   - problem\n   - acceptance\n4. Extract reusable lessons.\n\n## [OUTPUT FORMAT]\n\n- 답변을 markdown code block 또는 d2 code block으로 복사 가능하게 출력할 것\n\n## [EXIT CONDITION]\n\n- Learning captured\n- Next cycle defined"
         }
       }
     ]
   },
-  "Learned": {
-    "situation": "Learned",
+  "Learning": {
+    "situation": "Learning",
     "startQuestionId": "learned-new-facts",
     "questions": [
       {
@@ -443,10 +443,28 @@
         "question": "어떤 점을 개선할 수 있나요?",
         "type": "text",
         "required": true,
-        "nextQuestionId": "learned-clear-implementation",
+        "nextQuestionId": "learned-feedback-issues-list",
         "aiPromptTemplate": {
           "template": "# 개선점 도출 도움\n\n## [INPUT – Human]\n\n1. Learning and feedback:\n- New facts: {{learned-new-facts-text}}\n- Feedback: {{feedback-documented-text}}\n- Intent: {{intent}}\n- Problem: {{problem}}\n\n## [AI PROMPT]\n\nYou are identifying improvement opportunities.\n\nTasks:\n1. Analyze gaps between intent and reality.\n2. Identify improvement opportunities.\n3. Propose updates to:\n   - intent\n   - problem\n   - acceptance criteria\n4. Prioritize improvements by impact.\n\n## [OUTPUT FORMAT]\n\n- 답변을 markdown code block 또는 d2 code block으로 복사 가능하게 출력할 것\n\n## [EXIT CONDITION]\n\n- Improvement opportunities identified\n- Next cycle defined"
         }
+      },
+      {
+        "id": "learned-feedback-issues-list",
+        "question": "피드백과 이슈 목록을 작성해주세요 (각 항목을 개별적으로 입력)",
+        "type": "list",
+        "required": false,
+        "nextQuestionId": "learned-next-improvement-recommendation",
+        "aiPromptTemplate": {
+          "template": "# 다음 개선 항목 추천\n\n## [INPUT – Human]\n\n1. Feedback and Issues List:\n{{learned-feedback-issues-list}}\n\n2. Improvement Opportunities:\n{{learned-improvements-text}}\n\n3. Context:\n- Intent: {{intent}}\n- Problem: {{problem}}\n- New Facts: {{learned-new-facts-text}}\n- Feedback: {{feedback-documented-text}}\n\n## [AI PROMPT]\n\nYou are a product strategist analyzing feedback and issues to recommend the next improvement item.\n\nScoring Framework:\n\n**Essential Features (High Priority):**\n- Core functionality that must work for the product to be usable\n- Blocking issues that prevent users from achieving their goals\n- Critical bugs or missing fundamental features\n- Security or data integrity concerns\n- Compliance or legal requirements\n- Score: 8-10 points\n\n**Modifiable Features (Medium Priority):**\n- Enhancements that improve user experience but aren't critical\n- Nice-to-have features that add value\n- Performance optimizations\n- UI/UX improvements\n- Non-blocking bugs or edge cases\n- Score: 4-7 points\n\n**Optional Features (Low Priority):**\n- Cosmetic changes\n- Future enhancements\n- Experimental features\n- Score: 1-3 points\n\nTasks:\n1. Analyze each item in the Feedback and Issues List.\n2. For each item, classify it as:\n   - Essential Feature (must-have, core functionality)\n   - Modifiable Feature (nice-to-have, can be changed)\n   - Optional Feature (cosmetic, future enhancement)\n3. Score each item (1-10 scale) based on:\n   - Impact on user goals\n   - Urgency (blocking vs. enhancement)\n   - Effort vs. value ratio\n   - Alignment with intent\n4. Rank all items by priority score.\n5. Recommend the TOP 1 item to improve next with:\n   - Item description\n   - Classification (Essential/Modifiable/Optional)\n   - Score and reasoning\n   - Why this should be prioritized\n   - Suggested next steps\n\nOutput Format:\n- For each item: [Item] | [Classification] | [Score] | [Reasoning]\n- Top Recommendation: [Item] | [Detailed Analysis]\n\n## [OUTPUT FORMAT]\n\n- 답변을 markdown code block 또는 d2 code block으로 복사 가능하게 출력할 것\n\n## [EXIT CONDITION]\n\n- All items scored and classified\n- Top recommendation clearly identified\n- Reasoning provided for prioritization"
+        }
+      },
+      {
+        "id": "learned-next-improvement-recommendation",
+        "question": "AI가 추천한 다음 개선 항목을 확인하셨나요?",
+        "type": "yesno",
+        "required": true,
+        "onYesNextQuestionId": "learned-clear-implementation",
+        "onNoNextQuestionId": "learned-clear-implementation"
       },
       {
         "id": "learned-clear-implementation",
@@ -496,7 +514,7 @@
         "question": "가장 가까운 상황이 무엇인가요?",
         "type": "multiple",
         "required": true,
-        "options": ["IntentDefined", "ProblemSelected", "AcceptanceDefined", "FeasibilityChecked", "DesignReady", "TaskBreakdown", "Implementing", "Verifying", "Verified", "Released", "FeedbackCollected", "Learned"]
+        "options": ["DefiningIntent", "SelectingProblem", "DefiningAcceptance", "CheckingFeasibility", "Designing", "BreakingTasks", "Implementing", "Verifying", "Verified", "Releasing", "CollectingFeedback", "Learning"]
       }
     ]
   }

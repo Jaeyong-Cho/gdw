@@ -6,19 +6,19 @@
  * All possible development situations
  */
 export type Situation =
-  | 'IntentDefined'
-  | 'IntentDefinedFail'
-  | 'ProblemSelected'
-  | 'AcceptanceDefined'
-  | 'FeasibilityChecked'
-  | 'DesignReady'
-  | 'TaskBreakdown'
+  | 'DefiningIntent'
+  | 'FailingIntent'
+  | 'SelectingProblem'
+  | 'DefiningAcceptance'
+  | 'CheckingFeasibility'
+  | 'Designing'
+  | 'BreakingTasks'
   | 'Implementing'
   | 'Verifying'
   | 'Verified'
-  | 'Released'
-  | 'FeedbackCollected'
-  | 'Learned';
+  | 'Releasing'
+  | 'CollectingFeedback'
+  | 'Learning';
 
 /**
  * Layout algorithm types for cytoscape

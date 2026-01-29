@@ -255,14 +255,14 @@ export async function initDatabase(): Promise<void> {
 export async function getCurrentIntentId(): Promise<number | null> {
   if (!db) return null;
 
-  // Look for intent-related questions in IntentDefined situation
+  // Look for intent-related questions in DefiningIntent situation
   const stmt = db.prepare(`
     SELECT id FROM question_answers 
     WHERE situation = ? 
     AND (question_id LIKE ? OR question_id LIKE ? OR question_id LIKE ?)
     ORDER BY answered_at DESC LIMIT 1
   `);
-  stmt.bind(['IntentDefined', 'intent-summary%', 'intent-summarized%', 'intent-document%']);
+  stmt.bind(['DefiningIntent', 'intent-summary%', 'intent-summarized%', 'intent-document%']);
   
   if (stmt.step()) {
     const result = stmt.getAsObject();
@@ -282,14 +282,14 @@ export async function getCurrentIntentId(): Promise<number | null> {
 export async function getCurrentProblemId(): Promise<number | null> {
   if (!db) return null;
 
-  // Look for problem-related questions in ProblemSelected situation
+  // Look for problem-related questions in SelectingProblem situation
   const stmt = db.prepare(`
     SELECT id FROM question_answers 
     WHERE situation = ? 
     AND (question_id LIKE ? OR question_id LIKE ? OR question_id LIKE ?)
     ORDER BY answered_at DESC LIMIT 1
   `);
-  stmt.bind(['ProblemSelected', 'problem-%', 'problem-boundaries%', 'problem-distinct%']);
+  stmt.bind(['SelectingProblem', 'problem-%', 'problem-boundaries%', 'problem-distinct%']);
   
   if (stmt.step()) {
     const result = stmt.getAsObject();
@@ -335,12 +335,12 @@ export async function saveAnswer(
   const parentId = options?.parentId;
   
   // If this is an intent answer, don't link to other intent
-  if (situation === 'IntentDefined' && questionId.includes('intent-')) {
+  if (situation === 'DefiningIntent' && questionId.includes('intent-')) {
     intentId = null;
     problemId = null;
   }
   // If this is a problem answer, link to intent but not to another problem
-  else if (situation === 'ProblemSelected' && questionId.includes('problem-')) {
+  else if (situation === 'SelectingProblem' && questionId.includes('problem-')) {
     if (intentId === undefined) {
       intentId = await getCurrentIntentId();
     }
@@ -579,7 +579,7 @@ export async function getIntentSummary(): Promise<string | null> {
   }
 
   const stmt = db.prepare('SELECT answer FROM question_answers WHERE situation = ? AND question_id = ? ORDER BY answered_at DESC LIMIT 1');
-  stmt.bind(['IntentDefined', 'intent-summarized-text']);
+  stmt.bind(['DefiningIntent', 'intent-summarized-text']);
   
   if (stmt.step()) {
     const result = stmt.getAsObject();
@@ -592,7 +592,7 @@ export async function getIntentSummary(): Promise<string | null> {
 }
 
 /**
- * @brief Get intent document from IntentDefined situation
+ * @brief Get intent document from DefiningIntent situation
  * 
  * @return Intent document text or null
  */
@@ -604,7 +604,7 @@ export async function getIntentDocument(): Promise<string | null> {
   }
 
   const stmt = db.prepare('SELECT answer FROM question_answers WHERE situation = ? AND question_id = ? ORDER BY answered_at DESC LIMIT 1');
-  stmt.bind(['IntentDefined', 'intent-document-text']);
+  stmt.bind(['DefiningIntent', 'intent-document-text']);
   
   if (stmt.step()) {
     const result = stmt.getAsObject();
