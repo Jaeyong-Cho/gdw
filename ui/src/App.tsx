@@ -156,6 +156,7 @@ const App: React.FC = () => {
                 setCurrentSituation('Dumping');
                 setSelectedSituation('Dumping');
                 setActiveCycleId(cycleId);
+                setSelectedCycleId(null);  // Reset selected cycle when starting new cycle
                 setInitialQuestionId(null);
                 setShowQuestionFlow(true);
               } catch (error) {
@@ -387,16 +388,12 @@ const App: React.FC = () => {
                   }
                 }}
                 onAnswerSave={async (answer: QuestionAnswer) => {
-                  const cycleId = await getCurrentCycleId();
-                  if (cycleId) {
-                    await saveAnswer(
-                      cycleId,
-                      currentSituation,
-                      answer.questionId,
-                      answer.answer,
-                      answer.questionText
-                    );
-                  }
+                  await saveAnswer(
+                    answer.questionId,
+                    currentSituation,
+                    answer.answer,
+                    answer.answeredAt
+                  );
                 }}
               />
             </div>

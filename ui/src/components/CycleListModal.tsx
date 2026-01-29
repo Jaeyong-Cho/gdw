@@ -42,6 +42,8 @@ export const CycleListModal: React.FC<CycleListModalProps> = ({
     startedAt: string;
     completedAt: string | null;
     status: string;
+    lastSituation: string;
+    lastQuestionId: string | null;
     answers: Array<{
       id: number;
       questionId: string;
@@ -296,10 +298,7 @@ export const CycleListModal: React.FC<CycleListModalProps> = ({
                   </div>
                   <button
                     onClick={() => {
-                      const lastAnswer = cycleDetails.answers[cycleDetails.answers.length - 1];
-                      const lastSituation = lastAnswer ? lastAnswer.situation : 'Dumping';
-                      const lastQuestionId = lastAnswer ? lastAnswer.questionId : null;
-                      onRestartCycle(cycleDetails.id, lastSituation, lastQuestionId);
+                      onRestartCycle(cycleDetails.id, cycleDetails.lastSituation, cycleDetails.lastQuestionId);
                     }}
                     style={{
                       padding: '12px 24px',

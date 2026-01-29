@@ -1809,6 +1809,8 @@ export async function getCycleData(cycleId: number): Promise<{
   unconsciousEnteredAt: string | null;
   unconsciousExitedAt: string | null;
   unconsciousEntryReason: string | null;
+  lastSituation: string;
+  lastQuestionId: string | null;
   answers: Array<{
     id: number;
     questionId: string;
@@ -1835,7 +1837,7 @@ export async function getCycleData(cycleId: number): Promise<{
   const cycleRow = cycleStmt.getAsObject();
   cycleStmt.free();
 
-  // Get all answers for this cycle
+  // Get all answers for this cycle ordered by answered_at
   const answersStmt = db.prepare(`
     SELECT id, question_id, answer, answered_at, situation 
     FROM question_answers 
@@ -1865,6 +1867,16 @@ export async function getCycleData(cycleId: number): Promise<{
   
   answersStmt.free();
 
+  // Determine last situation from the most recent answer
+  // The last answer's situation tells us where the user was working last
+  // We use the situation but start from the beginning of that situation's flow
+  // (not from the specific question) since the user may want to review or re-answer
+  const lastAnswer = answers.length > 0 ? answers[answers.length - 1] : null;
+  const lastSituation = lastAnswer ? lastAnswer.situation : 'Dumping';
+  // Set lastQuestionId to null to start from the beginning of the situation
+  // This ensures the user sees the full context of that situation
+  const lastQuestionId: string | null = null;
+
   return {
     id: cycleRow.id as number,
     cycleNumber: cycleRow.cycle_number as number,
@@ -1874,6 +1886,8 @@ export async function getCycleData(cycleId: number): Promise<{
     unconsciousEnteredAt: (cycleRow.unconscious_entered_at as string) || null,
     unconsciousExitedAt: (cycleRow.unconscious_exited_at as string) || null,
     unconsciousEntryReason: (cycleRow.unconscious_entry_reason as string) || null,
+    lastSituation,
+    lastQuestionId,
     answers,
   };
 }

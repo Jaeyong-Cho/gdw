@@ -28,6 +28,9 @@ interface PromptContext {
  * @post Returns prompt with all variables replaced with context data or empty string
  */
 export function generatePrompt(template: string, context: PromptContext): string {
+  console.log('[DEBUG] generatePrompt - context keys:', Object.keys(context));
+  console.log('[DEBUG] generatePrompt - dump-thoughts-text in context:', context['dump-thoughts-text']);
+  
   let prompt = template;
   
   Object.keys(context).forEach(key => {
@@ -35,6 +38,12 @@ export function generatePrompt(template: string, context: PromptContext): string
     const regex = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
     prompt = prompt.replace(regex, value);
   });
+  
+  // Check if any template variables remain unreplaced
+  const remainingVars = prompt.match(/\{\{[^}]+\}\}/g);
+  if (remainingVars) {
+    console.log('[DEBUG] generatePrompt - Unreplaced template variables:', remainingVars);
+  }
   
   return prompt;
 }
@@ -219,15 +228,20 @@ export async function buildPromptContext(situation: string, selectedProblemId?: 
       situation
     ];
     
+    console.log('[DEBUG] buildPromptContext - effectiveCycleId:', effectiveCycleId);
+    console.log('[DEBUG] buildPromptContext - currentCycleId:', currentCycleId);
+    
     for (const sit of situations) {
       try {
         // Get answers from effective cycle (current cycle if it has data, otherwise previous cycle)
         const answers = await getAnswersBySituation(sit, effectiveCycleId);
+        console.log(`[DEBUG] buildPromptContext - ${sit} answers:`, answers.length, answers.map(a => ({ questionId: a.questionId, answer: a.answer?.substring(0, 50) })));
         answers.forEach(a => {
           if (!['true', 'false'].includes(a.answer)) {
             // Use question ID as key
             if (!context[a.questionId]) {
               context[a.questionId] = a.answer;
+              console.log(`[DEBUG] buildPromptContext - Added to context: ${a.questionId}`);
             }
             
             // Also map common patterns to standard keys
