@@ -1,11 +1,102 @@
 {
+  "Dumping": {
+    "situation": "Dumping",
+    "startQuestionId": "dump-thoughts-text",
+    "questions": [
+      {
+        "id": "dump-thoughts-text",
+        "question": "나의 생각을 자유롭게 작성해주세요",
+        "type": "text",
+        "required": true,
+        "nextQuestionId": "dump-complete",
+        "showData": {
+          "type": "previous-cycle",
+          "label": "이전 Cycle 내용",
+          "source": "getPreviousCycleData"
+        },
+        "aiPromptTemplate": {
+          "template": "# 생각 정리 도움\n\n## [INPUT – Human]\n\n1. 현재 생각:\n- {{dump-thoughts-text}}\n\n2. 이전 Cycle 내용 (선택적):\n{{previous-cycle}}\n\n## [AI PROMPT]\n\nYou are helping to organize thoughts.\n\nTasks:\n1. Identify key themes and patterns in the thoughts.\n2. Extract actionable insights.\n3. Suggest areas that need clarification.\n\n## [OUTPUT FORMAT]\n\n- Output the answer as a copyable markdown code block or d2 code block\n- Use a list instead of a table\n- Do not nest d2 code blocks inside markdown code blocks\n\n## [EXIT CONDITION]\n\n- Thoughts are organized\n- Key themes identified"
+        }
+      },
+      {
+        "id": "dump-complete",
+        "question": "생각 정리가 완료되었나요?",
+        "type": "yesno",
+        "required": true,
+        "onYesNextSituation": "DefiningActionIntent",
+        "onNoNextQuestionId": "dump-thoughts-text"
+      }
+    ]
+  },
+  "DefiningActionIntent": {
+    "situation": "DefiningActionIntent",
+    "startQuestionId": "action-intent-text",
+    "questions": [
+      {
+        "id": "action-intent-text",
+        "question": "지금 어떤 행동을 하고 싶은지 작성해주세요",
+        "type": "text",
+        "required": true,
+        "nextQuestionId": "action-intent-clear",
+        "showData": {
+          "type": "dump-thoughts",
+          "label": "Dumping 단계에서 작성한 생각",
+          "source": "getAnswerByQuestionId",
+          "sourceParam": "dump-thoughts-text"
+        },
+        "aiPromptTemplate": {
+          "template": "# 행동 의도 작성 도움\n\n## [INPUT – Human]\n\n1. Dumping 단계의 생각:\n- {{dump-thoughts-text}}\n\n2. 원하는 행동:\n- {{action-intent-text}}\n\n## [AI PROMPT]\n\nYou are helping to clarify action intent.\n\nTasks:\n1. Clarify what action the user wants to take.\n2. Identify the motivation behind the action.\n3. Extract assumptions about the action.\n\n## [OUTPUT FORMAT]\n\n- Output the answer as a copyable markdown code block or d2 code block\n- Use a list instead of a table\n- Do not nest d2 code blocks inside markdown code blocks\n\n## [EXIT CONDITION]\n\n- Action intent is clear\n- Motivation identified"
+        }
+      },
+      {
+        "id": "action-intent-clear",
+        "question": "행동 의도가 명확한가요?",
+        "type": "yesno",
+        "required": true,
+        "onYesNextSituation": "DefiningIntent",
+        "onNoNextQuestionId": "action-intent-text"
+      }
+    ]
+  },
   "DefiningIntent": {
     "situation": "DefiningIntent",
     "startQuestionId": "intent-summary-text",
     "questions": [
       {
+        "id": "intent-why-action",
+        "question": "이 행동을 하고 싶은 이유를 작성해주세요",
+        "type": "text",
+        "required": true,
+        "nextQuestionId": "intent-assumptions",
+        "showData": {
+          "type": "action-intent",
+          "label": "행동 의도",
+          "source": "getAnswerByQuestionId",
+          "sourceParam": "action-intent-text"
+        },
+        "aiPromptTemplate": {
+          "template": "# 행동 이유 정리 도움\n\n## [INPUT – Human]\n\n1. 행동 의도:\n- {{action-intent-text}}\n\n2. 행동을 하고 싶은 이유:\n- {{why-action}}\n\n## [AI PROMPT]\n\nYou are helping to clarify the reasons for action.\n\nTasks:\n1. Identify the core motivations.\n2. Extract underlying needs or desires.\n3. Validate the reasoning.\n\n## [OUTPUT FORMAT]\n\n- Output the answer as a copyable markdown code block or d2 code block\n- Use a list instead of a table\n- Do not nest d2 code blocks inside markdown code blocks\n\n## [EXIT CONDITION]\n\n- Reasons are clear\n- Motivations identified"
+        }
+      },
+      {
+        "id": "intent-assumptions",
+        "question": "이 행동에 대한 가정을 작성해주세요",
+        "type": "text",
+        "required": true,
+        "nextQuestionId": "intent-summary-text",
+        "showData": {
+          "type": "why-action",
+          "label": "행동 이유",
+          "source": "getAnswerByQuestionId",
+          "sourceParam": "intent-why-action"
+        },
+        "aiPromptTemplate": {
+          "template": "# 가정 정리 도움\n\n## [INPUT – Human]\n\n1. 행동 의도:\n- {{action-intent-text}}\n\n2. 행동 이유:\n- {{why-action}}\n\n3. 가정:\n- {{assumptions}}\n\n## [AI PROMPT]\n\nYou are helping to identify and validate assumptions.\n\nTasks:\n1. Extract hidden assumptions.\n2. Identify assumptions that might be incorrect.\n3. Suggest ways to validate assumptions.\n\n## [OUTPUT FORMAT]\n\n- Output the answer as a copyable markdown code block or d2 code block\n- Use a list instead of a table\n- Do not nest d2 code blocks inside markdown code blocks\n\n## [EXIT CONDITION]\n\n- Assumptions are explicit\n- Validation methods suggested"
+        }
+      },
+      {
         "id": "intent-summary-text",
-        "question": "Intent를 한 문장으로 요약해주세요",
+        "question": "의도를 한 문장으로 요약해주세요",
         "type": "text",
         "required": true,
         "nextQuestionId": "intent-consistent",
@@ -15,21 +106,7 @@
           "source": "getIntentSummary"
         },
         "aiPromptTemplate": {
-          "template": "# 개발 의도(Intent) 작성 도움\n\n## [INPUT – Human]\n\n1. Who is suffering:\n- {{intent}}\n\n2. What pain exists:\n- {{pain-exists}}\n\n3. Why this matters now:\n- {{why-now}}\n\n## [AI PROMPT]\n\nYou are acting as a critical systems analyst.\n\nRules:\n- Do NOT propose solutions, features, or implementations.\n- Do NOT use technical language.\n- Focus only on intent clarity and assumptions.\n\nTasks:\n1. Ask clarifying questions until the intent is logically stable.\n2. Produce exactly ONE intent sentence.\n3. Extract 3 hidden assumptions.\n4. Identify ambiguity or contradiction.\n\n## [OUTPUT FORMAT]\n\n- Output the answer as a copyable markdown code block or d2 code block\n- Use a list instead of a table\n- Do not nest d2 code blocks inside markdown code blocks\n\n## [EXIT CONDITION]\n\n- Intent is one sentence\n- No solution language\n- Assumptions are explicit",
-          "inputFields": [
-            {
-              "id": "pain-exists",
-              "label": "What pain exists",
-              "placeholder": "어떤 고통이나 문제가 존재하나요?",
-              "required": false
-            },
-            {
-              "id": "why-now",
-              "label": "Why this matters now",
-              "placeholder": "왜 지금 이 문제가 중요한가요?",
-              "required": false
-            }
-          ]
+          "template": "# 의도 요약 도움\n\n## [INPUT – Human]\n\n1. 행동 의도:\n- {{action-intent-text}}\n\n2. 행동 이유:\n- {{why-action}}\n\n3. 가정:\n- {{assumptions}}\n\n## [AI PROMPT]\n\nYou are helping to summarize intent.\n\nTasks:\n1. Synthesize action intent, reasons, and assumptions into one clear sentence.\n2. Ensure the summary captures the essence without losing important context.\n\n## [OUTPUT FORMAT]\n\n- Output the answer as a copyable markdown code block or d2 code block\n- Use a list instead of a table\n- Do not nest d2 code blocks inside markdown code blocks\n\n## [EXIT CONDITION]\n\n- Intent is one clear sentence\n- All key elements included"
         }
       },
       {
@@ -418,8 +495,16 @@
         "question": "릴리스가 공지되었나요?",
         "type": "yesno",
         "required": true,
-        "onYesNextSituation": "CollectingFeedback",
+        "onYesNextQuestionId": "cycle-complete",
         "onNoNextQuestionId": "release-announced"
+      },
+      {
+        "id": "cycle-complete",
+        "question": "이번 Cycle을 완료하시겠습니까?",
+        "type": "yesno",
+        "required": true,
+        "onYesNextSituation": "CollectingFeedback",
+        "onNoNextQuestionId": "cycle-complete"
       }
     ]
   },

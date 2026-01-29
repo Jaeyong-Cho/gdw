@@ -6,7 +6,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Situation, QuestionAnswer, SituationFlow, QuestionDataDisplay } from '../types';
 import { getSituationFlows } from '../data/data-loader';
 import { generatePrompt, buildPromptContext } from '../utils/prompt-generator';
-import { getTransitionCount, incrementTransitionCount, resetTransitionCount } from '../data/db';
+import { getTransitionCount, incrementTransitionCount, resetTransitionCount, getCurrentCycleId, completeCycle } from '../data/db';
 
 /**
  * @brief Props for InteractiveFlow component
@@ -127,6 +127,16 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
         case 'getAnswerByQuestionId':
           if (showData.sourceParam) {
             data = await db.getAnswerByQuestionId(showData.sourceParam);
+          }
+          break;
+        case 'getPreviousCycleData':
+          const { getPreviousCycleData } = await import('../data/db');
+          const previousCycle = await getPreviousCycleData();
+          if (previousCycle) {
+            const cycleSummary = `Cycle #${previousCycle.cycleNumber}\n시작: ${new Date(previousCycle.startedAt).toLocaleString('ko-KR')}\n완료: ${previousCycle.completedAt ? new Date(previousCycle.completedAt).toLocaleString('ko-KR') : '미완료'}\n\n답변 내용:\n${previousCycle.answers.map((a: { questionId: string; answer: string; situation: string }) => `[${a.situation}] ${a.questionId}: ${a.answer}`).join('\n\n')}`;
+            data = cycleSummary;
+          } else {
+            data = '이전 Cycle 데이터가 없습니다.';
           }
           break;
         default:
@@ -431,7 +441,16 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
         await incrementTransitionCount('Verifying', 'Implementing');
         nextSituation = 'Implementing';
       }
-    } else if (currentQuestion.type === 'yesno') {
+    } 
+    // Special handling for cycle-complete question
+    else if (currentQuestion.id === 'cycle-complete' && answer === true) {
+      const cycleId = await getCurrentCycleId();
+      if (cycleId) {
+        await completeCycle(cycleId);
+      }
+      nextSituation = 'CollectingFeedback';
+    } 
+    else if (currentQuestion.type === 'yesno') {
       if (answer === true && currentQuestion.onYesNextQuestionId) {
         nextQuestionId = currentQuestion.onYesNextQuestionId;
       } else if (answer === true && currentQuestion.onYesNextSituation) {

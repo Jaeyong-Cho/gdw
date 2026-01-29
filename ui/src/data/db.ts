@@ -100,6 +100,26 @@ async function migrateDatabase(database: Database): Promise<void> {
     `);
     database.run('CREATE INDEX IF NOT EXISTS idx_transition_key ON transition_counters(transition_key)');
     
+    // Create cycles table if it doesn't exist
+    database.run(`
+      CREATE TABLE IF NOT EXISTS cycles (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        cycle_number INTEGER NOT NULL,
+        started_at TEXT NOT NULL,
+        completed_at TEXT,
+        status TEXT NOT NULL DEFAULT 'active'
+      )
+    `);
+    database.run('CREATE INDEX IF NOT EXISTS idx_cycle_number ON cycles(cycle_number)');
+    database.run('CREATE INDEX IF NOT EXISTS idx_cycle_status ON cycles(status)');
+    
+    // Add cycle_id column to question_answers if it doesn't exist
+    if (!columns.includes('cycle_id')) {
+      console.log('Adding cycle_id column...');
+      database.run('ALTER TABLE question_answers ADD COLUMN cycle_id INTEGER');
+      database.run('CREATE INDEX IF NOT EXISTS idx_cycle_id ON question_answers(cycle_id)');
+    }
+    
     console.log('Database migration completed');
     
     // Save migrated database
@@ -227,9 +247,11 @@ export async function initDatabase(): Promise<void> {
           intent_id INTEGER,
           problem_id INTEGER,
           parent_id INTEGER,
+          cycle_id INTEGER,
           FOREIGN KEY (intent_id) REFERENCES question_answers(id),
           FOREIGN KEY (problem_id) REFERENCES question_answers(id),
-          FOREIGN KEY (parent_id) REFERENCES question_answers(id)
+          FOREIGN KEY (parent_id) REFERENCES question_answers(id),
+          FOREIGN KEY (cycle_id) REFERENCES cycles(id)
         )
       `);
       
@@ -237,6 +259,20 @@ export async function initDatabase(): Promise<void> {
       db.run(`CREATE INDEX IF NOT EXISTS idx_situation ON question_answers(situation)`);
       db.run(`CREATE INDEX IF NOT EXISTS idx_intent_id ON question_answers(intent_id)`);
       db.run(`CREATE INDEX IF NOT EXISTS idx_problem_id ON question_answers(problem_id)`);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_cycle_id ON question_answers(cycle_id)`);
+      
+      // Create cycles table
+      db.run(`
+        CREATE TABLE IF NOT EXISTS cycles (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          cycle_number INTEGER NOT NULL,
+          started_at TEXT NOT NULL,
+          completed_at TEXT,
+          status TEXT NOT NULL DEFAULT 'active'
+        )
+      `);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_cycle_number ON cycles(cycle_number)`);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_cycle_status ON cycles(status)`);
 
       // Create workflow state table
       db.run(`
@@ -314,6 +350,34 @@ export async function getCurrentProblemId(): Promise<number | null> {
 }
 
 /**
+ * @brief Get current active cycle ID
+ * 
+ * @return Cycle ID or null if no active cycle
+ * 
+ * @pre Database is initialized
+ * @post Returns current active cycle ID or null
+ */
+export async function getCurrentCycleId(): Promise<number | null> {
+  await initDatabase();
+  
+  if (!db) {
+    throw new Error('Database not initialized');
+  }
+
+  const stmt = db.prepare('SELECT id FROM cycles WHERE status = ? ORDER BY cycle_number DESC LIMIT 1');
+  stmt.bind(['active']);
+  
+  if (stmt.step()) {
+    const result = stmt.getAsObject();
+    stmt.free();
+    return result.id as number;
+  }
+  
+  stmt.free();
+  return null;
+}
+
+/**
  * @brief Save answer to database with relationship tracking
  * 
  * @param questionId - Question ID
@@ -368,9 +432,12 @@ export async function saveAnswer(
     }
   }
   
+  // Get current cycle ID
+  const cycleId = await getCurrentCycleId();
+  
   db.run(
-    'INSERT INTO question_answers (question_id, situation, answer, answered_at, intent_id, problem_id, parent_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
-    [questionId, situation, answerStr, answeredAt, intentId ?? null, problemId ?? null, parentId ?? null]
+    'INSERT INTO question_answers (question_id, situation, answer, answered_at, intent_id, problem_id, parent_id, cycle_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    [questionId, situation, answerStr, answeredAt, intentId ?? null, problemId ?? null, parentId ?? null, cycleId]
   );
 
   // Get the inserted row ID
@@ -1176,4 +1243,209 @@ export async function resetTransitionCount(
   );
   
   await saveDatabase();
+}
+
+/**
+ * @brief Create a new cycle
+ * 
+ * @return Cycle ID
+ * 
+ * @pre Database is initialized
+ * @post New cycle is created and returned
+ */
+export async function createCycle(): Promise<number> {
+  await initDatabase();
+  
+  if (!db) {
+    throw new Error('Database not initialized');
+  }
+
+  // Get the next cycle number
+  const maxStmt = db.prepare('SELECT MAX(cycle_number) as max_num FROM cycles');
+  maxStmt.step();
+  const result = maxStmt.getAsObject();
+  const nextCycleNumber = (result.max_num as number || 0) + 1;
+  maxStmt.free();
+
+  const startedAt = new Date().toISOString();
+  
+  db.run(
+    'INSERT INTO cycles (cycle_number, started_at, status) VALUES (?, ?, ?)',
+    [nextCycleNumber, startedAt, 'active']
+  );
+
+  const idStmt = db.prepare('SELECT last_insert_rowid() as id');
+  idStmt.step();
+  const cycleId = idStmt.getAsObject().id as number;
+  idStmt.free();
+
+  await saveDatabase();
+  
+  console.log(`Cycle ${nextCycleNumber} created: ID ${cycleId}`);
+  return cycleId;
+}
+
+/**
+ * @brief Complete a cycle
+ * 
+ * @param cycleId - Cycle ID to complete
+ * 
+ * @pre Database is initialized, cycleId exists
+ * @post Cycle status is set to 'completed'
+ */
+export async function completeCycle(cycleId: number): Promise<void> {
+  await initDatabase();
+  
+  if (!db) {
+    throw new Error('Database not initialized');
+  }
+
+  const completedAt = new Date().toISOString();
+  
+  db.run(
+    'UPDATE cycles SET status = ?, completed_at = ? WHERE id = ?',
+    ['completed', completedAt, cycleId]
+  );
+  
+  await saveDatabase();
+  
+  console.log(`Cycle ${cycleId} completed`);
+}
+
+/**
+ * @brief Get cycle data for a specific cycle
+ * 
+ * @param cycleId - Cycle ID
+ * @return Cycle data with all answers
+ * 
+ * @pre Database is initialized
+ * @post Returns cycle data including all answers
+ */
+export async function getCycleData(cycleId: number): Promise<{
+  id: number;
+  cycleNumber: number;
+  startedAt: string;
+  completedAt: string | null;
+  status: string;
+  answers: Array<{
+    id: number;
+    questionId: string;
+    answer: string;
+    answeredAt: string;
+    situation: string;
+  }>;
+}> {
+  await initDatabase();
+  
+  if (!db) {
+    throw new Error('Database not initialized');
+  }
+
+  // Get cycle info
+  const cycleStmt = db.prepare('SELECT * FROM cycles WHERE id = ?');
+  cycleStmt.bind([cycleId]);
+  
+  if (!cycleStmt.step()) {
+    cycleStmt.free();
+    throw new Error('Cycle not found');
+  }
+  
+  const cycleRow = cycleStmt.getAsObject();
+  cycleStmt.free();
+
+  // Get all answers for this cycle
+  const answersStmt = db.prepare(`
+    SELECT id, question_id, answer, answered_at, situation 
+    FROM question_answers 
+    WHERE cycle_id = ? 
+    ORDER BY answered_at
+  `);
+  answersStmt.bind([cycleId]);
+  
+  const answers: Array<{
+    id: number;
+    questionId: string;
+    answer: string;
+    answeredAt: string;
+    situation: string;
+  }> = [];
+  
+  while (answersStmt.step()) {
+    const row = answersStmt.getAsObject();
+    answers.push({
+      id: row.id as number,
+      questionId: row.question_id as string,
+      answer: row.answer as string,
+      answeredAt: row.answered_at as string,
+      situation: row.situation as string,
+    });
+  }
+  
+  answersStmt.free();
+
+  return {
+    id: cycleRow.id as number,
+    cycleNumber: cycleRow.cycle_number as number,
+    startedAt: cycleRow.started_at as string,
+    completedAt: (cycleRow.completed_at as string) || null,
+    status: cycleRow.status as string,
+    answers,
+  };
+}
+
+/**
+ * @brief Get previous cycle data (most recent completed cycle)
+ * 
+ * @return Previous cycle data or null
+ * 
+ * @pre Database is initialized
+ * @post Returns most recent completed cycle data or null
+ */
+export async function getPreviousCycleData(): Promise<{
+  id: number;
+  cycleNumber: number;
+  startedAt: string;
+  completedAt: string | null;
+  answers: Array<{
+    questionId: string;
+    answer: string;
+    situation: string;
+  }>;
+} | null> {
+  await initDatabase();
+  
+  if (!db) {
+    throw new Error('Database not initialized');
+  }
+
+  const stmt = db.prepare(`
+    SELECT id FROM cycles 
+    WHERE status = ? 
+    ORDER BY cycle_number DESC 
+    LIMIT 1
+  `);
+  stmt.bind(['completed']);
+  
+  if (!stmt.step()) {
+    stmt.free();
+    return null;
+  }
+  
+  const result = stmt.getAsObject();
+  const cycleId = result.id as number;
+  stmt.free();
+
+  const cycleData = await getCycleData(cycleId);
+  
+  return {
+    id: cycleData.id,
+    cycleNumber: cycleData.cycleNumber,
+    startedAt: cycleData.startedAt,
+    completedAt: cycleData.completedAt,
+    answers: cycleData.answers.map((a) => ({
+      questionId: a.questionId,
+      answer: a.answer,
+      situation: a.situation,
+    })),
+  };
 }

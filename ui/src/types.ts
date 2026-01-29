@@ -6,6 +6,8 @@
  * All possible development situations
  */
 export type Situation =
+  | 'Dumping'
+  | 'DefiningActionIntent'
   | 'DefiningIntent'
   | 'FailingIntent'
   | 'SelectingProblem'
@@ -136,9 +138,9 @@ export type QuestionType = 'text' | 'yesno' | 'multiple';
  * Data display configuration for a question
  */
 export interface QuestionDataDisplay {
-  type: 'intent-summary' | 'intent-document' | 'answer' | 'custom';
+  type: 'intent-summary' | 'intent-document' | 'answer' | 'custom' | 'previous-cycle' | 'dump-thoughts' | 'action-intent' | 'why-action';
   label: string;
-  source: 'getIntentSummary' | 'getIntentDocument' | 'getAnswerByQuestionId' | 'getAnswersBySituation';
+  source: 'getIntentSummary' | 'getIntentDocument' | 'getAnswerByQuestionId' | 'getAnswersBySituation' | 'getPreviousCycleData';
   sourceParam?: string;
 }
 

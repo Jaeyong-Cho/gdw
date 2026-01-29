@@ -111,6 +111,23 @@ export const SituationInfoPanel: React.FC<SituationInfoPanelProps> = ({
 
   const definition = situationDefinitions[situation];
 
+  if (!definition) {
+    return (
+      <div style={{
+        padding: '24px',
+        backgroundColor: '#f9fafb',
+        borderLeft: '4px solid #e5e7eb',
+        borderRadius: '8px',
+        minHeight: '200px',
+      }}>
+        <h3 style={{ marginTop: 0, color: '#6b7280' }}>Situation Definition Not Found</h3>
+        <p style={{ color: '#9ca3af' }}>
+          Definition for situation "{situation}" is not available.
+        </p>
+      </div>
+    );
+  }
+
   const sectionStyle = {
     marginTop: '24px',
   };

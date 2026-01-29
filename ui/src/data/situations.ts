@@ -9,6 +9,26 @@ import { Situation, SituationDefinition, NodePosition } from '../types';
  * @return Map of situation names to their definitions
  */
 export const situationDefinitions: Record<Situation, SituationDefinition> = {
+  Dumping: {
+    name: 'Dumping',
+    description: 'Dumping thoughts freely to organize ideas',
+    required_facts: [
+      { description: 'Thoughts have been written down freely' },
+      { description: 'Key themes and patterns have been identified' },
+      { description: 'Actionable insights have been extracted' },
+      { description: 'Thought organization is complete' },
+    ],
+  },
+  DefiningActionIntent: {
+    name: 'DefiningActionIntent',
+    description: 'Defining what action to take based on dumped thoughts',
+    required_facts: [
+      { description: 'Action intent has been written down' },
+      { description: 'The motivation behind the action is identified' },
+      { description: 'Assumptions about the action are extracted' },
+      { description: 'Action intent is clear' },
+    ],
+  },
   DefiningIntent: {
     name: 'DefiningIntent',
     description: 'The development intent has been clearly defined',
@@ -152,6 +172,10 @@ export const situationDefinitions: Record<Situation, SituationDefinition> = {
  * - Alternative paths above/below with 150px spacing
  */
 export const nodePositions: Record<Situation, NodePosition> = {
+  // Column -1: Cycle Start (x=-200)
+  Dumping: { x: -200, y: 300 },
+  DefiningActionIntent: { x: -200, y: 450 },
+  
   // Column 0: Start (x=200)
   DefiningIntent: { x: 200, y: 300 },
   FailingIntent: { x: 200, y: 150 },
@@ -191,6 +215,8 @@ export const nodePositions: Record<Situation, NodePosition> = {
  * @return Array of transitions: [from, to, label]
  */
 export const stateTransitions: Array<[Situation, Situation, string]> = [
+  ['Dumping', 'DefiningActionIntent', 'thoughts organized'],
+  ['DefiningActionIntent', 'DefiningIntent', 'action intent clear'],
   ['DefiningIntent', 'SelectingProblem', 'intent clear'],
   ['DefiningIntent', 'FailingIntent', 'intent unclear'],
   ['FailingIntent', 'DefiningIntent', ''],

@@ -10,6 +10,7 @@ import { LayoutSelector } from './components/LayoutSelector';
 import { DatabaseSettings } from './components/DatabaseSettings';
 import WorkflowStateManager from './components/WorkflowStateManager';
 import WorkflowDataViewer from './components/WorkflowDataViewer';
+import { createCycle, getCurrentCycleId } from './data/db';
 
 /**
  * @brief Main application component
@@ -123,6 +124,38 @@ const App: React.FC = () => {
           </p>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
+          <button
+            onClick={async () => {
+              try {
+                const cycleId = await createCycle();
+                console.log('New cycle created:', cycleId);
+                setCurrentSituation('Dumping');
+                setSelectedSituation('Dumping');
+              } catch (error) {
+                console.error('Error creating cycle:', error);
+                alert('Cycle 생성에 실패했습니다.');
+              }
+            }}
+            style={{
+              padding: '10px 20px',
+              fontSize: '14px',
+              fontWeight: '600',
+              backgroundColor: '#f59e0b',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              transition: 'background-color 0.2s',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#d97706';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = '#f59e0b';
+            }}
+          >
+            Cycle 시작
+          </button>
           <button
             onClick={() => setShowDataViewer(true)}
             style={{
