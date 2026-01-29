@@ -2499,6 +2499,8 @@ export async function addCycleContext(
     throw new Error('Database not initialized');
   }
 
+  console.log('[DEBUG] addCycleContext - cycleId:', cycleId, 'sourceAnswerId:', sourceAnswerId);
+
   // Check if this context already exists
   const checkStmt = db.prepare(`
     SELECT id FROM cycle_context 
@@ -2509,6 +2511,7 @@ export async function addCycleContext(
   if (checkStmt.step()) {
     const existing = checkStmt.getAsObject();
     checkStmt.free();
+    console.log('[DEBUG] addCycleContext - already exists with id:', existing.id);
     return existing.id as number;
   }
   checkStmt.free();
@@ -2522,6 +2525,8 @@ export async function addCycleContext(
   stmt.free();
 
   const id = db.exec('SELECT last_insert_rowid() as id')[0].values[0][0] as number;
+  
+  console.log('[DEBUG] addCycleContext - inserted new context with id:', id);
   
   await saveDatabase();
   
@@ -2567,31 +2572,39 @@ export async function getCycleContext(cycleId: number): Promise<ContextAnswer[]>
     throw new Error('Database not initialized');
   }
 
-  const stmt = db.prepare(`
-    SELECT id, cycle_id, source_cycle_id, source_answer_id, question_id, answer_text, situation, added_at
-    FROM cycle_context
-    WHERE cycle_id = ?
-    ORDER BY added_at DESC
-  `);
-  stmt.bind([cycleId]);
+  console.log('[DEBUG] getCycleContext - cycleId:', cycleId);
 
-  const contexts: ContextAnswer[] = [];
-  while (stmt.step()) {
-    const row = stmt.getAsObject();
-    contexts.push({
-      id: row.id as number,
-      cycleId: row.cycle_id as number,
-      sourceCycleId: row.source_cycle_id as number,
-      sourceAnswerId: row.source_answer_id as number,
-      questionId: row.question_id as string,
-      answerText: row.answer_text as string,
-      situation: row.situation as string,
-      addedAt: row.added_at as string,
-    });
+  try {
+    const stmt = db.prepare(`
+      SELECT id, cycle_id, source_cycle_id, source_answer_id, question_id, answer_text, situation, added_at
+      FROM cycle_context
+      WHERE cycle_id = ?
+      ORDER BY added_at DESC
+    `);
+    stmt.bind([cycleId]);
+
+    const contexts: ContextAnswer[] = [];
+    while (stmt.step()) {
+      const row = stmt.getAsObject();
+      contexts.push({
+        id: row.id as number,
+        cycleId: row.cycle_id as number,
+        sourceCycleId: row.source_cycle_id as number,
+        sourceAnswerId: row.source_answer_id as number,
+        questionId: row.question_id as string,
+        answerText: row.answer_text as string,
+        situation: row.situation as string,
+        addedAt: row.added_at as string,
+      });
+    }
+    stmt.free();
+
+    console.log('[DEBUG] getCycleContext - found contexts:', contexts.length);
+    return contexts;
+  } catch (error) {
+    console.error('[DEBUG] getCycleContext - error:', error);
+    return [];
   }
-  stmt.free();
-
-  return contexts;
 }
 
 /**
@@ -2633,7 +2646,7 @@ export async function getPreviousCyclesAnswers(currentCycleId: number | null): P
     cycleQuery += ` AND id != ${currentCycleId}`;
   }
   
-  cycleQuery += ' ORDER BY cycle_number DESC LIMIT 10';
+  cycleQuery += ' ORDER BY cycle_number DESC';
 
   const cycleStmt = db.prepare(cycleQuery);
   

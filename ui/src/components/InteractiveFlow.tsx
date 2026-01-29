@@ -285,6 +285,7 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
       
       console.log('[DEBUG] Context problem:', context.problem);
       console.log('[DEBUG] Context acceptanceCriteria:', context.acceptanceCriteria);
+      console.log('[DEBUG] Context selectedContext:', context.selectedContext);
       
       if (userInputs) {
         Object.keys(userInputs).forEach(key => {

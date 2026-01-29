@@ -56,15 +56,19 @@ export async function buildPromptContext(situation: string, selectedProblemId?: 
   try {
     // Get current cycle ID
     const currentCycleId = await getCurrentCycleId();
+    console.log('[DEBUG] buildPromptContext - currentCycleId:', currentCycleId);
     
     // Get selected context from previous cycles for current cycle
     if (currentCycleId !== null) {
       const cycleContexts = await getCycleContext(currentCycleId);
+      console.log('[DEBUG] buildPromptContext - cycleContexts count:', cycleContexts.length);
+      console.log('[DEBUG] buildPromptContext - cycleContexts:', cycleContexts);
       if (cycleContexts.length > 0) {
         const formattedContext = cycleContexts.map(ctx => 
           `[${ctx.situation}] ${ctx.answerText}`
         ).join('\n\n');
         context.selectedContext = formattedContext;
+        console.log('[DEBUG] buildPromptContext - selectedContext set:', context.selectedContext);
       }
     }
     
