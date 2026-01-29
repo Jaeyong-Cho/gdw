@@ -1433,7 +1433,7 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
                         newAnswers[index] = e.target.value;
                         setTextAnswers(newAnswers);
                       }}
-                      placeholder={showDataForText ? `${displayDataLabel}를 참고하여 답변을 입력하세요...` : "답변을 입력하세요..."}
+                      placeholder={isDumpingSituation ? "현재 머리속에 생각나는 것들을 모두 입력해보세요" : (showDataForText ? `${displayDataLabel}를 참고하여 답변을 입력하세요...` : "답변을 입력하세요...")}
                       style={{
                         flex: 1,
                         minHeight: '80px',
@@ -1496,7 +1496,7 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
               <textarea
                 value={textAnswer}
                 onChange={(e) => setTextAnswer(e.target.value)}
-                placeholder={showDataForText ? `${displayDataLabel}를 참고하여 답변을 입력하세요...` : "답변을 입력하세요..."}
+                placeholder={isDumpingSituation ? "현재 머리속에 생각나는 것들을 모두 입력해보세요" : (showDataForText ? `${displayDataLabel}를 참고하여 답변을 입력하세요...` : "답변을 입력하세요...")}
                 style={{
                   width: '100%',
                   minHeight: '100px',
