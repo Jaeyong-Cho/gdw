@@ -241,6 +241,7 @@ export const CytoscapeDiagram: React.FC<CytoscapeDiagramProps> = ({
             'height': 80,
             'shape': 'round-rectangle',
             'padding': '10px', // Add padding to prevent label overlap
+            'events': 'no', // Disable node interaction
           },
         },
         {
@@ -308,14 +309,14 @@ export const CytoscapeDiagram: React.FC<CytoscapeDiagramProps> = ({
 
     cyRef.current = cy;
 
-    // Set up click handler
-    cy.on('tap', 'node', (evt) => {
-      const nodeData = evt.target.data();
-      if (nodeData.id && onNodeClick) {
-        const situation = nodeData.id as Situation;
-        onNodeClick(situation);
-      }
-    });
+    // Node click handler disabled - nodes are not clickable
+    // cy.on('tap', 'node', (evt) => {
+    //   const nodeData = evt.target.data();
+    //   if (nodeData.id && onNodeClick) {
+    //     const situation = nodeData.id as Situation;
+    //     onNodeClick(situation);
+    //   }
+    // });
 
     // Fit to viewport
     cy.fit(undefined, 50);

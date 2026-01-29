@@ -60,11 +60,11 @@
   },
   "DefiningIntent": {
     "situation": "DefiningIntent",
-    "startQuestionId": "intent-summary-text",
+    "startQuestionId": "intent-why-action",
     "questions": [
       {
         "id": "intent-why-action",
-        "question": "이 행동/일을 하고 싶은 이유를 작성해주세요",
+        "question": "이 행동/일을 하고 싶은 이유를 작성해주세요 (왜 이 행동/일이 필요한지, 어떤 문제나 불편함을 해결하려는지)",
         "type": "text",
         "required": true,
         "nextQuestionId": "intent-assumptions",
@@ -75,12 +75,12 @@
           "sourceParam": "action-intent-text"
         },
         "aiPromptTemplate": {
-          "template": "# 하고 싶은 행동/일의 이유 정리 도움\n\n## [INPUT – Human]\n\n1. 하고 싶은 행동/일:\n- {{action-intent-text}}\n\n2. 이 행동/일을 하고 싶은 이유:\n- {{why-action}}\n\n## [AI PROMPT]\n\nYou are helping to clarify the reasons for what the user wants to do.\n\nTasks:\n1. Identify the core motivations.\n2. Extract underlying needs or desires.\n3. Validate the reasoning.\n\n## [OUTPUT FORMAT]\n\n- Output the answer as a copyable markdown code block or d2 code block\n- Use a list instead of a table\n- Do not nest d2 code blocks inside markdown code blocks\n\n## [EXIT CONDITION]\n\n- Reasons are clear\n- Motivations identified"
+          "template": "# 하고 싶은 행동/일의 이유 정리 도움\n\n## [INPUT – Human]\n\n1. Dumping 단계의 생각:\n- {{dump-thoughts-text}}\n\n2. 하고 싶은 행동/일:\n- {{action-intent-text}}\n\n## [AI PROMPT]\n\nYou are helping to clarify the reasons for what the user wants to do.\n\nTasks:\n1. Consider the thoughts from the Dumping phase.\n2. Based on the action/task the user wants to do, help identify the core motivations.\n3. Extract underlying needs or desires that might drive this action.\n4. Identify what problem or discomfort this action aims to solve.\n5. Suggest potential reasons why the user wants to do this action.\n\nImportant: Focus on WHY the user wants to do this action, not WHAT they will do or HOW they will do it.\n\n## [OUTPUT FORMAT]\n\n- Output the answer as a copyable markdown code block or d2 code block\n- Use a list instead of a table\n- Do not nest d2 code blocks inside markdown code blocks\n\n## [EXIT CONDITION]\n\n- Potential reasons identified\n- Motivations suggested"
         }
       },
       {
         "id": "intent-assumptions",
-        "question": "이 행동/일에 대한 가정을 작성해주세요",
+        "question": "이 행동/일에 대한 가정을 작성해주세요 (이 행동/일이 효과적일 것이라고 가정하는 것, 또는 이 행동/일을 하기 전에 참이라고 가정하는 것)",
         "type": "text",
         "required": true,
         "nextQuestionId": "intent-summary-text",
@@ -91,12 +91,12 @@
           "sourceParam": "intent-why-action"
         },
         "aiPromptTemplate": {
-          "template": "# 가정 정리 도움\n\n## [INPUT – Human]\n\n1. 하고 싶은 행동/일:\n- {{action-intent-text}}\n\n2. 행동/일을 하고 싶은 이유:\n- {{why-action}}\n\n3. 가정:\n- {{assumptions}}\n\n## [AI PROMPT]\n\nYou are helping to identify and validate assumptions.\n\nTasks:\n1. Extract hidden assumptions.\n2. Identify assumptions that might be incorrect.\n3. Suggest ways to validate assumptions.\n\n## [OUTPUT FORMAT]\n\n- Output the answer as a copyable markdown code block or d2 code block\n- Use a list instead of a table\n- Do not nest d2 code blocks inside markdown code blocks\n\n## [EXIT CONDITION]\n\n- Assumptions are explicit\n- Validation methods suggested"
+          "template": "# 가정 정리 도움\n\n## [INPUT – Human]\n\n1. Dumping 단계의 생각:\n- {{dump-thoughts-text}}\n\n2. 하고 싶은 행동/일:\n- {{action-intent-text}}\n\n3. 행동/일을 하고 싶은 이유:\n- {{intent-why-action}}\n\n## [AI PROMPT]\n\nYou are helping to identify and validate assumptions.\n\nTasks:\n1. Consider the thoughts from the Dumping phase.\n2. Based on the action intent and reasons, extract hidden assumptions.\n3. Identify what the user assumes to be true before taking this action.\n4. Identify assumptions about the effectiveness or outcome of this action.\n5. Identify assumptions that might be incorrect or need validation.\n6. Suggest ways to validate these assumptions.\n\nImportant: Focus on ASSUMPTIONS (what is assumed to be true), not reasons (why) or the action itself (what).\n\n## [OUTPUT FORMAT]\n\n- Output the answer as a copyable markdown code block or d2 code block\n- Use a list instead of a table\n- Do not nest d2 code blocks inside markdown code blocks\n\n## [EXIT CONDITION]\n\n- Assumptions identified\n- Validation methods suggested"
         }
       },
       {
         "id": "intent-summary-text",
-        "question": "의도를 한 문장으로 요약해주세요",
+        "question": "위에서 작성한 내용을 바탕으로 의도를 한 문장으로 요약해주세요 (행동/일, 이유, 가정을 종합하여)",
         "type": "text",
         "required": true,
         "nextQuestionId": "intent-consistent",
@@ -106,7 +106,7 @@
           "source": "getIntentSummary"
         },
         "aiPromptTemplate": {
-          "template": "# 의도 요약 도움\n\n## [INPUT – Human]\n\n1. 하고 싶은 행동/일:\n- {{action-intent-text}}\n\n2. 행동/일을 하고 싶은 이유:\n- {{why-action}}\n\n3. 가정:\n- {{assumptions}}\n\n## [AI PROMPT]\n\nYou are helping to summarize intent.\n\nTasks:\n1. Synthesize what the user wants to do, reasons, and assumptions into one clear sentence.\n2. Ensure the summary captures the essence without losing important context.\n\n## [OUTPUT FORMAT]\n\n- Output the answer as a copyable markdown code block or d2 code block\n- Use a list instead of a table\n- Do not nest d2 code blocks inside markdown code blocks\n\n## [EXIT CONDITION]\n\n- Intent is one clear sentence\n- All key elements included"
+          "template": "# 의도 요약 도움\n\n## [INPUT – Human]\n\n1. Dumping 단계의 생각:\n- {{dump-thoughts-text}}\n\n2. 하고 싶은 행동/일:\n- {{action-intent-text}}\n\n3. 행동/일을 하고 싶은 이유:\n- {{intent-why-action}}\n\n4. 가정:\n- {{intent-assumptions}}\n\n## [AI PROMPT]\n\nYou are helping to summarize intent.\n\nTasks:\n1. Consider the thoughts from the Dumping phase.\n2. Synthesize what the user wants to do, reasons, and assumptions into one clear sentence.\n3. Ensure the summary captures the essence without losing important context from the Dumping phase.\n4. The summary should integrate: what action/task, why it's needed, and key assumptions.\n\nImportant: This is a SUMMARY that combines all the above information into one sentence, not a repetition of any single part.\n\n## [OUTPUT FORMAT]\n\n- Output the answer as a copyable markdown code block or d2 code block\n- Use a list instead of a table\n- Do not nest d2 code blocks inside markdown code blocks\n\n## [EXIT CONDITION]\n\n- Intent is one clear sentence\n- All key elements included"
         }
       },
       {
@@ -173,8 +173,13 @@
         "type": "text",
         "required": true,
         "nextQuestionId": "problem-distinct",
+        "showData": {
+          "type": "intent-summary",
+          "label": "의도 요약",
+          "source": "getIntentSummary"
+        },
         "aiPromptTemplate": {
-          "template": "# 문제 선택 및 경계 정의 도움\n\n## [INPUT – Human]\n\n1. System intent summary:\n- {{intent}}\n\n2. Proposed improvement points (선택적):\n{{improvements}}\n\n## [AI PROMPT]\n\nYou are performing problem decomposition.\n\nRules:\n- No solution framing.\n- No implementation hints.\n\nPriority Principle:\n- **Problems that rarely change must be resolved first.**\n- When ranking problems, prioritize stability: problems with stable requirements, clear boundaries, and minimal expected changes should be addressed before problems that are likely to evolve.\n- This reduces rework and establishes a solid foundation.\n\nTasks:\n1. Enumerate all problems implied by the intent.\n2. For each problem, assess its expected change frequency:\n   - Stable problems: clear boundaries, well-understood requirements, minimal expected changes\n   - Volatile problems: evolving requirements, unclear boundaries, likely to change\n3. Rank problems by:\n   - **Primary: Change frequency (stable first)**\n   - Secondary: Urgency, impact, and dependency depth\n4. Select exactly ONE problem (prefer the most stable one that is still actionable).\n5. Rewrite it as a single precise question.\n6. If oversized, decompose and select the smallest viable unit.\n7. If improvement points are provided, consider them in problem selection.\n\n## [OUTPUT FORMAT]\n\n- Output the answer as a copyable markdown code block or d2 code block\n- Use a list instead of a table\n- Do not nest d2 code blocks inside markdown code blocks\n\n## [EXIT CONDITION]\n\n- One problem only\n- Expressed as a question\n- Solvable independently\n- Change frequency assessment included",
+          "template": "# 문제 선택 및 경계 정의 도움\n\n## [INPUT – Human]\n\n1. Dumping 단계의 생각:\n- {{dump-thoughts-text}}\n\n2. 하고 싶은 행동/일:\n- {{action-intent-text}}\n\n3. 행동/일을 하고 싶은 이유:\n- {{intent-why-action}}\n\n4. 가정:\n- {{intent-assumptions}}\n\n5. 의도 요약:\n- {{intent-summary-text}}\n\n6. 이전 개선점 (선택적):\n{{improvements}}\n\n## [AI PROMPT]\n\nYou are performing problem decomposition.\n\nRules:\n- No solution framing.\n- No implementation hints.\n- Consider the full context from Dumping, WhatToDo, and DefiningIntent phases.\n\nPriority Principle:\n- **Problems that rarely change must be resolved first.**\n- When ranking problems, prioritize stability: problems with stable requirements, clear boundaries, and minimal expected changes should be addressed before problems that are likely to evolve.\n- This reduces rework and establishes a solid foundation.\n\nTasks:\n1. Review the thoughts from Dumping phase, the action intent, reasons, and assumptions.\n2. Enumerate all problems implied by the intent summary and underlying context.\n3. For each problem, assess its expected change frequency:\n   - Stable problems: clear boundaries, well-understood requirements, minimal expected changes\n   - Volatile problems: evolving requirements, unclear boundaries, likely to change\n4. Rank problems by:\n   - **Primary: Change frequency (stable first)**\n   - Secondary: Urgency, impact, and dependency depth\n   - Consider alignment with the reasons and assumptions from DefiningIntent\n5. Select exactly ONE problem (prefer the most stable one that is still actionable).\n6. Rewrite it as a single precise question.\n7. If oversized, decompose and select the smallest viable unit.\n8. If improvement points are provided, consider them in problem selection.\n\n## [OUTPUT FORMAT]\n\n- Output the answer as a copyable markdown code block or d2 code block\n- Use a list instead of a table\n- Do not nest d2 code blocks inside markdown code blocks\n\n## [EXIT CONDITION]\n\n- One problem only\n- Expressed as a question\n- Solvable independently\n- Change frequency assessment included\n- Aligned with intent and assumptions",
           "selectableAnswers": {
             "questionId": "learned-improvements-text",
             "label": "이전 개선점 선택",

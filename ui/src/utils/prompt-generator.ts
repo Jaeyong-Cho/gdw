@@ -141,6 +141,8 @@ export async function buildPromptContext(situation: string, selectedProblemId?: 
     
     // Fallback: Get all answers from current and related situations
     const situations = [
+      'Dumping',
+      'WhatToDo',
       'DefiningIntent',
       'SelectingProblem', 
       'DefiningAcceptance',
