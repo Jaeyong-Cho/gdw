@@ -159,6 +159,16 @@ export const situationDefinitions: Record<Situation, SituationDefinition> = {
       { description: 'Next actions based on learning have been identified' },
     ],
   },
+  Ending: {
+    name: 'Ending',
+    description: 'The development cycle has been completed',
+    required_facts: [
+      { description: 'All work has been completed and delivered' },
+      { description: 'Feedback has been collected and analyzed' },
+      { description: 'Learning has been documented' },
+      { description: 'The cycle is finished' },
+    ],
+  },
 };
 
 /**
@@ -172,9 +182,9 @@ export const situationDefinitions: Record<Situation, SituationDefinition> = {
  * - Alternative paths above/below with 150px spacing
  */
 export const nodePositions: Record<Situation, NodePosition> = {
-  // Column -1: Cycle Start (x=-200)
-  Dumping: { x: -200, y: 300 },
-  DefiningActionIntent: { x: -200, y: 450 },
+  // Top Center: Cycle Start
+  Dumping: { x: 1800, y: 0 },
+  DefiningActionIntent: { x: 1800, y: 150 },
   
   // Column 0: Start (x=200)
   DefiningIntent: { x: 200, y: 300 },
@@ -208,6 +218,9 @@ export const nodePositions: Record<Situation, NodePosition> = {
   Releasing: { x: 3800, y: 200 },
   CollectingFeedback: { x: 3800, y: 300 },
   Learning: { x: 3800, y: 400 },
+  
+  // Column 10: Ending (x=4200)
+  Ending: { x: 4200, y: 300 },
 };
 
 /**
@@ -246,4 +259,5 @@ export const stateTransitions: Array<[Situation, Situation, string]> = [
   ['Learning', 'DefiningAcceptance', 'deepen same problem'],
   ['Learning', 'DefiningIntent', 'adjust intent'],
   ['Learning', 'Implementing', 'clear implementation task'],
+  ['Learning', 'Ending', 'cycle complete'],
 ];

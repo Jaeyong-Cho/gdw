@@ -1313,7 +1313,7 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
               const validSituations: Situation[] = [
                 'DefiningIntent', 'FailingIntent', 'SelectingProblem', 'DefiningAcceptance',
                 'CheckingFeasibility', 'Designing', 'BreakingTasks', 'Implementing',
-                'Verifying', 'Verified', 'Releasing', 'CollectingFeedback', 'Learning'
+                'Verifying', 'Verified', 'Releasing', 'CollectingFeedback', 'Learning', 'Ending'
               ];
               
               let nextSituation: Situation | undefined;
@@ -1324,6 +1324,8 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
                 nextSituation = 'DefiningAcceptance';
               } else if (option === 'Intent 조정') {
                 nextSituation = 'DefiningIntent';
+              } else if (option === '완료') {
+                nextSituation = 'Ending';
               } else if (option === 'feasible') {
                 nextSituation = 'Designing';
               } else if (option === 'too hard' || option === 'problem too big') {

@@ -20,7 +20,8 @@ export type Situation =
   | 'Verified'
   | 'Releasing'
   | 'CollectingFeedback'
-  | 'Learning';
+  | 'Learning'
+  | 'Ending';
 
 /**
  * Layout algorithm types for cytoscape

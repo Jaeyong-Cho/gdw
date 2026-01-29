@@ -412,6 +412,33 @@
       "nextStep": "모두 \"예\"면 다음 행동에 따라 ProblemSelected/AcceptanceDefined/IntentDefined/Implementing으로 진행 (명확한 구현 작업이 있으면 Implementing으로 바로 진행)"
     }
   },
+  "Ending": {
+    "whatToDo": "이번 Cycle이 완료되었습니다. 모든 작업이 완료되고 피드백이 수집되었으며 학습이 문서화되었습니다. 새로운 Cycle을 시작할 수 있습니다. 예상 소요 시간: 즉시.",
+    "conditionsToProceed": [
+      "모든 작업이 완료됨",
+      "피드백이 수집되고 분석됨",
+      "학습이 문서화됨",
+      "Cycle이 완료됨"
+    ],
+    "failure": [
+      "완료되지 않은 작업이 남아있음",
+      "피드백이 수집되지 않음",
+      "학습이 문서화되지 않음"
+    ],
+    "goBackTo": "Dumping (새로운 Cycle 시작)",
+    "warning": "이 상태는 Cycle의 마지막 상태입니다. 새로운 Cycle을 시작하려면 Dumping으로 이동하세요.",
+    "tip": "Cycle 완료를 축하합니다. 새로운 Cycle을 시작하려면 \"Cycle 시작\" 버튼을 클릭하거나 Dumping으로 이동하세요.",
+    "aiUsage": "Cycle 완료 요약 요청, 다음 Cycle 계획 수립 요청.",
+    "quickCheck": {
+      "items": [
+        { "question": "모든 작업이 완료되었나요?" },
+        { "question": "피드백이 수집되고 분석되었나요?" },
+        { "question": "학습이 문서화되었나요?" },
+        { "question": "Cycle이 완료되었나요?" }
+      ],
+      "nextStep": "모두 \"예\"면 새로운 Cycle을 시작할 수 있습니다 (Dumping으로 이동)"
+    }
+  },
   "Undetermined": {
     "whatToDo": "현재 상황이 어떤 정의된 상황의 체크리스트와도 일치하지 않거나, 여러 상황이 부분적으로 일치하지만 완전히 일치하는 것이 없거나, 상황을 결정하는 데 필요한 정보가 누락되었거나, 상황이 모호하거나 불명확함. 예상 소요 시간: 즉시 (상태 확인).",
     "conditionsToProceed": [
