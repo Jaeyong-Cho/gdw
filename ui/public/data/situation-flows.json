@@ -40,7 +40,7 @@
           "sourceParam": "dump-thoughts-text"
         },
         "aiPromptTemplate": {
-          "template": "# 하고 싶은 행동/일 정리 도움\n\n## [INPUT – Human]\n\n1. Dumping 단계의 생각:\n- {{dump-thoughts-text}}\n\n2. 하고 싶은 행동/일:\n- {{action-intent-text}}\n\n## [AI PROMPT]\n\nYou are helping to clarify what the user wants to do.\n\nTasks:\n1. Clarify what action or task the user wants to do.\n2. Identify the motivation behind it.\n3. Extract assumptions about the action.\n\n## [OUTPUT FORMAT]\n\n- Output the answer as a copyable markdown code block or d2 code block\n- Use a list instead of a table\n- Do not nest d2 code blocks inside markdown code blocks\n\n## [EXIT CONDITION]\n\n- What the user wants to do is clear\n- Motivation identified"
+          "template": "# 하고 싶은 행동/일 정리 도움\n\n## [INPUT – Human]\n\nDumping 단계의 생각:\n{{dump-thoughts-text}}\n\n## [AI PROMPT]\n\nYou are helping to clarify what the user wants to do.\n\nTasks:\n1. Based on the dumped thoughts, help identify what action or task the user might want to do.\n2. Suggest potential motivations behind it.\n3. Extract possible assumptions about the action.\n\n## [OUTPUT FORMAT]\n\n- Output the answer as a copyable markdown code block or d2 code block\n- Use a list instead of a table\n- Do not nest d2 code blocks inside markdown code blocks\n\n## [EXIT CONDITION]\n\n- What the user wants to do is suggested\n- Motivation identified"
         }
       },
       {
