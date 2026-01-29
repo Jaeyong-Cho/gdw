@@ -44,8 +44,9 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
   const [aiPrompt, setAiPrompt] = useState<string>('');
   const [showAIPromptInputs, setShowAIPromptInputs] = useState<boolean>(false);
   const [aiPromptInputs, setAiPromptInputs] = useState<Record<string, string>>({});
-  const [selectableAnswers, setSelectableAnswers] = useState<Array<{id: string, text: string, timestamp: string}>>([]);
+  const [selectableAnswers, setSelectableAnswers] = useState<Array<{id: string, text: string, timestamp: string, dbId?: number}>>([]);
   const [selectedAnswerIds, setSelectedAnswerIds] = useState<string[]>([]);
+  const [selectedProblemId, setSelectedProblemId] = useState<number | null>(null);
   const [copyStatus, setCopyStatus] = useState<'idle' | 'success' | 'error'>('idle');
   
   const currentQuestionIdRef = useRef<string | null>(null);
@@ -156,7 +157,26 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
     }
 
     try {
-      const context = await buildPromptContext(situation);
+      // For problem-select question, use selected problem ID
+      let selectedProblemIdForPrompt: number | null = null;
+      if (question.id === 'problem-select' && selectedAnswerIds.length > 0) {
+        const selectedAnswer = selectableAnswers.find(ans => selectedAnswerIds.includes(ans.id));
+        if (selectedAnswer?.dbId) {
+          selectedProblemIdForPrompt = selectedAnswer.dbId;
+          setSelectedProblemId(selectedAnswer.dbId);
+        }
+      } else if (selectedProblemId) {
+        selectedProblemIdForPrompt = selectedProblemId;
+      }
+      
+      console.log('[DEBUG] Generating prompt for question:', question.id);
+      console.log('[DEBUG] selectedProblemId state:', selectedProblemId);
+      console.log('[DEBUG] selectedProblemIdForPrompt:', selectedProblemIdForPrompt);
+      
+      const context = await buildPromptContext(situation, selectedProblemIdForPrompt);
+      
+      console.log('[DEBUG] Context problem:', context.problem);
+      console.log('[DEBUG] Context acceptanceCriteria:', context.acceptanceCriteria);
       
       if (userInputs) {
         Object.keys(userInputs).forEach(key => {
@@ -181,7 +201,7 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
     } catch (error) {
       console.error('Error generating AI prompt:', error);
     }
-  }, [flow, currentQuestionId, situation, selectableAnswers, selectedAnswerIds]);
+  }, [flow, currentQuestionId, situation, selectableAnswers, selectedAnswerIds, selectedProblemId]);
 
   /**
    * @brief Show AI prompt input form
@@ -216,15 +236,32 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
       
       if (hasSelectableAnswers && question.aiPromptTemplate.selectableAnswers) {
         try {
-          const { getAllAnswersByQuestionId } = await import('../data/db');
-          const answers = await getAllAnswersByQuestionId(question.aiPromptTemplate.selectableAnswers.questionId);
-          const formattedAnswers = answers.map((ans, idx) => ({
-            id: `${ans.answeredAt}-${idx}`,
-            text: ans.answer,
-            timestamp: ans.answeredAt
-          }));
-          setSelectableAnswers(formattedAnswers);
-          setSelectedAnswerIds([]);
+          // For problem selection, get answers with IDs from SelectingProblem situation
+          if (question.id === 'problem-select' && question.aiPromptTemplate.selectableAnswers.questionId === 'problem-boundaries-text') {
+            const { getAnswersBySituation } = await import('../data/db');
+            const answers = await getAnswersBySituation('SelectingProblem');
+            const problemAnswers = answers.filter(a => a.questionId === 'problem-boundaries-text');
+            const formattedAnswers = problemAnswers.map((ans, idx) => ({
+              id: `${ans.id}-${idx}`,
+              text: ans.answer,
+              timestamp: ans.answeredAt,
+              dbId: ans.id
+            }));
+            setSelectableAnswers(formattedAnswers);
+            setSelectedAnswerIds([]);
+            setSelectedProblemId(null);
+          } else {
+            // For other selectable answers, use the existing method
+            const { getAllAnswersByQuestionId } = await import('../data/db');
+            const answers = await getAllAnswersByQuestionId(question.aiPromptTemplate.selectableAnswers.questionId);
+            const formattedAnswers = answers.map((ans, idx) => ({
+              id: `${ans.answeredAt}-${idx}`,
+              text: ans.answer,
+              timestamp: ans.answeredAt
+            }));
+            setSelectableAnswers(formattedAnswers);
+            setSelectedAnswerIds([]);
+          }
         } catch (error) {
           console.error('Error loading selectable answers:', error);
           setSelectableAnswers([]);
@@ -266,8 +303,34 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
     setAiPrompt('');
     setShowAIPromptInputs(false);
     setAiPromptInputs({});
-    setSelectableAnswers([]);
-    setSelectedAnswerIds([]);
+    
+    // For problem-select question, load problems automatically
+    if (question?.id === 'problem-select' && question.aiPromptTemplate?.selectableAnswers) {
+      const loadProblems = async () => {
+        try {
+          const { getAnswersBySituation } = await import('../data/db');
+          const answers = await getAnswersBySituation('SelectingProblem');
+          const problemAnswers = answers.filter(a => a.questionId === 'problem-boundaries-text');
+          const formattedAnswers = problemAnswers.map((ans, idx) => ({
+            id: `${ans.id}-${idx}`,
+            text: ans.answer,
+            timestamp: ans.answeredAt,
+            dbId: ans.id
+          }));
+          setSelectableAnswers(formattedAnswers);
+          setSelectedAnswerIds([]);
+          // Don't reset selectedProblemId here - keep it if it was already set
+        } catch (error) {
+          console.error('Error loading problems:', error);
+          setSelectableAnswers([]);
+        }
+      };
+      loadProblems();
+    } else {
+      setSelectableAnswers([]);
+      setSelectedAnswerIds([]);
+      // Don't reset selectedProblemId when moving to other questions - keep it for prompt generation
+    }
     
     setTextAnswer('');
     
@@ -704,6 +767,120 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
         );
 
       case 'text':
+        // Special handling for problem-select question
+        if (currentQuestion.id === 'problem-select' && currentQuestion.aiPromptTemplate?.selectableAnswers) {
+          return (
+            <div style={{ marginTop: '16px' }}>
+              <div>
+                <label style={{
+                  display: 'block',
+                  marginBottom: '8px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  color: '#374151',
+                }}>
+                  {currentQuestion.aiPromptTemplate.selectableAnswers.label}
+                </label>
+                {selectableAnswers.length === 0 ? (
+                  <div style={{
+                    padding: '12px',
+                    fontSize: '13px',
+                    color: '#9ca3af',
+                    fontStyle: 'italic',
+                    backgroundColor: '#f3f4f6',
+                    borderRadius: '6px',
+                  }}>
+                    선택 가능한 문제가 없습니다.
+                  </div>
+                ) : (
+                  <div style={{
+                    maxHeight: '300px',
+                    overflowY: 'auto',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '6px',
+                    backgroundColor: '#ffffff',
+                    marginBottom: '16px',
+                  }}>
+                    {selectableAnswers.map(ans => (
+                      <label key={ans.id} style={{
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        padding: '12px',
+                        cursor: 'pointer',
+                        borderBottom: '1px solid #f3f4f6',
+                        backgroundColor: selectedAnswerIds.includes(ans.id) ? '#eff6ff' : '#ffffff',
+                      }}>
+                        <input
+                          type="radio"
+                          name="problem-select"
+                          checked={selectedAnswerIds.includes(ans.id)}
+                          onChange={() => {
+                            setSelectedAnswerIds([ans.id]);
+                            if (ans.dbId) {
+                              setSelectedProblemId(ans.dbId);
+                            }
+                          }}
+                          style={{
+                            marginTop: '2px',
+                            marginRight: '10px',
+                            cursor: 'pointer',
+                          }}
+                        />
+                        <div style={{ flex: 1 }}>
+                          <div style={{
+                            fontSize: '14px',
+                            color: '#374151',
+                            marginBottom: '4px',
+                            lineHeight: '1.4',
+                          }}>
+                            {ans.text}
+                          </div>
+                          <div style={{
+                            fontSize: '11px',
+                            color: '#9ca3af',
+                          }}>
+                            {new Date(ans.timestamp).toLocaleString('ko-KR')}
+                          </div>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <button
+                onClick={() => {
+                  if (selectedAnswerIds.length > 0) {
+                    const selectedAnswer = selectableAnswers.find(ans => selectedAnswerIds.includes(ans.id));
+                    if (selectedAnswer) {
+                      console.log('[DEBUG] Problem selected:', selectedAnswer.text);
+                      console.log('[DEBUG] Problem ID:', selectedAnswer.dbId);
+                      if (selectedAnswer.dbId) {
+                        setSelectedProblemId(selectedAnswer.dbId);
+                        console.log('[DEBUG] Set selectedProblemId to:', selectedAnswer.dbId);
+                      }
+                      handleAnswer(selectedAnswer.text);
+                    }
+                  }
+                }}
+                disabled={selectedAnswerIds.length === 0}
+                style={{
+                  padding: '12px 24px',
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  backgroundColor: selectedAnswerIds.length > 0 ? '#3b82f6' : '#9ca3af',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: selectedAnswerIds.length > 0 ? 'pointer' : 'not-allowed',
+                  width: '100%',
+                }}
+              >
+                선택하고 다음
+              </button>
+            </div>
+          );
+        }
+        
         const showDataForText = currentQuestion.showData && displayData;
         const hasAIPromptForText = currentQuestion.aiPromptTemplate !== undefined;
         

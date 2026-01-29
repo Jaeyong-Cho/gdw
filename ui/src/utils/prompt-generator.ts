@@ -42,12 +42,13 @@ export function generatePrompt(template: string, context: PromptContext): string
  * @brief Build context from database answers with relationships
  * 
  * @param situation - Current situation
+ * @param selectedProblemId - Optional selected problem ID to filter acceptance criteria
  * @return Promise resolving to context object with relevant answers and relationships
  * 
  * @pre situation is provided
  * @post Returns context with intent, problem, and other relevant data including relationships
  */
-export async function buildPromptContext(situation: string): Promise<PromptContext> {
+export async function buildPromptContext(situation: string, selectedProblemId?: number | null): Promise<PromptContext> {
   const context: PromptContext = {};
   
   try {
@@ -69,12 +70,46 @@ export async function buildPromptContext(situation: string): Promise<PromptConte
       context.relatedProblems = relatedContext.problems.join('\n\n');
     }
     
+    // If a specific problem is selected, use only that problem
+    if (selectedProblemId !== undefined && selectedProblemId !== null) {
+      console.log('[DEBUG] buildPromptContext: selectedProblemId provided:', selectedProblemId);
+      const { getAnswersBySituation } = await import('../data/db');
+      // Get the problem answer directly by ID (selectedProblemId is the answer ID, not problem_id)
+      const allAnswers = await getAnswersBySituation('SelectingProblem');
+      const problemAnswer = allAnswers.find(a => a.id === selectedProblemId && a.questionId === 'problem-boundaries-text');
+      if (problemAnswer) {
+        context.problem = problemAnswer.answer;
+        console.log('[DEBUG] buildPromptContext: Set context.problem:', context.problem);
+        
+        // Get acceptance criteria related to this problem
+        // selectedProblemId is the problem answer's id, so we need to find acceptance answers
+        // that have problem_id = selectedProblemId
+        const allAcceptanceAnswers = await getAnswersBySituation('DefiningAcceptance');
+        const acceptanceAnswers = allAcceptanceAnswers.filter(a => 
+          !['true', 'false'].includes(a.answer) && a.problemId === selectedProblemId
+        );
+        if (acceptanceAnswers.length > 0) {
+          context.acceptanceCriteria = acceptanceAnswers.map(a => a.answer).join('\n\n');
+          console.log('[DEBUG] buildPromptContext: Set acceptanceCriteria from problem_id:', selectedProblemId, 'count:', acceptanceAnswers.length);
+        } else {
+          console.log('[DEBUG] buildPromptContext: No acceptance criteria found with problem_id:', selectedProblemId);
+        }
+      } else {
+        console.log('[DEBUG] buildPromptContext: No problem-boundaries-text found with id:', selectedProblemId);
+      }
+    } else {
+      console.log('[DEBUG] buildPromptContext: No selectedProblemId provided');
+    }
+    
     if (relatedContext.design && relatedContext.design.length > 0) {
       context.design = relatedContext.design.join('\n\n');
     }
     
-    if (relatedContext.acceptance && relatedContext.acceptance.length > 0) {
-      context.acceptanceCriteria = relatedContext.acceptance.join('\n\n');
+    // Acceptance criteria is already handled above when selectedProblemId is provided
+    if (!(selectedProblemId !== undefined && selectedProblemId !== null)) {
+      if (relatedContext.acceptance && relatedContext.acceptance.length > 0) {
+        context.acceptanceCriteria = relatedContext.acceptance.join('\n\n');
+      }
     }
     
     if (relatedContext.implementation && relatedContext.implementation.length > 0) {
@@ -133,17 +168,27 @@ export async function buildPromptContext(situation: string): Promise<PromptConte
             if (a.questionId.includes('intent') && !context.intent) {
               context.intent = a.answer;
             }
+            // Only set problem if no specific problem is selected, or if it matches the selected problem
             if (a.questionId.includes('problem') && !context.problem) {
-              context.problem = a.answer;
+              // If a specific problem is selected, skip problem in fallback
+              // (it's already handled above with getAnswersByProblem)
+              if (selectedProblemId === undefined || selectedProblemId === null) {
+                context.problem = a.answer;
+              }
             }
             if (a.questionId.includes('design') && !context.design) {
               context.design = a.answer;
             }
+            // Only add acceptance criteria if no specific problem is selected, or if it's related to the selected problem
             if (a.questionId.includes('acceptance') || a.questionId.includes('criteria')) {
-              if (!context.acceptanceCriteria) {
-                context.acceptanceCriteria = a.answer;
-              } else {
-                context.acceptanceCriteria += '\n\n' + a.answer;
+              // If a specific problem is selected, skip acceptance criteria in fallback
+              // (it's already handled above with getAnswersByProblem)
+              if (selectedProblemId === undefined || selectedProblemId === null) {
+                if (!context.acceptanceCriteria) {
+                  context.acceptanceCriteria = a.answer;
+                } else {
+                  context.acceptanceCriteria += '\n\n' + a.answer;
+                }
               }
             }
           }

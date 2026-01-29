@@ -178,8 +178,23 @@
   },
   "CheckingFeasibility": {
     "situation": "CheckingFeasibility",
-    "startQuestionId": "constraints-text",
+    "startQuestionId": "problem-select",
     "questions": [
+      {
+        "id": "problem-select",
+        "question": "검증할 문제를 선택해주세요",
+        "type": "text",
+        "required": true,
+        "nextQuestionId": "constraints-text",
+        "aiPromptTemplate": {
+          "template": "",
+          "selectableAnswers": {
+            "questionId": "problem-boundaries-text",
+            "label": "이전 문제 목록",
+            "variableName": "selectedProblemId"
+          }
+        }
+      },
       {
         "id": "constraints-text",
         "question": "기술적 제약사항을 작성해주세요",
