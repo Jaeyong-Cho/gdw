@@ -1949,3 +1949,263 @@ export async function getDailyStatistics(
 
   return result;
 }
+
+/**
+ * @brief State time statistics structure
+ */
+export interface StateTimeStats {
+  situation: string;
+  totalMinutes: number;
+  averageMinutes: number;
+  count: number;
+  minMinutes: number;
+  maxMinutes: number;
+}
+
+/**
+ * @brief Get time statistics for each state
+ *
+ * @param startDate - Start date filter (optional)
+ * @param endDate - End date filter (optional)
+ * @param cycleId - Filter by cycle ID (optional)
+ * @return Array of state time statistics
+ *
+ * @pre Database is initialized
+ * @post Returns statistics grouped by state
+ */
+export async function getStateTimeStatistics(
+  startDate?: string,
+  endDate?: string,
+  cycleId?: number
+): Promise<StateTimeStats[]> {
+  await initDatabase();
+
+  if (!db) {
+    throw new Error('Database not initialized');
+  }
+
+  let query = `
+    SELECT 
+      situation,
+      COUNT(*) as count,
+      SUM(CASE 
+        WHEN exited_at IS NOT NULL 
+        THEN (julianday(exited_at) - julianday(entered_at)) * 24 * 60
+        ELSE 0
+      END) as total_minutes,
+      AVG(CASE 
+        WHEN exited_at IS NOT NULL 
+        THEN (julianday(exited_at) - julianday(entered_at)) * 24 * 60
+        ELSE NULL
+      END) as avg_minutes,
+      MIN(CASE 
+        WHEN exited_at IS NOT NULL 
+        THEN (julianday(exited_at) - julianday(entered_at)) * 24 * 60
+        ELSE NULL
+      END) as min_minutes,
+      MAX(CASE 
+        WHEN exited_at IS NOT NULL 
+        THEN (julianday(exited_at) - julianday(entered_at)) * 24 * 60
+        ELSE NULL
+      END) as max_minutes
+    FROM state_transitions
+    WHERE 1=1
+  `;
+
+  const params: any[] = [];
+  
+  if (startDate) {
+    query += ' AND DATE(entered_at) >= DATE(?)';
+    params.push(startDate);
+  }
+  if (endDate) {
+    query += ' AND DATE(entered_at) <= DATE(?)';
+    params.push(endDate);
+  }
+  if (cycleId !== undefined) {
+    query += ' AND cycle_id = ?';
+    params.push(cycleId);
+  }
+
+  query += ' GROUP BY situation ORDER BY total_minutes DESC';
+
+  const stmt = db.prepare(query);
+  stmt.bind(params);
+
+  const results: StateTimeStats[] = [];
+  while (stmt.step()) {
+    const row = stmt.getAsObject();
+    results.push({
+      situation: row.situation as string,
+      totalMinutes: Math.round((row.total_minutes as number) || 0),
+      averageMinutes: Math.round((row.avg_minutes as number) || 0),
+      count: row.count as number,
+      minMinutes: Math.round((row.min_minutes as number) || 0),
+      maxMinutes: Math.round((row.max_minutes as number) || 0),
+    });
+  }
+  stmt.free();
+
+  return results;
+}
+
+/**
+ * @brief State transition record structure
+ */
+export interface StateTransitionRecord {
+  id: number;
+  cycleId: number | null;
+  situation: string;
+  enteredAt: string;
+  exitedAt: string | null;
+  durationMinutes: number | null;
+}
+
+/**
+ * @brief Get state transition history
+ *
+ * @param limit - Maximum records to return (default 100)
+ * @param cycleId - Filter by cycle ID (optional)
+ * @return Array of state transition records
+ *
+ * @pre Database is initialized
+ * @post Returns state transition history
+ */
+export async function getStateTransitionHistory(
+  limit: number = 100,
+  cycleId?: number
+): Promise<StateTransitionRecord[]> {
+  await initDatabase();
+
+  if (!db) {
+    throw new Error('Database not initialized');
+  }
+
+  let query = `
+    SELECT 
+      id,
+      cycle_id,
+      situation,
+      entered_at,
+      exited_at,
+      CASE 
+        WHEN exited_at IS NOT NULL 
+        THEN (julianday(exited_at) - julianday(entered_at)) * 24 * 60
+        ELSE NULL
+      END as duration_minutes
+    FROM state_transitions
+    WHERE 1=1
+  `;
+
+  const params: any[] = [];
+  
+  if (cycleId !== undefined) {
+    query += ' AND cycle_id = ?';
+    params.push(cycleId);
+  }
+
+  query += ' ORDER BY entered_at DESC LIMIT ?';
+  params.push(limit);
+
+  const stmt = db.prepare(query);
+  stmt.bind(params);
+
+  const results: StateTransitionRecord[] = [];
+  while (stmt.step()) {
+    const row = stmt.getAsObject();
+    results.push({
+      id: row.id as number,
+      cycleId: row.cycle_id as number | null,
+      situation: row.situation as string,
+      enteredAt: row.entered_at as string,
+      exitedAt: row.exited_at as string | null,
+      durationMinutes: row.duration_minutes !== null 
+        ? Math.round(row.duration_minutes as number) 
+        : null,
+    });
+  }
+  stmt.free();
+
+  return results;
+}
+
+/**
+ * @brief Daily state time statistics structure
+ */
+export interface DailyStateStats {
+  date: string;
+  stateMinutes: Record<string, number>;
+}
+
+/**
+ * @brief Get daily time statistics broken down by state
+ *
+ * @param startDate - Start date filter (optional)
+ * @param endDate - End date filter (optional)
+ * @return Array of daily state time statistics
+ *
+ * @pre Database is initialized
+ * @post Returns daily statistics with time per state
+ */
+export async function getDailyStateStatistics(
+  startDate?: string,
+  endDate?: string
+): Promise<DailyStateStats[]> {
+  await initDatabase();
+
+  if (!db) {
+    throw new Error('Database not initialized');
+  }
+
+  let query = `
+    SELECT 
+      DATE(entered_at) as date,
+      situation,
+      SUM(CASE 
+        WHEN exited_at IS NOT NULL 
+        THEN (julianday(exited_at) - julianday(entered_at)) * 24 * 60
+        ELSE 0
+      END) as minutes
+    FROM state_transitions
+    WHERE 1=1
+  `;
+
+  const params: any[] = [];
+  
+  if (startDate) {
+    query += ' AND DATE(entered_at) >= DATE(?)';
+    params.push(startDate);
+  }
+  if (endDate) {
+    query += ' AND DATE(entered_at) <= DATE(?)';
+    params.push(endDate);
+  }
+
+  query += ' GROUP BY DATE(entered_at), situation ORDER BY date, situation';
+
+  const stmt = db.prepare(query);
+  stmt.bind(params);
+
+  const dataByDate: Record<string, Record<string, number>> = {};
+  while (stmt.step()) {
+    const row = stmt.getAsObject();
+    const date = row.date as string;
+    const situation = row.situation as string;
+    const minutes = Math.round((row.minutes as number) || 0);
+    
+    if (!dataByDate[date]) {
+      dataByDate[date] = {};
+    }
+    dataByDate[date][situation] = minutes;
+  }
+  stmt.free();
+
+  const results: DailyStateStats[] = Object.entries(dataByDate)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, stateMinutes]) => ({
+      date,
+      stateMinutes,
+    }));
+
+  return results;
+}
