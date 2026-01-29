@@ -88,6 +88,18 @@ async function migrateDatabase(database: Database): Promise<void> {
     `);
     database.run('CREATE INDEX IF NOT EXISTS idx_saved_at ON workflow_states(saved_at)');
     
+    // Create transition_counters table if it doesn't exist
+    database.run(`
+      CREATE TABLE IF NOT EXISTS transition_counters (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        transition_key TEXT NOT NULL UNIQUE,
+        count INTEGER NOT NULL DEFAULT 0,
+        last_reset_at TEXT,
+        updated_at TEXT NOT NULL
+      )
+    `);
+    database.run('CREATE INDEX IF NOT EXISTS idx_transition_key ON transition_counters(transition_key)');
+    
     console.log('Database migration completed');
     
     // Save migrated database
@@ -1044,4 +1056,124 @@ export async function getWorkflowStateDetails(snapshotId: number): Promise<{
     description: (result.description as string) || null,
     answerCount: snapshot.answers.length
   };
+}
+
+/**
+ * @brief Get consecutive transition count for a specific transition
+ * 
+ * @param fromSituation - Source situation
+ * @param toSituation - Target situation
+ * @return Consecutive transition count
+ * 
+ * @pre Database is initialized
+ * @post Returns current count (0 if not found)
+ */
+export async function getTransitionCount(
+  fromSituation: string,
+  toSituation: string
+): Promise<number> {
+  await initDatabase();
+  
+  if (!db) {
+    throw new Error('Database not initialized');
+  }
+
+  const transitionKey = `${fromSituation}->${toSituation}`;
+  const stmt = db.prepare('SELECT count FROM transition_counters WHERE transition_key = ?');
+  stmt.bind([transitionKey]);
+  
+  if (stmt.step()) {
+    const result = stmt.getAsObject();
+    stmt.free();
+    return result.count as number;
+  }
+  
+  stmt.free();
+  return 0;
+}
+
+/**
+ * @brief Increment consecutive transition count
+ * 
+ * @param fromSituation - Source situation
+ * @param toSituation - Target situation
+ * @return New count after increment
+ * 
+ * @pre Database is initialized
+ * @post Transition count is incremented and saved
+ */
+export async function incrementTransitionCount(
+  fromSituation: string,
+  toSituation: string
+): Promise<number> {
+  await initDatabase();
+  
+  if (!db) {
+    throw new Error('Database not initialized');
+  }
+
+  const transitionKey = `${fromSituation}->${toSituation}`;
+  const now = new Date().toISOString();
+  
+  // Try to update existing record
+  const updateStmt = db.prepare(`
+    UPDATE transition_counters 
+    SET count = count + 1, updated_at = ?
+    WHERE transition_key = ?
+  `);
+  updateStmt.bind([now, transitionKey]);
+  updateStmt.step();
+  const rowsAffected = updateStmt.getAsObject().changes as number;
+  updateStmt.free();
+  
+  if (rowsAffected === 0) {
+    // Insert new record
+    db.run(
+      'INSERT INTO transition_counters (transition_key, count, updated_at) VALUES (?, 1, ?)',
+      [transitionKey, now]
+    );
+    await saveDatabase();
+    return 1;
+  }
+  
+  // Get updated count
+  const selectStmt = db.prepare('SELECT count FROM transition_counters WHERE transition_key = ?');
+  selectStmt.bind([transitionKey]);
+  selectStmt.step();
+  const result = selectStmt.getAsObject();
+  const newCount = result.count as number;
+  selectStmt.free();
+  
+  await saveDatabase();
+  return newCount;
+}
+
+/**
+ * @brief Reset transition count for a specific transition
+ * 
+ * @param fromSituation - Source situation
+ * @param toSituation - Target situation
+ * 
+ * @pre Database is initialized
+ * @post Transition count is reset to 0
+ */
+export async function resetTransitionCount(
+  fromSituation: string,
+  toSituation: string
+): Promise<void> {
+  await initDatabase();
+  
+  if (!db) {
+    throw new Error('Database not initialized');
+  }
+
+  const transitionKey = `${fromSituation}->${toSituation}`;
+  const now = new Date().toISOString();
+  
+  db.run(
+    'UPDATE transition_counters SET count = 0, last_reset_at = ?, updated_at = ? WHERE transition_key = ?',
+    [now, now, transitionKey]
+  );
+  
+  await saveDatabase();
 }

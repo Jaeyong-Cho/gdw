@@ -336,10 +336,26 @@
         "question": "검증 테스트를 작성해주세요 (테스트 코드 또는 재현 가능한 테스트 절차)",
         "type": "text",
         "required": true,
-        "nextQuestionId": "all-criteria-met",
+        "nextQuestionId": "verification-improvement-ideas",
         "aiPromptTemplate": {
           "template": "# 검증(Verification) 도움\n\n## [INPUT – Human]\n\n1. Implementation + acceptance criteria:\n- Implementation: {{task-implementation-text}}\n- Acceptance Criteria: {{acceptanceCriteria}}\n\n## [AI PROMPT]\n\nYou are validating correctness.\n\nTasks:\n1. Generate verification tests.\n2. Define observable success signals.\n3. Define observable failure signals.\n4. Classify failure origin:\n   - implementation fault\n   - acceptance fault\n   - design fault\n\n## [OUTPUT FORMAT]\n\n- Output the answer as a copyable markdown code block or d2 code block\n- Use a list instead of a table\n- Do not nest d2 code blocks inside markdown code blocks\n\n## [EXIT CONDITION]\n\n- Tests are reproducible\n- Results are evidence-based"
         }
+      },
+      {
+        "id": "verification-improvement-ideas",
+        "question": "개선점, 구현 방법, 또는 검증 방법이 떠오르나요?",
+        "type": "yesno",
+        "required": true,
+        "onYesNextQuestionId": "verification-go-to-implementation",
+        "onNoNextQuestionId": "all-criteria-met"
+      },
+      {
+        "id": "verification-go-to-implementation",
+        "question": "Implementation으로 돌아가시겠습니까? (연속 최대 5회)",
+        "type": "yesno",
+        "required": true,
+        "onYesNextSituation": "Implementing",
+        "onNoNextQuestionId": "all-criteria-met"
       },
       {
         "id": "all-criteria-met",

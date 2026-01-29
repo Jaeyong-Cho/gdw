@@ -6,6 +6,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Situation, QuestionAnswer, SituationFlow, QuestionDataDisplay } from '../types';
 import { getSituationFlows } from '../data/data-loader';
 import { generatePrompt, buildPromptContext } from '../utils/prompt-generator';
+import { getTransitionCount, incrementTransitionCount, resetTransitionCount } from '../data/db';
 
 /**
  * @brief Props for InteractiveFlow component
@@ -48,6 +49,7 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
   const [selectedAnswerIds, setSelectedAnswerIds] = useState<string[]>([]);
   const [selectedProblemId, setSelectedProblemId] = useState<number | null>(null);
   const [copyStatus, setCopyStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [verificationTransitionCount, setVerificationTransitionCount] = useState<number>(0);
   
   const currentQuestionIdRef = useRef<string | null>(null);
 
@@ -356,6 +358,20 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
       // Don't reset selectedProblemId when moving to other questions - keep it for prompt generation
     }
     
+    // Load transition count for verification-go-to-implementation question
+    if (question?.id === 'verification-go-to-implementation') {
+      const loadTransitionCount = async () => {
+        try {
+          const count = await getTransitionCount('Verifying', 'Implementing');
+          setVerificationTransitionCount(count);
+        } catch (error) {
+          console.error('Error loading transition count:', error);
+          setVerificationTransitionCount(0);
+        }
+      };
+      loadTransitionCount();
+    }
+    
     setTextAnswer('');
     
     if (question?.showData) {
@@ -388,7 +404,7 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
     return null;
   }
 
-  const handleAnswer = (answer: string | boolean) => {
+  const handleAnswer = async (answer: string | boolean) => {
     const answerRecord: QuestionAnswer = {
       questionId: currentQuestion.id,
       answer,
@@ -405,7 +421,17 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
     let nextQuestionId: string | undefined;
     let nextSituation: Situation | undefined;
 
-    if (currentQuestion.type === 'yesno') {
+    // Special handling for verification-go-to-implementation question
+    if (currentQuestion.id === 'verification-go-to-implementation' && answer === true) {
+      const currentCount = await getTransitionCount('Verifying', 'Implementing');
+      if (currentCount >= 5) {
+        alert('연속으로 Implementation으로 돌아간 횟수가 5회에 도달했습니다. 더 이상 돌아갈 수 없습니다.');
+        nextQuestionId = 'all-criteria-met';
+      } else {
+        await incrementTransitionCount('Verifying', 'Implementing');
+        nextSituation = 'Implementing';
+      }
+    } else if (currentQuestion.type === 'yesno') {
       if (answer === true && currentQuestion.onYesNextQuestionId) {
         nextQuestionId = currentQuestion.onYesNextQuestionId;
       } else if (answer === true && currentQuestion.onYesNextSituation) {
@@ -427,6 +453,15 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
       nextSituation = currentQuestion.onAnswerNextSituation;
     } else if (currentQuestion.nextQuestionId) {
       nextQuestionId = currentQuestion.nextQuestionId;
+    }
+
+    // Reset transition count when moving to a different situation (except Verifying -> Implementing)
+    if (nextSituation && nextSituation !== 'Implementing' && situation === 'Verifying') {
+      await resetTransitionCount('Verifying', 'Implementing');
+    }
+    // Reset transition count when moving from Implementing to a situation other than Verifying
+    if (nextSituation && situation === 'Implementing' && nextSituation !== 'Verifying') {
+      await resetTransitionCount('Verifying', 'Implementing');
     }
 
     if (nextSituation) {
@@ -464,6 +499,8 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
       case 'yesno':
         const showDataForYesNo = currentQuestion.showData && displayData;
         const hasAIPrompt = currentQuestion.aiPromptTemplate !== undefined;
+        const isVerificationGoToImplementation = currentQuestion.id === 'verification-go-to-implementation';
+        const isTransitionLimitReached = isVerificationGoToImplementation && verificationTransitionCount >= 5;
         
         return (
           <div style={{ marginTop: '16px' }}>
@@ -484,18 +521,38 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
                 </div>
               </div>
             )}
+            {isVerificationGoToImplementation && (
+              <div style={{
+                marginBottom: '16px',
+                padding: '12px',
+                backgroundColor: isTransitionLimitReached ? '#fee2e2' : '#eff6ff',
+                border: `1px solid ${isTransitionLimitReached ? '#ef4444' : '#3b82f6'}`,
+                borderRadius: '8px',
+                fontSize: '14px',
+              }}>
+                <div style={{ fontWeight: '600', marginBottom: '4px', color: isTransitionLimitReached ? '#991b1b' : '#1e40af' }}>
+                  연속 전환 횟수: {verificationTransitionCount} / 5
+                </div>
+                {isTransitionLimitReached && (
+                  <div style={{ color: '#991b1b', fontSize: '13px' }}>
+                    최대 연속 횟수(5회)에 도달했습니다. 더 이상 Implementation으로 돌아갈 수 없습니다.
+                  </div>
+                )}
+              </div>
+            )}
             <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
               <button
                 onClick={() => handleAnswer(true)}
+                disabled={isTransitionLimitReached}
                 style={{
                   padding: '12px 24px',
                   fontSize: '16px',
                   fontWeight: '600',
-                  backgroundColor: '#10b981',
+                  backgroundColor: isTransitionLimitReached ? '#9ca3af' : '#10b981',
                   color: '#ffffff',
                   border: 'none',
                   borderRadius: '8px',
-                  cursor: 'pointer',
+                  cursor: isTransitionLimitReached ? 'not-allowed' : 'pointer',
                   flex: 1,
                   minWidth: '120px',
                 }}
