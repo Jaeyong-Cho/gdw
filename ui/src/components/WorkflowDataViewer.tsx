@@ -910,6 +910,84 @@ export const WorkflowDataViewer: React.FC<WorkflowDataViewerProps> = ({ onClose 
               </div>
             ) : (
               <div style={{ overflowX: 'auto' }}>
+                {/* Unconscious Periods Pagination Controls - Top */}
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: '16px',
+                  padding: '8px 0',
+                }}>
+                  <div style={{ fontSize: '14px', color: '#5b21b6' }}>
+                    총 {unconsciousPeriods.length}개 무의식 기간
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <button
+                      onClick={() => setUnconsciousCurrentPage(1)}
+                      disabled={unconsciousCurrentPage === 1}
+                      style={{
+                        padding: '6px 12px',
+                        border: '1px solid #c4b5fd',
+                        borderRadius: '4px',
+                        backgroundColor: unconsciousCurrentPage === 1 ? '#f5f3ff' : '#ffffff',
+                        color: unconsciousCurrentPage === 1 ? '#a5a3a8' : '#5b21b6',
+                        cursor: unconsciousCurrentPage === 1 ? 'not-allowed' : 'pointer',
+                        fontSize: '12px',
+                      }}
+                    >
+                      First
+                    </button>
+                    <button
+                      onClick={() => setUnconsciousCurrentPage(p => Math.max(1, p - 1))}
+                      disabled={unconsciousCurrentPage === 1}
+                      style={{
+                        padding: '6px 12px',
+                        border: '1px solid #c4b5fd',
+                        borderRadius: '4px',
+                        backgroundColor: unconsciousCurrentPage === 1 ? '#f5f3ff' : '#ffffff',
+                        color: unconsciousCurrentPage === 1 ? '#a5a3a8' : '#5b21b6',
+                        cursor: unconsciousCurrentPage === 1 ? 'not-allowed' : 'pointer',
+                        fontSize: '12px',
+                      }}
+                    >
+                      Prev
+                    </button>
+                    <span style={{ padding: '0 12px', fontSize: '14px', color: '#5b21b6' }}>
+                      {unconsciousCurrentPage} / {unconsciousTotalPages}
+                    </span>
+                    <button
+                      onClick={() => setUnconsciousCurrentPage(p => Math.min(unconsciousTotalPages, p + 1))}
+                      disabled={unconsciousCurrentPage === unconsciousTotalPages}
+                      style={{
+                        padding: '6px 12px',
+                        border: '1px solid #c4b5fd',
+                        borderRadius: '4px',
+                        backgroundColor: unconsciousCurrentPage === unconsciousTotalPages ? '#f5f3ff' : '#ffffff',
+                        color: unconsciousCurrentPage === unconsciousTotalPages ? '#a5a3a8' : '#5b21b6',
+                        cursor: unconsciousCurrentPage === unconsciousTotalPages ? 'not-allowed' : 'pointer',
+                        fontSize: '12px',
+                      }}
+                    >
+                      Next
+                    </button>
+                    <button
+                      onClick={() => setUnconsciousCurrentPage(unconsciousTotalPages)}
+                      disabled={unconsciousCurrentPage === unconsciousTotalPages}
+                      style={{
+                        padding: '6px 12px',
+                        border: '1px solid #c4b5fd',
+                        borderRadius: '4px',
+                        backgroundColor: unconsciousCurrentPage === unconsciousTotalPages ? '#f5f3ff' : '#ffffff',
+                        color: unconsciousCurrentPage === unconsciousTotalPages ? '#a5a3a8' : '#5b21b6',
+                        cursor: unconsciousCurrentPage === unconsciousTotalPages ? 'not-allowed' : 'pointer',
+                        fontSize: '12px',
+                      }}
+                    >
+                      Last
+                    </button>
+                  </div>
+                </div>
+                
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
                     <tr style={{ backgroundColor: '#f3e8ff' }}>
@@ -923,7 +1001,7 @@ export const WorkflowDataViewer: React.FC<WorkflowDataViewerProps> = ({ onClose 
                     </tr>
                   </thead>
                   <tbody>
-                    {unconsciousPeriods.map((period, index) => {
+                    {paginatedUnconsciousPeriods.map((period, index) => {
                       const formatDuration = (ms: number | null): string => {
                         if (ms === null) return '-';
                         const minutes = Math.floor(ms / 60000);
