@@ -1088,7 +1088,70 @@ export async function clearDatabase(): Promise<void> {
     throw new Error('Database not initialized');
   }
 
+  // Clear all tables in correct order (respect foreign key constraints)
+  db.run('DELETE FROM cycle_context');
+  db.run('DELETE FROM unconscious_periods');
+  db.run('DELETE FROM state_entries');
   db.run('DELETE FROM question_answers');
+  db.run('DELETE FROM cycles');
+  db.run('DELETE FROM workflow_states');
+  db.run('DELETE FROM transition_counts');
+  
+  await saveDatabase();
+}
+
+/**
+ * @brief Delete a specific answer by ID
+ * 
+ * @param answerId - Answer ID to delete
+ */
+export async function deleteAnswer(answerId: number): Promise<void> {
+  await initDatabase();
+  
+  if (!db) {
+    throw new Error('Database not initialized');
+  }
+
+  db.run('DELETE FROM question_answers WHERE id = ?', [answerId]);
+  await saveDatabase();
+}
+
+/**
+ * @brief Update a specific answer by ID
+ * 
+ * @param answerId - Answer ID to update
+ * @param newAnswer - New answer text
+ */
+export async function updateAnswer(answerId: number, newAnswer: string): Promise<void> {
+  await initDatabase();
+  
+  if (!db) {
+    throw new Error('Database not initialized');
+  }
+
+  db.run('UPDATE question_answers SET answer = ? WHERE id = ?', [newAnswer, answerId]);
+  await saveDatabase();
+}
+
+/**
+ * @brief Delete a specific cycle by ID
+ * 
+ * @param cycleId - Cycle ID to delete
+ */
+export async function deleteCycle(cycleId: number): Promise<void> {
+  await initDatabase();
+  
+  if (!db) {
+    throw new Error('Database not initialized');
+  }
+
+  // Delete related data first
+  db.run('DELETE FROM cycle_context WHERE cycle_id = ? OR source_cycle_id = ?', [cycleId, cycleId]);
+  db.run('DELETE FROM unconscious_periods WHERE cycle_id = ? OR previous_cycle_id = ?', [cycleId, cycleId]);
+  db.run('DELETE FROM state_entries WHERE cycle_id = ?', [cycleId]);
+  db.run('DELETE FROM question_answers WHERE cycle_id = ?', [cycleId]);
+  db.run('DELETE FROM cycles WHERE id = ?', [cycleId]);
+  
   await saveDatabase();
 }
 

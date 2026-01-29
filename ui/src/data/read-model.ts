@@ -14,6 +14,7 @@ import { Situation } from '../types';
  * @brief State history entry
  */
 export interface StateHistoryEntry {
+  id: number;
   state: Situation;
   timestamp: string;
   questionId: string;
@@ -110,6 +111,7 @@ export class WorkflowReadModel implements IReadModel {
         const answers = await getAnswersBySituation(situation);
         for (const answer of answers) {
           history.push({
+            id: answer.id,
             state: situation,
             timestamp: answer.answeredAt,
             questionId: answer.questionId,
@@ -142,6 +144,7 @@ export class WorkflowReadModel implements IReadModel {
     try {
       const answers = await getAnswersBySituation(situation);
       return answers.map(answer => ({
+        id: answer.id,
         state: situation,
         timestamp: answer.answeredAt,
         questionId: answer.questionId,
@@ -171,6 +174,7 @@ export class WorkflowReadModel implements IReadModel {
         const answers = await getAnswersBySituation(situation, cycleId);
         for (const answer of answers) {
           history.push({
+            id: answer.id,
             state: situation,
             timestamp: answer.answeredAt,
             questionId: answer.questionId,

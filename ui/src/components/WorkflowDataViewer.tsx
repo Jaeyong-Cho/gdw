@@ -10,7 +10,7 @@
 import React, { useState, useEffect } from 'react';
 import { Situation } from '../types';
 import { workflowReadModel, StateHistoryEntry } from '../data/read-model';
-import { getAllCycles, getAllUnconsciousPeriods } from '../data/db';
+import { getAllCycles, getAllUnconsciousPeriods, deleteAnswer, updateAnswer, deleteCycle } from '../data/db';
 
 interface WorkflowDataViewerProps {
   onClose: () => void;
@@ -61,6 +61,10 @@ export const WorkflowDataViewer: React.FC<WorkflowDataViewerProps> = ({ onClose 
   const [unconsciousPageSize] = useState<number>(10);
   const [unconsciousCurrentPage, setUnconsciousCurrentPage] = useState<number>(1);
 
+  // Edit/Delete state
+  const [editingEntryId, setEditingEntryId] = useState<number | null>(null);
+  const [editingAnswer, setEditingAnswer] = useState<string>('');
+
   // Computed pagination values
   const cycleTotalPages = Math.ceil(cycles.length / cyclePageSize);
   const paginatedCycles = cycles.slice(
@@ -73,6 +77,73 @@ export const WorkflowDataViewer: React.FC<WorkflowDataViewerProps> = ({ onClose 
     (unconsciousCurrentPage - 1) * unconsciousPageSize,
     unconsciousCurrentPage * unconsciousPageSize
   );
+
+  /**
+   * @brief Handle delete answer
+   */
+  const handleDeleteAnswer = async (entryId: number) => {
+    const confirmed = confirm('이 답변을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.');
+    if (!confirmed) return;
+
+    try {
+      await deleteAnswer(entryId);
+      await loadWorkflowData();
+    } catch (error) {
+      console.error('Failed to delete answer:', error);
+      alert('답변 삭제에 실패했습니다.');
+    }
+  };
+
+  /**
+   * @brief Handle update answer
+   */
+  const handleUpdateAnswer = async (entryId: number) => {
+    try {
+      await updateAnswer(entryId, editingAnswer);
+      setEditingEntryId(null);
+      setEditingAnswer('');
+      await loadWorkflowData();
+    } catch (error) {
+      console.error('Failed to update answer:', error);
+      alert('답변 수정에 실패했습니다.');
+    }
+  };
+
+  /**
+   * @brief Handle delete cycle
+   */
+  const handleDeleteCycle = async (cycleId: number) => {
+    const confirmed = confirm('이 Cycle과 관련된 모든 데이터가 삭제됩니다. 계속하시겠습니까?');
+    if (!confirmed) return;
+
+    try {
+      await deleteCycle(cycleId);
+      if (selectedCycleId === cycleId) {
+        setSelectedCycleId(null);
+      }
+      await loadCycles();
+      await loadWorkflowData();
+    } catch (error) {
+      console.error('Failed to delete cycle:', error);
+      alert('Cycle 삭제에 실패했습니다.');
+    }
+  };
+
+  /**
+   * @brief Start editing an answer
+   */
+  const startEditing = (entryId: number, currentAnswer: string) => {
+    setEditingEntryId(entryId);
+    setEditingAnswer(currentAnswer);
+  };
+
+  /**
+   * @brief Cancel editing
+   */
+  const cancelEditing = () => {
+    setEditingEntryId(null);
+    setEditingAnswer('');
+  };
 
   useEffect(() => {
     loadCycles();
@@ -424,6 +495,7 @@ export const WorkflowDataViewer: React.FC<WorkflowDataViewerProps> = ({ onClose 
                       <th style={{ padding: '10px', textAlign: 'left', borderBottom: '2px solid #e5e7eb', fontSize: '13px' }}>완료 시간</th>
                       <th style={{ padding: '10px', textAlign: 'center', borderBottom: '2px solid #e5e7eb', fontSize: '13px' }}>상태</th>
                       <th style={{ padding: '10px', textAlign: 'center', borderBottom: '2px solid #e5e7eb', fontSize: '13px' }}>선택</th>
+                      <th style={{ padding: '10px', textAlign: 'center', borderBottom: '2px solid #e5e7eb', fontSize: '13px' }}>삭제</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -464,6 +536,22 @@ export const WorkflowDataViewer: React.FC<WorkflowDataViewerProps> = ({ onClose 
                             }}
                           >
                             {selectedCycleId === cycle.id ? '선택됨' : '선택'}
+                          </button>
+                        </td>
+                        <td style={{ padding: '10px', textAlign: 'center', borderBottom: '1px solid #e5e7eb' }}>
+                          <button
+                            onClick={() => handleDeleteCycle(cycle.id)}
+                            style={{
+                              padding: '4px 12px',
+                              fontSize: '12px',
+                              backgroundColor: '#fee2e2',
+                              color: '#dc2626',
+                              border: 'none',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            삭제
                           </button>
                         </td>
                       </tr>
@@ -650,7 +738,7 @@ export const WorkflowDataViewer: React.FC<WorkflowDataViewerProps> = ({ onClose 
                       textAlign: 'left',
                       fontWeight: '600',
                       color: '#374151',
-                      width: '15%',
+                      width: '12%',
                     }}>
                       Situation
                     </th>
@@ -659,7 +747,7 @@ export const WorkflowDataViewer: React.FC<WorkflowDataViewerProps> = ({ onClose 
                       textAlign: 'left',
                       fontWeight: '600',
                       color: '#374151',
-                      width: '25%',
+                      width: '18%',
                     }}>
                       Question ID
                     </th>
@@ -668,7 +756,7 @@ export const WorkflowDataViewer: React.FC<WorkflowDataViewerProps> = ({ onClose 
                       textAlign: 'left',
                       fontWeight: '600',
                       color: '#374151',
-                      width: '40%',
+                      width: '35%',
                     }}>
                       Answer
                     </th>
@@ -677,7 +765,7 @@ export const WorkflowDataViewer: React.FC<WorkflowDataViewerProps> = ({ onClose 
                       textAlign: 'left',
                       fontWeight: '600',
                       color: '#374151',
-                      width: '10%',
+                      width: '8%',
                     }}>
                       Cycle
                     </th>
@@ -686,27 +774,37 @@ export const WorkflowDataViewer: React.FC<WorkflowDataViewerProps> = ({ onClose 
                       textAlign: 'left',
                       fontWeight: '600',
                       color: '#374151',
-                      width: '15%',
+                      width: '12%',
                     }}>
                       Timestamp
+                    </th>
+                    <th style={{
+                      padding: '12px',
+                      textAlign: 'center',
+                      fontWeight: '600',
+                      color: '#374151',
+                      width: '15%',
+                    }}>
+                      Actions
                     </th>
                   </tr>
                 </thead>
                 <tbody>
                   {stateHistory.map((entry, index) => {
                     const cycle = entry.cycleId ? cycles.find(c => c.id === entry.cycleId) : null;
+                    const isEditing = editingEntryId === entry.id;
                     return (
                       <tr
-                        key={`${entry.questionId}-${entry.timestamp}-${index}`}
-                        onClick={() => setSelectedEntry(selectedEntry === entry ? null : entry)}
+                        key={`${entry.id}-${entry.questionId}-${entry.timestamp}-${index}`}
+                        onClick={() => !isEditing && setSelectedEntry(selectedEntry === entry ? null : entry)}
                         style={{
                           backgroundColor: selectedEntry === entry ? '#f0f9ff' : index % 2 === 0 ? '#ffffff' : '#f9fafb',
                           borderBottom: '1px solid #e5e7eb',
-                          cursor: 'pointer',
+                          cursor: isEditing ? 'default' : 'pointer',
                           transition: 'background-color 0.15s',
                         }}
                         onMouseEnter={(e) => {
-                          if (selectedEntry !== entry) {
+                          if (selectedEntry !== entry && !isEditing) {
                             e.currentTarget.style.backgroundColor = '#f3f4f6';
                           }
                         }}
@@ -741,14 +839,31 @@ export const WorkflowDataViewer: React.FC<WorkflowDataViewerProps> = ({ onClose 
                           color: '#374151',
                           maxWidth: '400px',
                         }}>
-                          <div style={{
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: selectedEntry === entry ? 'pre-wrap' : 'nowrap',
-                            wordBreak: 'break-word',
-                          }}>
-                            {entry.answer}
-                          </div>
+                          {isEditing ? (
+                            <textarea
+                              value={editingAnswer}
+                              onChange={(e) => setEditingAnswer(e.target.value)}
+                              onClick={(e) => e.stopPropagation()}
+                              style={{
+                                width: '100%',
+                                minHeight: '60px',
+                                padding: '8px',
+                                border: '1px solid #3b82f6',
+                                borderRadius: '4px',
+                                fontSize: '13px',
+                                resize: 'vertical',
+                              }}
+                            />
+                          ) : (
+                            <div style={{
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: selectedEntry === entry ? 'pre-wrap' : 'nowrap',
+                              wordBreak: 'break-word',
+                            }}>
+                              {entry.answer}
+                            </div>
+                          )}
                         </td>
                         <td style={{
                           padding: '12px',
@@ -779,6 +894,76 @@ export const WorkflowDataViewer: React.FC<WorkflowDataViewerProps> = ({ onClose 
                           whiteSpace: 'nowrap',
                         }}>
                           {formatTimestamp(entry.timestamp)}
+                        </td>
+                        <td style={{
+                          padding: '12px',
+                          textAlign: 'center',
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                        >
+                          {isEditing ? (
+                            <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
+                              <button
+                                onClick={() => handleUpdateAnswer(entry.id)}
+                                style={{
+                                  padding: '4px 8px',
+                                  fontSize: '11px',
+                                  backgroundColor: '#22c55e',
+                                  color: '#ffffff',
+                                  border: 'none',
+                                  borderRadius: '4px',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                저장
+                              </button>
+                              <button
+                                onClick={cancelEditing}
+                                style={{
+                                  padding: '4px 8px',
+                                  fontSize: '11px',
+                                  backgroundColor: '#6b7280',
+                                  color: '#ffffff',
+                                  border: 'none',
+                                  borderRadius: '4px',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                취소
+                              </button>
+                            </div>
+                          ) : (
+                            <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
+                              <button
+                                onClick={() => startEditing(entry.id, entry.answer)}
+                                style={{
+                                  padding: '4px 8px',
+                                  fontSize: '11px',
+                                  backgroundColor: '#3b82f6',
+                                  color: '#ffffff',
+                                  border: 'none',
+                                  borderRadius: '4px',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                편집
+                              </button>
+                              <button
+                                onClick={() => handleDeleteAnswer(entry.id)}
+                                style={{
+                                  padding: '4px 8px',
+                                  fontSize: '11px',
+                                  backgroundColor: '#fee2e2',
+                                  color: '#dc2626',
+                                  border: 'none',
+                                  borderRadius: '4px',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                삭제
+                              </button>
+                            </div>
+                          )}
                         </td>
                       </tr>
                     );
