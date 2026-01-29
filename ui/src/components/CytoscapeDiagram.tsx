@@ -396,9 +396,11 @@ export const CytoscapeDiagram: React.FC<CytoscapeDiagramProps> = ({
       const selectedNode = cyRef.current.getElementById(selectedSituation);
       if (selectedNode.length > 0) {
         selectedNode.style({
-          'background-color': '#dbeafe',
-          'border-color': '#3b82f6',
-          'border-width': 3,
+          'background-color': '#fce7f3', // Pink background
+          'border-color': '#e11d48', // Crimson/coral border
+          'border-width': 4,
+          'color': '#1f2937', // Black text
+          'font-weight': '700',
         });
       }
     } else if (selectedSituation === 'Dumping' || selectedSituation === 'Ending' || selectedSituation === 'Unconscious') {
@@ -407,13 +409,15 @@ export const CytoscapeDiagram: React.FC<CytoscapeDiagramProps> = ({
       if (selectedNode.length > 0) {
         if (selectedSituation === 'Dumping') {
           selectedNode.style({
-            'background-color': '#93c5fd',
-            'border-color': '#2563eb',
+            'background-color': '#fce7f3', // Pink background
+            'border-color': '#e11d48', // Crimson/coral border
             'border-width': 4,
+            'color': '#1f2937', // Black text
+            'font-weight': '700',
           });
         } else if (selectedSituation === 'Unconscious') {
           selectedNode.style({
-            'background-color': '#e9d5ff',
+            'background-color': '#a855f7', // Purple for unconscious
             'background-opacity': 1,
             'border-color': '#7e22ce',
             'border-width': 5,
@@ -421,12 +425,17 @@ export const CytoscapeDiagram: React.FC<CytoscapeDiagramProps> = ({
             'shape': 'ellipse',
             'width': 220,
             'height': 110,
+            'color': '#ffffff',
+            'font-weight': '700',
           });
         } else {
+          // Ending
           selectedNode.style({
-            'background-color': '#fde68a',
-            'border-color': '#d97706',
+            'background-color': '#fce7f3', // Pink background
+            'border-color': '#e11d48', // Crimson/coral border
             'border-width': 4,
+            'color': '#1f2937', // Black text
+            'font-weight': '700',
           });
         }
       }
@@ -443,6 +452,122 @@ export const CytoscapeDiagram: React.FC<CytoscapeDiagramProps> = ({
     // Fit to viewport after layout
     cyRef.current.fit(undefined, 50);
   }, [layoutType]);
+
+  // Get node order for circle layout
+  const getNodeOrder = useCallback((): string[] => {
+    // Define the order of nodes in the circle (clockwise from top)
+    return [
+      'Dumping',
+      'WhatToDo',
+      'DefiningIntent',
+      'FailingIntent',
+      'SelectingProblem',
+      'DefiningAcceptance',
+      'CheckingFeasibility',
+      'Designing',
+      'BreakingTasks',
+      'Implementing',
+      'Verifying',
+      'Verified',
+      'Releasing',
+      'CollectingFeedback',
+      'Learning',
+      'Ending',
+      'Unconscious',
+    ];
+  }, []);
+
+  // Calculate rotation angle to position selected node at top
+  const calculateRotationToTop = useCallback((nodeId: string): number => {
+    const nodeOrder = getNodeOrder();
+    const nodeCount = nodeOrder.length;
+    const nodeIndex = nodeOrder.indexOf(nodeId);
+    
+    if (nodeIndex === -1) return 0;
+    
+    // Each node is spaced by (2 * PI / nodeCount) radians
+    // We want the selected node at the top (-PI/2 radians or -90 degrees)
+    // Current angle of node = startAngle + (nodeIndex / nodeCount) * 2 * PI
+    // startAngle is -PI/2 (top), so node 0 (Dumping) is at top
+    // To move nodeIndex to top, we need to rotate by: -(nodeIndex / nodeCount) * 2 * PI
+    const anglePerNode = (2 * Math.PI) / nodeCount;
+    const rotationNeeded = -nodeIndex * anglePerNode;
+    
+    return rotationNeeded;
+  }, [getNodeOrder]);
+
+  // Rotate diagram to position selected situation at top (for circle layout)
+  useEffect(() => {
+    if (!cyRef.current || layoutType !== 'circle' || !selectedSituation) return;
+    if (isUnconscious) return; // Don't interfere with unconscious animation
+
+    const cy = cyRef.current;
+    const centerX = cy.width() / 2;
+    const centerY = cy.height() / 2;
+
+    const targetRotation = calculateRotationToTop(selectedSituation);
+    const currentRotation = rotationRef.current;
+    
+    // Calculate shortest rotation path
+    let rotationDiff = targetRotation - currentRotation;
+    while (rotationDiff > Math.PI) rotationDiff -= 2 * Math.PI;
+    while (rotationDiff < -Math.PI) rotationDiff += 2 * Math.PI;
+
+    // Animate rotation
+    const animationDuration = 500; // ms
+    const startTime = performance.now();
+    const startRotation = currentRotation;
+    const endRotation = startRotation + rotationDiff;
+
+    // Store initial positions and calculate radius/angle from center
+    const nodeData = new Map<string, { radius: number; baseAngle: number }>();
+    cy.nodes().forEach((node) => {
+      const pos = node.position();
+      const dx = pos.x - centerX;
+      const dy = pos.y - centerY;
+      const radius = Math.sqrt(dx * dx + dy * dy);
+      const angle = Math.atan2(dy, dx) - currentRotation; // Remove current rotation to get base angle
+      nodeData.set(node.id(), { radius, baseAngle: angle });
+    });
+
+    const animateRotation = (currentTime: number) => {
+      const elapsed = currentTime - startTime;
+      const progress = Math.min(elapsed / animationDuration, 1);
+      
+      // Ease out cubic
+      const easeProgress = 1 - Math.pow(1 - progress, 3);
+      
+      const currentAngle = startRotation + rotationDiff * easeProgress;
+      rotationRef.current = currentAngle;
+
+      cy.batch(() => {
+        cy.nodes().forEach((node) => {
+          const data = nodeData.get(node.id());
+          if (data) {
+            const newAngle = data.baseAngle + currentAngle;
+            const newX = centerX + data.radius * Math.cos(newAngle);
+            const newY = centerY + data.radius * Math.sin(newAngle);
+            node.position({ x: newX, y: newY });
+          }
+        });
+      });
+
+      if (progress < 1) {
+        animationFrameRef.current = requestAnimationFrame(animateRotation);
+      }
+    };
+
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+    }
+    animationFrameRef.current = requestAnimationFrame(animateRotation);
+
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, [selectedSituation, layoutType, isUnconscious, calculateRotationToTop]);
 
   // Rotation animation for Unconscious state in circle layout
   useEffect(() => {
