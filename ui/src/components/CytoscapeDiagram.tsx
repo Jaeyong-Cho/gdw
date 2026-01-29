@@ -639,14 +639,67 @@ export const CytoscapeDiagram: React.FC<CytoscapeDiagramProps> = ({
     }
   }, [isUnconscious, layoutType]);
 
+  /**
+   * @brief Fit the graph to the viewport
+   */
+  const handleFit = () => {
+    if (cyRef.current) {
+      cyRef.current.fit(undefined, 50);
+    }
+  };
+
   return (
     <div
-      ref={containerRef}
       style={{
         width: '100%',
         height: '100%',
-        backgroundColor: '#f3f4f6',
+        position: 'relative',
       }}
-    />
+    >
+      <div
+        ref={containerRef}
+        style={{
+          width: '100%',
+          height: '100%',
+          backgroundColor: '#f3f4f6',
+        }}
+      />
+      {/* Fit Button */}
+      <button
+        onClick={handleFit}
+        style={{
+          position: 'absolute',
+          bottom: '16px',
+          right: '16px',
+          padding: '8px 16px',
+          fontSize: '13px',
+          fontWeight: '500',
+          backgroundColor: '#ffffff',
+          color: '#374151',
+          border: '1px solid #d1d5db',
+          borderRadius: '6px',
+          cursor: 'pointer',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+          transition: 'all 0.2s',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.backgroundColor = '#f3f4f6';
+          e.currentTarget.style.borderColor = '#9ca3af';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.backgroundColor = '#ffffff';
+          e.currentTarget.style.borderColor = '#d1d5db';
+        }}
+        title="Fit graph to viewport"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
+        </svg>
+        Fit
+      </button>
+    </div>
   );
 };
