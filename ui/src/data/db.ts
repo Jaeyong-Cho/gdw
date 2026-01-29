@@ -173,6 +173,25 @@ async function migrateDatabase(database: Database): Promise<void> {
     database.run('CREATE INDEX IF NOT EXISTS idx_unconscious_started_at ON unconscious_periods(started_at)');
     database.run('CREATE INDEX IF NOT EXISTS idx_unconscious_ended_at ON unconscious_periods(ended_at)');
     
+    // Create cycle_context table for storing selected previous cycle answers as context
+    database.run(`
+      CREATE TABLE IF NOT EXISTS cycle_context (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        cycle_id INTEGER NOT NULL,
+        source_cycle_id INTEGER NOT NULL,
+        source_answer_id INTEGER NOT NULL,
+        question_id TEXT NOT NULL,
+        answer_text TEXT NOT NULL,
+        situation TEXT NOT NULL,
+        added_at TEXT NOT NULL,
+        FOREIGN KEY (cycle_id) REFERENCES cycles(id),
+        FOREIGN KEY (source_cycle_id) REFERENCES cycles(id),
+        FOREIGN KEY (source_answer_id) REFERENCES question_answers(id)
+      )
+    `);
+    database.run('CREATE INDEX IF NOT EXISTS idx_cycle_context_cycle ON cycle_context(cycle_id)');
+    database.run('CREATE INDEX IF NOT EXISTS idx_cycle_context_source ON cycle_context(source_cycle_id)');
+    
     console.log('Database migration completed');
     
     // Save migrated database
@@ -2433,3 +2452,250 @@ export async function getDailyStateStatistics(
 
   return results;
 }
+
+// ============================================================================
+// Cycle Context Functions
+// ============================================================================
+
+/**
+ * @brief Context answer from previous cycle
+ */
+interface ContextAnswer {
+  id: number;
+  cycleId: number;
+  sourceCycleId: number;
+  sourceAnswerId: number;
+  questionId: string;
+  answerText: string;
+  situation: string;
+  addedAt: string;
+}
+
+/**
+ * @brief Add a previous cycle answer as context for current cycle
+ * 
+ * @param cycleId - Current cycle ID
+ * @param sourceCycleId - Source cycle ID where the answer came from
+ * @param sourceAnswerId - Answer ID in the source cycle
+ * @param questionId - Question ID
+ * @param answerText - Answer text content
+ * @param situation - Situation where answer was given
+ * @return Created context ID
+ * 
+ * @pre Database is initialized
+ * @post Context is stored in cycle_context table
+ */
+export async function addCycleContext(
+  cycleId: number,
+  sourceCycleId: number,
+  sourceAnswerId: number,
+  questionId: string,
+  answerText: string,
+  situation: string
+): Promise<number> {
+  await initDatabase();
+  
+  if (!db) {
+    throw new Error('Database not initialized');
+  }
+
+  // Check if this context already exists
+  const checkStmt = db.prepare(`
+    SELECT id FROM cycle_context 
+    WHERE cycle_id = ? AND source_answer_id = ?
+  `);
+  checkStmt.bind([cycleId, sourceAnswerId]);
+  
+  if (checkStmt.step()) {
+    const existing = checkStmt.getAsObject();
+    checkStmt.free();
+    return existing.id as number;
+  }
+  checkStmt.free();
+
+  const stmt = db.prepare(`
+    INSERT INTO cycle_context (cycle_id, source_cycle_id, source_answer_id, question_id, answer_text, situation, added_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `);
+  stmt.bind([cycleId, sourceCycleId, sourceAnswerId, questionId, answerText, situation, new Date().toISOString()]);
+  stmt.step();
+  stmt.free();
+
+  const id = db.exec('SELECT last_insert_rowid() as id')[0].values[0][0] as number;
+  
+  await saveDatabase();
+  
+  return id;
+}
+
+/**
+ * @brief Remove a context from current cycle
+ * 
+ * @param contextId - Context ID to remove
+ * 
+ * @pre Database is initialized
+ * @post Context is removed from cycle_context table
+ */
+export async function removeCycleContext(contextId: number): Promise<void> {
+  await initDatabase();
+  
+  if (!db) {
+    throw new Error('Database not initialized');
+  }
+
+  const stmt = db.prepare('DELETE FROM cycle_context WHERE id = ?');
+  stmt.bind([contextId]);
+  stmt.step();
+  stmt.free();
+
+  await saveDatabase();
+}
+
+/**
+ * @brief Get all context for a cycle
+ * 
+ * @param cycleId - Cycle ID
+ * @return Array of context answers
+ * 
+ * @pre Database is initialized
+ * @post Returns all context answers for the cycle
+ */
+export async function getCycleContext(cycleId: number): Promise<ContextAnswer[]> {
+  await initDatabase();
+  
+  if (!db) {
+    throw new Error('Database not initialized');
+  }
+
+  const stmt = db.prepare(`
+    SELECT id, cycle_id, source_cycle_id, source_answer_id, question_id, answer_text, situation, added_at
+    FROM cycle_context
+    WHERE cycle_id = ?
+    ORDER BY added_at DESC
+  `);
+  stmt.bind([cycleId]);
+
+  const contexts: ContextAnswer[] = [];
+  while (stmt.step()) {
+    const row = stmt.getAsObject();
+    contexts.push({
+      id: row.id as number,
+      cycleId: row.cycle_id as number,
+      sourceCycleId: row.source_cycle_id as number,
+      sourceAnswerId: row.source_answer_id as number,
+      questionId: row.question_id as string,
+      answerText: row.answer_text as string,
+      situation: row.situation as string,
+      addedAt: row.added_at as string,
+    });
+  }
+  stmt.free();
+
+  return contexts;
+}
+
+/**
+ * @brief Get answers from all previous cycles (excluding current)
+ * 
+ * @param currentCycleId - Current cycle ID to exclude
+ * @return Array of answers grouped by cycle
+ * 
+ * @pre Database is initialized
+ * @post Returns all answers from previous cycles
+ */
+export async function getPreviousCyclesAnswers(currentCycleId: number | null): Promise<Array<{
+  cycleId: number;
+  cycleNumber: number;
+  startedAt: string;
+  completedAt: string | null;
+  answers: Array<{
+    id: number;
+    questionId: string;
+    answer: string;
+    situation: string;
+    answeredAt: string;
+  }>;
+}>> {
+  await initDatabase();
+  
+  if (!db) {
+    throw new Error('Database not initialized');
+  }
+
+  // Get all cycles except current
+  let cycleQuery = `
+    SELECT id, cycle_number, started_at, completed_at
+    FROM cycles
+    WHERE status IN ('completed', 'active')
+  `;
+  
+  if (currentCycleId !== null) {
+    cycleQuery += ` AND id != ${currentCycleId}`;
+  }
+  
+  cycleQuery += ' ORDER BY cycle_number DESC LIMIT 10';
+
+  const cycleStmt = db.prepare(cycleQuery);
+  
+  const results: Array<{
+    cycleId: number;
+    cycleNumber: number;
+    startedAt: string;
+    completedAt: string | null;
+    answers: Array<{
+      id: number;
+      questionId: string;
+      answer: string;
+      situation: string;
+      answeredAt: string;
+    }>;
+  }> = [];
+
+  while (cycleStmt.step()) {
+    const cycleRow = cycleStmt.getAsObject();
+    const cycleId = cycleRow.id as number;
+    
+    // Get answers for this cycle
+    const answerStmt = db.prepare(`
+      SELECT id, question_id, answer, situation, answered_at
+      FROM question_answers
+      WHERE cycle_id = ? AND answer NOT IN ('true', 'false')
+      ORDER BY answered_at DESC
+    `);
+    answerStmt.bind([cycleId]);
+    
+    const answers: Array<{
+      id: number;
+      questionId: string;
+      answer: string;
+      situation: string;
+      answeredAt: string;
+    }> = [];
+    
+    while (answerStmt.step()) {
+      const ansRow = answerStmt.getAsObject();
+      answers.push({
+        id: ansRow.id as number,
+        questionId: ansRow.question_id as string,
+        answer: ansRow.answer as string,
+        situation: ansRow.situation as string,
+        answeredAt: ansRow.answered_at as string,
+      });
+    }
+    answerStmt.free();
+    
+    if (answers.length > 0) {
+      results.push({
+        cycleId,
+        cycleNumber: cycleRow.cycle_number as number,
+        startedAt: cycleRow.started_at as string,
+        completedAt: (cycleRow.completed_at as string) || null,
+        answers,
+      });
+    }
+  }
+  cycleStmt.free();
+
+  return results;
+}
+

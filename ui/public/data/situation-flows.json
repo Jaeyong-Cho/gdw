@@ -15,7 +15,7 @@
           "source": "getPreviousCycleData"
         },
         "aiPromptTemplate": {
-          "template": "# 생각 정리 도움\n\n## [INPUT – Human]\n\n1. 현재 생각:\n- {{dump-thoughts-text}}\n\n2. 이전 Cycle 내용 (선택적):\n{{previous-cycle}}\n\n## [AI PROMPT]\n\nYou are helping to organize thoughts.\n\nTasks:\n1. Identify key themes and patterns in the thoughts.\n2. Extract actionable insights.\n3. Suggest areas that need clarification.\n\n## [OUTPUT FORMAT]\n\n- Output the answer as a copyable markdown code block or d2 code block\n- Use a list instead of a table\n- Do not nest d2 code blocks inside markdown code blocks\n\n## [EXIT CONDITION]\n\n- Thoughts are organized\n- Key themes identified"
+          "template": "# 생각 정리 도움\n\n## [INPUT – Human]\n\n1. 현재 생각:\n- {{dump-thoughts-text}}\n\n2. 선택한 이전 Cycle Context:\n{{selectedContext}}\n\n3. 이전 Cycle 내용 (선택적):\n{{previous-cycle}}\n\n## [AI PROMPT]\n\nYou are helping to organize thoughts.\n\nTasks:\n1. Consider the selected context from previous cycles if provided.\n2. Identify key themes and patterns in the thoughts.\n3. Extract actionable insights.\n4. Suggest areas that need clarification.\n\n## [OUTPUT FORMAT]\n\n- Output the answer as a copyable markdown code block or d2 code block\n- Use a list instead of a table\n- Do not nest d2 code blocks inside markdown code blocks\n\n## [EXIT CONDITION]\n\n- Thoughts are organized\n- Key themes identified"
         }
       },
       {

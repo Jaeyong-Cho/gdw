@@ -185,6 +185,7 @@ export interface Question {
   type: QuestionType;
   required?: boolean;
   options?: string[];
+  allowMultiple?: boolean;
   nextQuestionId?: string;
   nextSituation?: Situation;
   onYesNextQuestionId?: string;

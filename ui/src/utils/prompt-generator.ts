@@ -2,7 +2,7 @@
  * @fileoverview Utility for generating AI prompts from templates
  */
 
-import { getIntentSummary, getAnswersBySituation, getCurrentCycleId, getPreviousCycleData } from '../data/db';
+import { getIntentSummary, getAnswersBySituation, getCurrentCycleId, getPreviousCycleData, getCycleContext } from '../data/db';
 import { buildRelatedContext, formatRelatedContextForPrompt } from '../data/relationships';
 
 /**
@@ -13,6 +13,7 @@ interface PromptContext {
   problem?: string | null;
   acceptanceCriteria?: string | null;
   design?: string | null;
+  selectedContext?: string | null;
   [key: string]: string | null | undefined;
 }
 
@@ -55,6 +56,17 @@ export async function buildPromptContext(situation: string, selectedProblemId?: 
   try {
     // Get current cycle ID
     const currentCycleId = await getCurrentCycleId();
+    
+    // Get selected context from previous cycles for current cycle
+    if (currentCycleId !== null) {
+      const cycleContexts = await getCycleContext(currentCycleId);
+      if (cycleContexts.length > 0) {
+        const formattedContext = cycleContexts.map(ctx => 
+          `[${ctx.situation}] ${ctx.answerText}`
+        ).join('\n\n');
+        context.selectedContext = formattedContext;
+      }
+    }
     
     // Get previous cycle data for context
     const previousCycleData = await getPreviousCycleData();

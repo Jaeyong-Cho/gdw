@@ -6,7 +6,32 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Situation, QuestionAnswer, SituationFlow, QuestionDataDisplay } from '../types';
 import { getSituationFlows } from '../data/data-loader';
 import { generatePrompt, buildPromptContext } from '../utils/prompt-generator';
-import { getTransitionCount, incrementTransitionCount, resetTransitionCount, getCurrentCycleId, completeCycle } from '../data/db';
+import { getTransitionCount, incrementTransitionCount, resetTransitionCount, getCurrentCycleId, completeCycle, getPreviousCyclesAnswers, addCycleContext, removeCycleContext, getCycleContext } from '../data/db';
+
+/**
+ * @brief Previous cycle answer structure
+ */
+interface PreviousCycleAnswer {
+  id: number;
+  questionId: string;
+  answer: string;
+  situation: string;
+  answeredAt: string;
+  cycleId: number;
+  cycleNumber: number;
+}
+
+/**
+ * @brief Selected context structure
+ */
+interface SelectedContext {
+  id: number;
+  sourceAnswerId: number;
+  questionId: string;
+  answerText: string;
+  situation: string;
+  cycleNumber?: number;
+}
 
 /**
  * @brief Props for InteractiveFlow component
@@ -41,6 +66,7 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
   const [currentQuestionId, setCurrentQuestionId] = useState<string | null>(null);
   const [answers, setAnswers] = useState<Record<string, string | boolean>>({});
   const [textAnswer, setTextAnswer] = useState<string>('');
+  const [textAnswers, setTextAnswers] = useState<string[]>(['']);
   const [questionHistory, setQuestionHistory] = useState<string[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [displayData, setDisplayData] = useState<string | null>(null);
@@ -55,7 +81,65 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
   const [copyStatus, setCopyStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [verificationTransitionCount, setVerificationTransitionCount] = useState<number>(0);
   
+  // Context selection state
+  const [showContextSelector, setShowContextSelector] = useState<boolean>(false);
+  const [previousCyclesAnswers, setPreviousCyclesAnswers] = useState<Array<{
+    cycleId: number;
+    cycleNumber: number;
+    startedAt: string;
+    completedAt: string | null;
+    answers: PreviousCycleAnswer[];
+  }>>([]);
+  const [selectedContexts, setSelectedContexts] = useState<SelectedContext[]>([]);
+  const [expandedCycles, setExpandedCycles] = useState<Set<number>>(new Set());
+  
   const currentQuestionIdRef = useRef<string | null>(null);
+
+  // Load previous cycles answers and saved contexts for Dumping situation
+  useEffect(() => {
+    const loadContextData = async () => {
+      if (situation !== 'Dumping') {
+        return;
+      }
+      
+      try {
+        const currentCycleId = await getCurrentCycleId();
+        
+        // Load previous cycles answers
+        const prevCycles = await getPreviousCyclesAnswers(currentCycleId);
+        const formattedCycles = prevCycles.map(cycle => ({
+          ...cycle,
+          answers: cycle.answers.map(ans => ({
+            ...ans,
+            cycleId: cycle.cycleId,
+            cycleNumber: cycle.cycleNumber,
+          })),
+        }));
+        setPreviousCyclesAnswers(formattedCycles);
+        
+        // Load saved contexts for current cycle
+        if (currentCycleId !== null) {
+          const savedContexts = await getCycleContext(currentCycleId);
+          const formattedContexts: SelectedContext[] = savedContexts.map(ctx => {
+            const sourceCycle = prevCycles.find(c => c.cycleId === ctx.sourceCycleId);
+            return {
+              id: ctx.id,
+              sourceAnswerId: ctx.sourceAnswerId,
+              questionId: ctx.questionId,
+              answerText: ctx.answerText,
+              situation: ctx.situation,
+              cycleNumber: sourceCycle?.cycleNumber,
+            };
+          });
+          setSelectedContexts(formattedContexts);
+        }
+      } catch (error) {
+        console.error('Error loading context data:', error);
+      }
+    };
+    
+    loadContextData();
+  }, [situation]);
 
   useEffect(() => {
     const loadFlow = async () => {
@@ -233,6 +317,55 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
    * @pre currentQuestion has aiPromptTemplate
    * @post Input form is displayed
    */
+  /**
+   * @brief Add a previous cycle answer to current cycle context
+   */
+  const handleAddContext = useCallback(async (answer: PreviousCycleAnswer) => {
+    const currentCycleId = await getCurrentCycleId();
+    if (currentCycleId === null) {
+      return;
+    }
+    
+    // Check if already added
+    if (selectedContexts.some(ctx => ctx.sourceAnswerId === answer.id)) {
+      return;
+    }
+    
+    try {
+      const contextId = await addCycleContext(
+        currentCycleId,
+        answer.cycleId,
+        answer.id,
+        answer.questionId,
+        answer.answer,
+        answer.situation
+      );
+      
+      setSelectedContexts(prev => [...prev, {
+        id: contextId,
+        sourceAnswerId: answer.id,
+        questionId: answer.questionId,
+        answerText: answer.answer,
+        situation: answer.situation,
+        cycleNumber: answer.cycleNumber,
+      }]);
+    } catch (error) {
+      console.error('Error adding context:', error);
+    }
+  }, [selectedContexts]);
+
+  /**
+   * @brief Remove a context from current cycle
+   */
+  const handleRemoveContext = useCallback(async (contextId: number) => {
+    try {
+      await removeCycleContext(contextId);
+      setSelectedContexts(prev => prev.filter(ctx => ctx.id !== contextId));
+    } catch (error) {
+      console.error('Error removing context:', error);
+    }
+  }, []);
+
   const handleShowAIPromptInputs = useCallback(async () => {
     if (!flow || !currentQuestionId) {
       return;
@@ -395,6 +528,7 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
     }
     
     setTextAnswer('');
+    setTextAnswers(['']);
     
     if (question?.showData) {
       loadDisplayData(question.showData);
@@ -996,8 +1130,262 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
         const showDataForText = currentQuestion.showData && displayData;
         const hasAIPromptForText = currentQuestion.aiPromptTemplate !== undefined;
         
+        // Check if multiple answers are allowed
+        const allowMultipleAnswers = currentQuestion.allowMultiple !== false;
+        const hasValidAnswers = allowMultipleAnswers 
+          ? textAnswers.some(a => a.trim())
+          : textAnswer.trim();
+        
+        const handleMultiTextSubmit = () => {
+          if (allowMultipleAnswers) {
+            const validAnswers = textAnswers.filter(a => a.trim());
+            if (validAnswers.length > 0) {
+              const combinedAnswer = validAnswers.length === 1 
+                ? validAnswers[0] 
+                : validAnswers.map((a, i) => `${i + 1}. ${a}`).join('\n');
+              handleAnswer(combinedAnswer);
+            }
+          } else {
+            handleTextSubmit();
+          }
+        };
+        
+        // Check if this is Dumping situation for context selection
+        const isDumpingSituation = situation === 'Dumping';
+        
         return (
           <div style={{ marginTop: '16px' }}>
+            {/* Context Selection for Dumping */}
+            {isDumpingSituation && (
+              <div style={{
+                marginBottom: '20px',
+                padding: '16px',
+                backgroundColor: '#fefce8',
+                border: '1px solid #fde047',
+                borderRadius: '8px',
+              }}>
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: '12px',
+                }}>
+                  <h4 style={{
+                    margin: 0,
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: '#854d0e',
+                  }}>
+                    이전 Cycle Context ({selectedContexts.length}개 선택됨)
+                  </h4>
+                  <button
+                    onClick={() => setShowContextSelector(!showContextSelector)}
+                    style={{
+                      padding: '6px 12px',
+                      fontSize: '12px',
+                      fontWeight: '500',
+                      backgroundColor: showContextSelector ? '#fde047' : '#fef9c3',
+                      color: '#854d0e',
+                      border: '1px solid #fde047',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {showContextSelector ? '선택 닫기' : '이전 답변에서 선택'}
+                  </button>
+                </div>
+                
+                {/* Selected Contexts Display */}
+                {selectedContexts.length > 0 && (
+                  <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px',
+                    marginBottom: showContextSelector ? '16px' : '0',
+                  }}>
+                    {selectedContexts.map(ctx => (
+                      <div key={ctx.id} style={{
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: '8px',
+                        padding: '10px',
+                        backgroundColor: '#ffffff',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '6px',
+                      }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{
+                            fontSize: '11px',
+                            color: '#6b7280',
+                            marginBottom: '4px',
+                          }}>
+                            Cycle #{ctx.cycleNumber} - {ctx.situation}
+                          </div>
+                          <div style={{
+                            fontSize: '13px',
+                            color: '#374151',
+                            lineHeight: '1.4',
+                            whiteSpace: 'pre-wrap',
+                          }}>
+                            {ctx.answerText.length > 200 ? ctx.answerText.slice(0, 200) + '...' : ctx.answerText}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleRemoveContext(ctx.id)}
+                          style={{
+                            padding: '4px 8px',
+                            fontSize: '12px',
+                            backgroundColor: '#fee2e2',
+                            color: '#dc2626',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            flexShrink: 0,
+                          }}
+                        >
+                          삭제
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
+                {/* Context Selector */}
+                {showContextSelector && (
+                  <div style={{
+                    maxHeight: '300px',
+                    overflowY: 'auto',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '6px',
+                    backgroundColor: '#ffffff',
+                  }}>
+                    {previousCyclesAnswers.length === 0 ? (
+                      <div style={{
+                        padding: '16px',
+                        textAlign: 'center',
+                        color: '#9ca3af',
+                        fontSize: '13px',
+                      }}>
+                        이전 Cycle 답변이 없습니다.
+                      </div>
+                    ) : (
+                      previousCyclesAnswers.map(cycle => (
+                        <div key={cycle.cycleId}>
+                          <div
+                            onClick={() => {
+                              setExpandedCycles(prev => {
+                                const newSet = new Set(prev);
+                                if (newSet.has(cycle.cycleId)) {
+                                  newSet.delete(cycle.cycleId);
+                                } else {
+                                  newSet.add(cycle.cycleId);
+                                }
+                                return newSet;
+                              });
+                            }}
+                            style={{
+                              padding: '10px 12px',
+                              backgroundColor: '#f9fafb',
+                              borderBottom: '1px solid #e5e7eb',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                            }}
+                          >
+                            <span style={{
+                              fontSize: '13px',
+                              fontWeight: '600',
+                              color: '#374151',
+                            }}>
+                              Cycle #{cycle.cycleNumber}
+                            </span>
+                            <span style={{
+                              fontSize: '12px',
+                              color: '#6b7280',
+                            }}>
+                              {expandedCycles.has(cycle.cycleId) ? '▼' : '▶'} {cycle.answers.length}개 답변
+                            </span>
+                          </div>
+                          
+                          {expandedCycles.has(cycle.cycleId) && (
+                            <div>
+                              {cycle.answers.map(answer => {
+                                const isSelected = selectedContexts.some(ctx => ctx.sourceAnswerId === answer.id);
+                                return (
+                                  <div
+                                    key={answer.id}
+                                    style={{
+                                      padding: '10px 12px 10px 24px',
+                                      borderBottom: '1px solid #f3f4f6',
+                                      display: 'flex',
+                                      alignItems: 'flex-start',
+                                      gap: '10px',
+                                      backgroundColor: isSelected ? '#fef9c3' : '#ffffff',
+                                    }}
+                                  >
+                                    <div style={{ flex: 1 }}>
+                                      <div style={{
+                                        fontSize: '11px',
+                                        color: '#9ca3af',
+                                        marginBottom: '4px',
+                                      }}>
+                                        [{answer.situation}] {new Date(answer.answeredAt).toLocaleString('ko-KR')}
+                                      </div>
+                                      <div style={{
+                                        fontSize: '13px',
+                                        color: '#374151',
+                                        lineHeight: '1.4',
+                                        whiteSpace: 'pre-wrap',
+                                      }}>
+                                        {answer.answer.length > 150 ? answer.answer.slice(0, 150) + '...' : answer.answer}
+                                      </div>
+                                    </div>
+                                    <button
+                                      onClick={() => {
+                                        if (isSelected) {
+                                          const ctx = selectedContexts.find(c => c.sourceAnswerId === answer.id);
+                                          if (ctx) {
+                                            handleRemoveContext(ctx.id);
+                                          }
+                                        } else {
+                                          handleAddContext(answer);
+                                        }
+                                      }}
+                                      style={{
+                                        padding: '4px 10px',
+                                        fontSize: '12px',
+                                        backgroundColor: isSelected ? '#fee2e2' : '#dbeafe',
+                                        color: isSelected ? '#dc2626' : '#1d4ed8',
+                                        border: 'none',
+                                        borderRadius: '4px',
+                                        cursor: 'pointer',
+                                        flexShrink: 0,
+                                      }}
+                                    >
+                                      {isSelected ? '제거' : '추가'}
+                                    </button>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+                
+                <p style={{
+                  margin: '12px 0 0 0',
+                  fontSize: '12px',
+                  color: '#a16207',
+                }}>
+                  선택한 context는 AI 프롬프트 생성 시 자동으로 포함됩니다.
+                </p>
+              </div>
+            )}
+            
             {showDataForText && (
               <div style={{
                 marginBottom: '16px',
@@ -1015,34 +1403,125 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
                 </div>
               </div>
             )}
-            <textarea
-              value={textAnswer}
-              onChange={(e) => setTextAnswer(e.target.value)}
-              placeholder={showDataForText ? `${displayDataLabel}를 참고하여 답변을 입력하세요...` : "답변을 입력하세요..."}
-              style={{
-                width: '100%',
-                minHeight: '100px',
-                padding: '12px',
-                fontSize: '14px',
-                border: '1px solid #e5e7eb',
-                borderRadius: '8px',
-                fontFamily: 'inherit',
-                resize: 'vertical',
-              }}
-            />
+            
+            {allowMultipleAnswers ? (
+              /* Multiple answer inputs */
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {textAnswers.map((answer, index) => (
+                  <div key={index} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                    <div style={{
+                      width: '28px',
+                      height: '28px',
+                      backgroundColor: '#e5e7eb',
+                      borderRadius: '50%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '12px',
+                      fontWeight: '600',
+                      color: '#6b7280',
+                      flexShrink: 0,
+                      marginTop: '8px',
+                    }}>
+                      {index + 1}
+                    </div>
+                    <textarea
+                      value={answer}
+                      onChange={(e) => {
+                        const newAnswers = [...textAnswers];
+                        newAnswers[index] = e.target.value;
+                        setTextAnswers(newAnswers);
+                      }}
+                      placeholder={showDataForText ? `${displayDataLabel}를 참고하여 답변을 입력하세요...` : "답변을 입력하세요..."}
+                      style={{
+                        flex: 1,
+                        minHeight: '80px',
+                        padding: '12px',
+                        fontSize: '14px',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '8px',
+                        fontFamily: 'inherit',
+                        resize: 'vertical',
+                      }}
+                    />
+                    {textAnswers.length > 1 && (
+                      <button
+                        onClick={() => {
+                          const newAnswers = textAnswers.filter((_, i) => i !== index);
+                          setTextAnswers(newAnswers);
+                        }}
+                        style={{
+                          padding: '8px',
+                          backgroundColor: '#fee2e2',
+                          color: '#dc2626',
+                          border: 'none',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          marginTop: '8px',
+                          fontSize: '16px',
+                          lineHeight: 1,
+                        }}
+                        title="삭제"
+                      >
+                        x
+                      </button>
+                    )}
+                  </div>
+                ))}
+                
+                <button
+                  onClick={() => setTextAnswers([...textAnswers, ''])}
+                  style={{
+                    padding: '10px 16px',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    backgroundColor: '#f3f4f6',
+                    color: '#374151',
+                    border: '1px dashed #9ca3af',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  <span style={{ fontSize: '18px', lineHeight: 1 }}>+</span>
+                  답변 추가
+                </button>
+              </div>
+            ) : (
+              /* Single answer input */
+              <textarea
+                value={textAnswer}
+                onChange={(e) => setTextAnswer(e.target.value)}
+                placeholder={showDataForText ? `${displayDataLabel}를 참고하여 답변을 입력하세요...` : "답변을 입력하세요..."}
+                style={{
+                  width: '100%',
+                  minHeight: '100px',
+                  padding: '12px',
+                  fontSize: '14px',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px',
+                  fontFamily: 'inherit',
+                  resize: 'vertical',
+                }}
+              />
+            )}
+            
             <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
               <button
-                onClick={handleTextSubmit}
-                disabled={!textAnswer.trim()}
+                onClick={handleMultiTextSubmit}
+                disabled={!hasValidAnswers}
                 style={{
                   padding: '12px 24px',
                   fontSize: '16px',
                   fontWeight: '600',
-                  backgroundColor: textAnswer.trim() ? '#3b82f6' : '#9ca3af',
+                  backgroundColor: hasValidAnswers ? '#3b82f6' : '#9ca3af',
                   color: '#ffffff',
                   border: 'none',
                   borderRadius: '8px',
-                  cursor: textAnswer.trim() ? 'pointer' : 'not-allowed',
+                  cursor: hasValidAnswers ? 'pointer' : 'not-allowed',
                   flex: 1,
                 }}
               >
