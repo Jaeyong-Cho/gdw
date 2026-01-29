@@ -115,9 +115,72 @@ export const StatisticsViewer: React.FC<StatisticsViewerProps> = ({ onClose }) =
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
   const [activeTab, setActiveTab] = useState<TabType>('overview');
+  
+  // Period selection state
+  type PeriodType = 'day' | 'week' | 'month' | 'year';
+  const [periodType, setPeriodType] = useState<PeriodType>('week');
+  const [periodOffset, setPeriodOffset] = useState<number>(0); // 0 = current, -1 = previous, 1 = next
+
+  /**
+   * @brief Calculate date range based on period type and offset
+   */
+  const calculateDateRange = (type: PeriodType, offset: number): { start: string; end: string; label: string } => {
+    const now = new Date();
+    let start: Date;
+    let end: Date;
+    let label: string;
+
+    switch (type) {
+      case 'day':
+        start = new Date(now);
+        start.setDate(start.getDate() + offset);
+        start.setHours(0, 0, 0, 0);
+        end = new Date(start);
+        end.setHours(23, 59, 59, 999);
+        label = start.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
+        break;
+      case 'week':
+        start = new Date(now);
+        const dayOfWeek = start.getDay();
+        const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+        start.setDate(start.getDate() + diffToMonday + (offset * 7));
+        start.setHours(0, 0, 0, 0);
+        end = new Date(start);
+        end.setDate(end.getDate() + 6);
+        end.setHours(23, 59, 59, 999);
+        label = `${start.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })} - ${end.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}`;
+        break;
+      case 'month':
+        start = new Date(now.getFullYear(), now.getMonth() + offset, 1);
+        end = new Date(now.getFullYear(), now.getMonth() + offset + 1, 0);
+        end.setHours(23, 59, 59, 999);
+        label = start.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long' });
+        break;
+      case 'year':
+        start = new Date(now.getFullYear() + offset, 0, 1);
+        end = new Date(now.getFullYear() + offset, 11, 31);
+        end.setHours(23, 59, 59, 999);
+        label = `${start.getFullYear()}년`;
+        break;
+    }
+
+    return {
+      start: start.toISOString(),
+      end: end.toISOString(),
+      label,
+    };
+  };
 
   useEffect(() => {
-    loadStatistics();
+    const range = calculateDateRange(periodType, periodOffset);
+    setStartDate(range.start);
+    setEndDate(range.end);
+  }, [periodType, periodOffset]);
+
+  useEffect(() => {
+    if (startDate && endDate) {
+      loadStatistics();
+    }
   }, [startDate, endDate]);
 
   /**
@@ -321,6 +384,97 @@ export const StatisticsViewer: React.FC<StatisticsViewerProps> = ({ onClose }) =
           >
             닫기
           </button>
+        </div>
+
+        {/* Period Selection */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: '24px',
+          padding: '16px',
+          backgroundColor: '#f9fafb',
+          borderRadius: '8px',
+          border: '1px solid #e5e7eb',
+        }}>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            {(['day', 'week', 'month', 'year'] as const).map((type) => (
+              <button
+                key={type}
+                onClick={() => {
+                  setPeriodType(type);
+                  setPeriodOffset(0);
+                }}
+                style={{
+                  padding: '8px 16px',
+                  fontSize: '13px',
+                  fontWeight: periodType === type ? '600' : '400',
+                  backgroundColor: periodType === type ? '#3b82f6' : '#ffffff',
+                  color: periodType === type ? '#ffffff' : '#374151',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                }}
+              >
+                {type === 'day' ? '일별' : type === 'week' ? '주별' : type === 'month' ? '월별' : '연별'}
+              </button>
+            ))}
+          </div>
+          
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <button
+              onClick={() => setPeriodOffset(prev => prev - 1)}
+              style={{
+                padding: '8px 12px',
+                fontSize: '14px',
+                backgroundColor: '#ffffff',
+                border: '1px solid #d1d5db',
+                borderRadius: '6px',
+                cursor: 'pointer',
+              }}
+            >
+              ◀ 이전
+            </button>
+            <span style={{
+              fontSize: '14px',
+              fontWeight: '600',
+              color: '#111827',
+              minWidth: '150px',
+              textAlign: 'center',
+            }}>
+              {calculateDateRange(periodType, periodOffset).label}
+            </span>
+            <button
+              onClick={() => setPeriodOffset(prev => prev + 1)}
+              disabled={periodOffset >= 0}
+              style={{
+                padding: '8px 12px',
+                fontSize: '14px',
+                backgroundColor: periodOffset >= 0 ? '#f3f4f6' : '#ffffff',
+                color: periodOffset >= 0 ? '#9ca3af' : '#374151',
+                border: '1px solid #d1d5db',
+                borderRadius: '6px',
+                cursor: periodOffset >= 0 ? 'not-allowed' : 'pointer',
+              }}
+            >
+              다음 ▶
+            </button>
+            <button
+              onClick={() => setPeriodOffset(0)}
+              style={{
+                padding: '8px 12px',
+                fontSize: '13px',
+                backgroundColor: '#10b981',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+              }}
+            >
+              오늘
+            </button>
+          </div>
         </div>
 
         {/* Summary */}

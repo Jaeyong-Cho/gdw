@@ -498,12 +498,19 @@ export const CytoscapeDiagram: React.FC<CytoscapeDiagramProps> = ({
         }
       };
     } else {
-      // Stop animation and reset
+      // Stop animation and reset to initial positions
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
         animationFrameRef.current = null;
       }
       rotationRef.current = 0;
+      
+      // Re-run layout to reset positions
+      if (cy && layoutType === 'circle') {
+        const layout = cy.layout(getLayoutConfig(layoutType));
+        layout.run();
+        cy.fit(undefined, 50);
+      }
     }
   }, [isUnconscious, layoutType]);
 

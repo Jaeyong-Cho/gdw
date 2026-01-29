@@ -54,6 +54,25 @@ export const WorkflowDataViewer: React.FC<WorkflowDataViewerProps> = ({ onClose 
     unconsciousEntryReason: string | null;
   }>>([]);
   const [unconsciousPeriods, setUnconsciousPeriods] = useState<UnconsciousPeriod[]>([]);
+  
+  // Pagination state
+  const [cyclePageSize] = useState<number>(10);
+  const [cycleCurrentPage, setCycleCurrentPage] = useState<number>(1);
+  const [unconsciousPageSize] = useState<number>(10);
+  const [unconsciousCurrentPage, setUnconsciousCurrentPage] = useState<number>(1);
+
+  // Computed pagination values
+  const cycleTotalPages = Math.ceil(cycles.length / cyclePageSize);
+  const paginatedCycles = cycles.slice(
+    (cycleCurrentPage - 1) * cyclePageSize,
+    cycleCurrentPage * cyclePageSize
+  );
+  
+  const unconsciousTotalPages = Math.ceil(unconsciousPeriods.length / unconsciousPageSize);
+  const paginatedUnconsciousPeriods = unconsciousPeriods.slice(
+    (unconsciousCurrentPage - 1) * unconsciousPageSize,
+    unconsciousCurrentPage * unconsciousPageSize
+  );
 
   useEffect(() => {
     loadCycles();
@@ -374,6 +393,162 @@ export const WorkflowDataViewer: React.FC<WorkflowDataViewerProps> = ({ onClose 
 
         {activeTab === 'cycles' && (
           <>
+        {/* Cycle List with Pagination */}
+        <div style={{ marginBottom: '24px' }}>
+          <h3 style={{
+            fontSize: '16px',
+            fontWeight: '600',
+            color: '#111827',
+            marginBottom: '16px',
+          }}>
+            Cycle 목록 ({cycles.length}개)
+          </h3>
+          
+          {cycles.length === 0 ? (
+            <div style={{
+              textAlign: 'center',
+              padding: '24px',
+              color: '#6b7280',
+              fontSize: '14px',
+            }}>
+              Cycle 데이터가 없습니다.
+            </div>
+          ) : (
+            <>
+              <div style={{ overflowX: 'auto', marginBottom: '16px' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: '#f3f4f6' }}>
+                      <th style={{ padding: '10px', textAlign: 'left', borderBottom: '2px solid #e5e7eb', fontSize: '13px' }}>Cycle #</th>
+                      <th style={{ padding: '10px', textAlign: 'left', borderBottom: '2px solid #e5e7eb', fontSize: '13px' }}>시작 시간</th>
+                      <th style={{ padding: '10px', textAlign: 'left', borderBottom: '2px solid #e5e7eb', fontSize: '13px' }}>완료 시간</th>
+                      <th style={{ padding: '10px', textAlign: 'center', borderBottom: '2px solid #e5e7eb', fontSize: '13px' }}>상태</th>
+                      <th style={{ padding: '10px', textAlign: 'center', borderBottom: '2px solid #e5e7eb', fontSize: '13px' }}>선택</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paginatedCycles.map((cycle, index) => (
+                      <tr key={cycle.id} style={{ backgroundColor: index % 2 === 0 ? '#ffffff' : '#f9fafb' }}>
+                        <td style={{ padding: '10px', borderBottom: '1px solid #e5e7eb', fontWeight: '600' }}>
+                          #{cycle.cycleNumber}
+                        </td>
+                        <td style={{ padding: '10px', borderBottom: '1px solid #e5e7eb', fontSize: '13px' }}>
+                          {new Date(cycle.startedAt).toLocaleString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </td>
+                        <td style={{ padding: '10px', borderBottom: '1px solid #e5e7eb', fontSize: '13px' }}>
+                          {cycle.completedAt ? new Date(cycle.completedAt).toLocaleString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}
+                        </td>
+                        <td style={{ padding: '10px', textAlign: 'center', borderBottom: '1px solid #e5e7eb' }}>
+                          <span style={{
+                            padding: '4px 8px',
+                            borderRadius: '4px',
+                            fontSize: '12px',
+                            fontWeight: '500',
+                            backgroundColor: cycle.status === 'completed' ? '#dcfce7' : '#fef3c7',
+                            color: cycle.status === 'completed' ? '#16a34a' : '#d97706',
+                          }}>
+                            {cycle.status === 'completed' ? '완료' : '진행 중'}
+                          </span>
+                        </td>
+                        <td style={{ padding: '10px', textAlign: 'center', borderBottom: '1px solid #e5e7eb' }}>
+                          <button
+                            onClick={() => setSelectedCycleId(selectedCycleId === cycle.id ? null : cycle.id)}
+                            style={{
+                              padding: '4px 12px',
+                              fontSize: '12px',
+                              backgroundColor: selectedCycleId === cycle.id ? '#3b82f6' : '#e5e7eb',
+                              color: selectedCycleId === cycle.id ? '#ffffff' : '#374151',
+                              border: 'none',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            {selectedCycleId === cycle.id ? '선택됨' : '선택'}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              
+              {/* Cycle Pagination */}
+              {cycleTotalPages > 1 && (
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  gap: '8px',
+                }}>
+                  <button
+                    onClick={() => setCycleCurrentPage(1)}
+                    disabled={cycleCurrentPage === 1}
+                    style={{
+                      padding: '6px 10px',
+                      fontSize: '12px',
+                      backgroundColor: cycleCurrentPage === 1 ? '#f3f4f6' : '#ffffff',
+                      color: cycleCurrentPage === 1 ? '#9ca3af' : '#374151',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '4px',
+                      cursor: cycleCurrentPage === 1 ? 'not-allowed' : 'pointer',
+                    }}
+                  >
+                    ◀◀
+                  </button>
+                  <button
+                    onClick={() => setCycleCurrentPage(prev => Math.max(1, prev - 1))}
+                    disabled={cycleCurrentPage === 1}
+                    style={{
+                      padding: '6px 10px',
+                      fontSize: '12px',
+                      backgroundColor: cycleCurrentPage === 1 ? '#f3f4f6' : '#ffffff',
+                      color: cycleCurrentPage === 1 ? '#9ca3af' : '#374151',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '4px',
+                      cursor: cycleCurrentPage === 1 ? 'not-allowed' : 'pointer',
+                    }}
+                  >
+                    ◀
+                  </button>
+                  <span style={{ fontSize: '13px', color: '#6b7280' }}>
+                    {cycleCurrentPage} / {cycleTotalPages}
+                  </span>
+                  <button
+                    onClick={() => setCycleCurrentPage(prev => Math.min(cycleTotalPages, prev + 1))}
+                    disabled={cycleCurrentPage === cycleTotalPages}
+                    style={{
+                      padding: '6px 10px',
+                      fontSize: '12px',
+                      backgroundColor: cycleCurrentPage === cycleTotalPages ? '#f3f4f6' : '#ffffff',
+                      color: cycleCurrentPage === cycleTotalPages ? '#9ca3af' : '#374151',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '4px',
+                      cursor: cycleCurrentPage === cycleTotalPages ? 'not-allowed' : 'pointer',
+                    }}
+                  >
+                    ▶
+                  </button>
+                  <button
+                    onClick={() => setCycleCurrentPage(cycleTotalPages)}
+                    disabled={cycleCurrentPage === cycleTotalPages}
+                    style={{
+                      padding: '6px 10px',
+                      fontSize: '12px',
+                      backgroundColor: cycleCurrentPage === cycleTotalPages ? '#f3f4f6' : '#ffffff',
+                      color: cycleCurrentPage === cycleTotalPages ? '#9ca3af' : '#374151',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '4px',
+                      cursor: cycleCurrentPage === cycleTotalPages ? 'not-allowed' : 'pointer',
+                    }}
+                  >
+                    ▶▶
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
         {/* Current State */}
         <div style={{
           marginBottom: '24px',
