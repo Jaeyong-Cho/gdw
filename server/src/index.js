@@ -3,6 +3,7 @@
  * Provides REST API for reading/writing SQLite database files to arbitrary paths
  */
 
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import fs from 'fs/promises';
@@ -13,7 +14,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const HOST = process.env.SERVER_HOST || '0.0.0.0';
+const PORT = process.env.SERVER_PORT || 3001;
 
 // Middleware
 app.use(cors());
@@ -217,8 +219,8 @@ app.get('/api/db/info', async (req, res) => {
 });
 
 // Start server
-app.listen(PORT, () => {
-  console.log(`GDW Server running on http://localhost:${PORT}`);
+app.listen(PORT, HOST, () => {
+  console.log(`GDW Server running on http://${HOST}:${PORT}`);
   console.log(`API endpoints:`);
   console.log(`  GET  /api/health`);
   console.log(`  GET  /api/db/path`);

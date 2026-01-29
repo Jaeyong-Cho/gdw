@@ -11,9 +11,9 @@ import type { Database } from 'sql.js';
 let db: Database | null = null;
 
 /**
- * @brief Backend server URL
+ * @brief Backend server URL (configurable via VITE_SERVER_URL environment variable)
  */
-const SERVER_URL = 'http://localhost:3001';
+const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3001';
 
 /**
  * @brief LocalStorage key for database fallback
