@@ -9,6 +9,7 @@ import { SituationInfoPanel } from './components/SituationInfoPanel';
 import { LayoutSelector } from './components/LayoutSelector';
 import { DatabaseSettings } from './components/DatabaseSettings';
 import WorkflowStateManager from './components/WorkflowStateManager';
+import WorkflowDataViewer from './components/WorkflowDataViewer';
 
 /**
  * @brief Main application component
@@ -34,6 +35,7 @@ const App: React.FC = () => {
   });
   const [showSettings, setShowSettings] = useState<boolean>(false);
   const [showStateManager, setShowStateManager] = useState<boolean>(false);
+  const [showDataViewer, setShowDataViewer] = useState<boolean>(false);
   const [currentSituation, setCurrentSituation] = useState<Situation>('IntentDefinedFail');
   const sidebarRef = useRef<HTMLDivElement>(null);
 
@@ -122,6 +124,22 @@ const App: React.FC = () => {
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
           <button
+            onClick={() => setShowDataViewer(true)}
+            style={{
+              padding: '10px 20px',
+              fontSize: '14px',
+              fontWeight: '500',
+              backgroundColor: '#8b5cf6',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              transition: 'background-color 0.2s',
+            }}
+          >
+            데이터 뷰어
+          </button>
+          <button
             onClick={() => setShowStateManager(true)}
             style={{
               padding: '10px 20px',
@@ -155,6 +173,12 @@ const App: React.FC = () => {
           </button>
         </div>
       </header>
+
+      {showDataViewer && (
+        <WorkflowDataViewer
+          onClose={() => setShowDataViewer(false)}
+        />
+      )}
 
       {showStateManager && (
         <WorkflowStateManager
