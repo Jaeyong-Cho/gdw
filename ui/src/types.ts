@@ -7,7 +7,7 @@
  */
 export type Situation =
   | 'Dumping'
-  | 'DefiningActionIntent'
+  | 'WhatToDo'
   | 'DefiningIntent'
   | 'FailingIntent'
   | 'SelectingProblem'

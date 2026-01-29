@@ -19,14 +19,14 @@ export const situationDefinitions: Record<Situation, SituationDefinition> = {
       { description: 'Thought organization is complete' },
     ],
   },
-  DefiningActionIntent: {
-    name: 'DefiningActionIntent',
-    description: 'Defining what action to take based on dumped thoughts',
+  WhatToDo: {
+    name: 'WhatToDo',
+    description: 'Defining what action or task to do based on dumped thoughts',
     required_facts: [
-      { description: 'Action intent has been written down' },
-      { description: 'The motivation behind the action is identified' },
+      { description: 'What action or task to do has been written down' },
+      { description: 'The motivation behind it is identified' },
       { description: 'Assumptions about the action are extracted' },
-      { description: 'Action intent is clear' },
+      { description: 'What to do is clear' },
     ],
   },
   DefiningIntent: {
@@ -228,8 +228,8 @@ export const nodePositions: Record<Situation, NodePosition> = {
  * @return Array of transitions: [from, to, label]
  */
 export const stateTransitions: Array<[Situation, Situation, string]> = [
-  ['Dumping', 'DefiningActionIntent', 'thoughts organized'],
-  ['DefiningActionIntent', 'DefiningIntent', 'action intent clear'],
+  ['Dumping', 'WhatToDo', 'thoughts organized'],
+  ['WhatToDo', 'DefiningIntent', 'action intent clear'],
   ['DefiningIntent', 'SelectingProblem', 'intent clear'],
   ['DefiningIntent', 'FailingIntent', 'intent unclear'],
   ['FailingIntent', 'DefiningIntent', ''],

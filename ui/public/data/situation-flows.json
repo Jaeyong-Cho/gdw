@@ -23,18 +23,18 @@
         "question": "생각 정리가 완료되었나요?",
         "type": "yesno",
         "required": true,
-        "onYesNextSituation": "DefiningActionIntent",
+        "onYesNextSituation": "WhatToDo",
         "onNoNextQuestionId": "dump-thoughts-text"
       }
     ]
   },
-  "DefiningActionIntent": {
-    "situation": "DefiningActionIntent",
+  "WhatToDo": {
+    "situation": "WhatToDo",
     "startQuestionId": "action-intent-text",
     "questions": [
       {
         "id": "action-intent-text",
-        "question": "지금 어떤 행동을 하고 싶은지 작성해주세요",
+        "question": "지금 하고 싶은 행동/일을 작성해주세요",
         "type": "text",
         "required": true,
         "nextQuestionId": "action-intent-clear",
@@ -45,12 +45,12 @@
           "sourceParam": "dump-thoughts-text"
         },
         "aiPromptTemplate": {
-          "template": "# 행동 의도 작성 도움\n\n## [INPUT – Human]\n\n1. Dumping 단계의 생각:\n- {{dump-thoughts-text}}\n\n2. 원하는 행동:\n- {{action-intent-text}}\n\n## [AI PROMPT]\n\nYou are helping to clarify action intent.\n\nTasks:\n1. Clarify what action the user wants to take.\n2. Identify the motivation behind the action.\n3. Extract assumptions about the action.\n\n## [OUTPUT FORMAT]\n\n- Output the answer as a copyable markdown code block or d2 code block\n- Use a list instead of a table\n- Do not nest d2 code blocks inside markdown code blocks\n\n## [EXIT CONDITION]\n\n- Action intent is clear\n- Motivation identified"
+          "template": "# 하고 싶은 행동/일 정리 도움\n\n## [INPUT – Human]\n\n1. Dumping 단계의 생각:\n- {{dump-thoughts-text}}\n\n2. 하고 싶은 행동/일:\n- {{action-intent-text}}\n\n## [AI PROMPT]\n\nYou are helping to clarify what the user wants to do.\n\nTasks:\n1. Clarify what action or task the user wants to do.\n2. Identify the motivation behind it.\n3. Extract assumptions about the action.\n\n## [OUTPUT FORMAT]\n\n- Output the answer as a copyable markdown code block or d2 code block\n- Use a list instead of a table\n- Do not nest d2 code blocks inside markdown code blocks\n\n## [EXIT CONDITION]\n\n- What the user wants to do is clear\n- Motivation identified"
         }
       },
       {
         "id": "action-intent-clear",
-        "question": "행동 의도가 명확한가요?",
+        "question": "하고 싶은 행동/일이 명확한가요?",
         "type": "yesno",
         "required": true,
         "onYesNextSituation": "DefiningIntent",
@@ -64,34 +64,34 @@
     "questions": [
       {
         "id": "intent-why-action",
-        "question": "이 행동을 하고 싶은 이유를 작성해주세요",
+        "question": "이 행동/일을 하고 싶은 이유를 작성해주세요",
         "type": "text",
         "required": true,
         "nextQuestionId": "intent-assumptions",
         "showData": {
           "type": "action-intent",
-          "label": "행동 의도",
+          "label": "하고 싶은 행동/일",
           "source": "getAnswerByQuestionId",
           "sourceParam": "action-intent-text"
         },
         "aiPromptTemplate": {
-          "template": "# 행동 이유 정리 도움\n\n## [INPUT – Human]\n\n1. 행동 의도:\n- {{action-intent-text}}\n\n2. 행동을 하고 싶은 이유:\n- {{why-action}}\n\n## [AI PROMPT]\n\nYou are helping to clarify the reasons for action.\n\nTasks:\n1. Identify the core motivations.\n2. Extract underlying needs or desires.\n3. Validate the reasoning.\n\n## [OUTPUT FORMAT]\n\n- Output the answer as a copyable markdown code block or d2 code block\n- Use a list instead of a table\n- Do not nest d2 code blocks inside markdown code blocks\n\n## [EXIT CONDITION]\n\n- Reasons are clear\n- Motivations identified"
+          "template": "# 하고 싶은 행동/일의 이유 정리 도움\n\n## [INPUT – Human]\n\n1. 하고 싶은 행동/일:\n- {{action-intent-text}}\n\n2. 이 행동/일을 하고 싶은 이유:\n- {{why-action}}\n\n## [AI PROMPT]\n\nYou are helping to clarify the reasons for what the user wants to do.\n\nTasks:\n1. Identify the core motivations.\n2. Extract underlying needs or desires.\n3. Validate the reasoning.\n\n## [OUTPUT FORMAT]\n\n- Output the answer as a copyable markdown code block or d2 code block\n- Use a list instead of a table\n- Do not nest d2 code blocks inside markdown code blocks\n\n## [EXIT CONDITION]\n\n- Reasons are clear\n- Motivations identified"
         }
       },
       {
         "id": "intent-assumptions",
-        "question": "이 행동에 대한 가정을 작성해주세요",
+        "question": "이 행동/일에 대한 가정을 작성해주세요",
         "type": "text",
         "required": true,
         "nextQuestionId": "intent-summary-text",
         "showData": {
           "type": "why-action",
-          "label": "행동 이유",
+          "label": "행동/일을 하고 싶은 이유",
           "source": "getAnswerByQuestionId",
           "sourceParam": "intent-why-action"
         },
         "aiPromptTemplate": {
-          "template": "# 가정 정리 도움\n\n## [INPUT – Human]\n\n1. 행동 의도:\n- {{action-intent-text}}\n\n2. 행동 이유:\n- {{why-action}}\n\n3. 가정:\n- {{assumptions}}\n\n## [AI PROMPT]\n\nYou are helping to identify and validate assumptions.\n\nTasks:\n1. Extract hidden assumptions.\n2. Identify assumptions that might be incorrect.\n3. Suggest ways to validate assumptions.\n\n## [OUTPUT FORMAT]\n\n- Output the answer as a copyable markdown code block or d2 code block\n- Use a list instead of a table\n- Do not nest d2 code blocks inside markdown code blocks\n\n## [EXIT CONDITION]\n\n- Assumptions are explicit\n- Validation methods suggested"
+          "template": "# 가정 정리 도움\n\n## [INPUT – Human]\n\n1. 하고 싶은 행동/일:\n- {{action-intent-text}}\n\n2. 행동/일을 하고 싶은 이유:\n- {{why-action}}\n\n3. 가정:\n- {{assumptions}}\n\n## [AI PROMPT]\n\nYou are helping to identify and validate assumptions.\n\nTasks:\n1. Extract hidden assumptions.\n2. Identify assumptions that might be incorrect.\n3. Suggest ways to validate assumptions.\n\n## [OUTPUT FORMAT]\n\n- Output the answer as a copyable markdown code block or d2 code block\n- Use a list instead of a table\n- Do not nest d2 code blocks inside markdown code blocks\n\n## [EXIT CONDITION]\n\n- Assumptions are explicit\n- Validation methods suggested"
         }
       },
       {
@@ -106,7 +106,7 @@
           "source": "getIntentSummary"
         },
         "aiPromptTemplate": {
-          "template": "# 의도 요약 도움\n\n## [INPUT – Human]\n\n1. 행동 의도:\n- {{action-intent-text}}\n\n2. 행동 이유:\n- {{why-action}}\n\n3. 가정:\n- {{assumptions}}\n\n## [AI PROMPT]\n\nYou are helping to summarize intent.\n\nTasks:\n1. Synthesize action intent, reasons, and assumptions into one clear sentence.\n2. Ensure the summary captures the essence without losing important context.\n\n## [OUTPUT FORMAT]\n\n- Output the answer as a copyable markdown code block or d2 code block\n- Use a list instead of a table\n- Do not nest d2 code blocks inside markdown code blocks\n\n## [EXIT CONDITION]\n\n- Intent is one clear sentence\n- All key elements included"
+          "template": "# 의도 요약 도움\n\n## [INPUT – Human]\n\n1. 하고 싶은 행동/일:\n- {{action-intent-text}}\n\n2. 행동/일을 하고 싶은 이유:\n- {{why-action}}\n\n3. 가정:\n- {{assumptions}}\n\n## [AI PROMPT]\n\nYou are helping to summarize intent.\n\nTasks:\n1. Synthesize what the user wants to do, reasons, and assumptions into one clear sentence.\n2. Ensure the summary captures the essence without losing important context.\n\n## [OUTPUT FORMAT]\n\n- Output the answer as a copyable markdown code block or d2 code block\n- Use a list instead of a table\n- Do not nest d2 code blocks inside markdown code blocks\n\n## [EXIT CONDITION]\n\n- Intent is one clear sentence\n- All key elements included"
         }
       },
       {
