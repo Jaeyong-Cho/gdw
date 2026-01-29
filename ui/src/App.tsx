@@ -3,7 +3,7 @@
  */
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { Situation, LayoutType } from './types';
+import { Situation, LayoutType, QuestionAnswer } from './types';
 import { CytoscapeDiagram } from './components/CytoscapeDiagram';
 import { SituationInfoPanel } from './components/SituationInfoPanel';
 import { LayoutSelector } from './components/LayoutSelector';
@@ -12,7 +12,8 @@ import WorkflowStateManager from './components/WorkflowStateManager';
 import WorkflowDataViewer from './components/WorkflowDataViewer';
 import { StatisticsViewer } from './components/StatisticsViewer';
 import { CycleListModal } from './components/CycleListModal';
-import { createCycle, getCurrentCycleId, activateCycle, recordUnconsciousEntry, recordUnconsciousExit, recordStateEntry, recordStateExit, startUnconsciousPeriod, endUnconsciousPeriod, getCurrentUnconsciousPeriod, completeCycle } from './data/db';
+import { InteractiveFlow } from './components/InteractiveFlow';
+import { createCycle, getCurrentCycleId, activateCycle, recordUnconsciousEntry, recordUnconsciousExit, recordStateEntry, recordStateExit, startUnconsciousPeriod, endUnconsciousPeriod, getCurrentUnconsciousPeriod, completeCycle, saveAnswer } from './data/db';
 
 /**
  * @brief Main application component
@@ -46,6 +47,8 @@ const App: React.FC = () => {
   const [unconsciousEntryReason, setUnconsciousEntryReason] = useState<string>('');
   const [initialQuestionId, setInitialQuestionId] = useState<string | null>(null);
   const [selectedCycleId, setSelectedCycleId] = useState<number | null>(null);
+  const [showQuestionFlow, setShowQuestionFlow] = useState<boolean>(false);
+  const [activeCycleId, setActiveCycleId] = useState<number | null>(null);
   const sidebarRef = useRef<HTMLDivElement>(null);
 
   const handleNodeClick = useCallback((situation: Situation) => {
@@ -152,6 +155,9 @@ const App: React.FC = () => {
                 await recordStateEntry('Dumping', cycleId);
                 setCurrentSituation('Dumping');
                 setSelectedSituation('Dumping');
+                setActiveCycleId(cycleId);
+                setInitialQuestionId(null);
+                setShowQuestionFlow(true);
               } catch (error) {
                 console.error('Error creating cycle:', error);
                 alert('Cycle 생성에 실패했습니다.');
@@ -286,6 +292,146 @@ const App: React.FC = () => {
         </div>
       </header>
 
+      {/* Question Flow Modal */}
+      {showQuestionFlow && currentSituation && currentSituation !== 'Unconscious' && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.6)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1100,
+        }}>
+          <div style={{
+            backgroundColor: '#ffffff',
+            borderRadius: '12px',
+            width: '90%',
+            maxWidth: '800px',
+            maxHeight: '90vh',
+            overflow: 'hidden',
+            boxShadow: '0 20px 50px rgba(0, 0, 0, 0.3)',
+            display: 'flex',
+            flexDirection: 'column',
+          }}>
+            {/* Modal Header */}
+            <div style={{
+              padding: '16px 24px',
+              borderBottom: '1px solid #e5e7eb',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              backgroundColor: '#f9fafb',
+            }}>
+              <div>
+                <h2 style={{
+                  margin: 0,
+                  fontSize: '18px',
+                  fontWeight: '600',
+                  color: '#1f2937',
+                }}>
+                  {currentSituation} - 질문 응답
+                </h2>
+                <p style={{
+                  margin: '4px 0 0 0',
+                  fontSize: '13px',
+                  color: '#6b7280',
+                }}>
+                  {activeCycleId ? `Cycle #${activeCycleId}` : ''}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowQuestionFlow(false)}
+                style={{
+                  padding: '8px 16px',
+                  fontSize: '14px',
+                  backgroundColor: '#e5e7eb',
+                  color: '#374151',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                }}
+              >
+                최소화
+              </button>
+            </div>
+            
+            {/* Modal Content */}
+            <div style={{
+              flex: 1,
+              overflow: 'auto',
+              padding: '24px',
+            }}>
+              <InteractiveFlow
+                situation={currentSituation}
+                initialQuestionId={initialQuestionId}
+                selectedCycleId={selectedCycleId || activeCycleId}
+                onComplete={async (nextSituation) => {
+                  if (nextSituation) {
+                    const cycleId = await getCurrentCycleId();
+                    if (cycleId) {
+                      await recordStateExit(currentSituation, cycleId);
+                      await recordStateEntry(nextSituation, cycleId);
+                    }
+                    setCurrentSituation(nextSituation);
+                    setSelectedSituation(nextSituation);
+                    setInitialQuestionId(null);
+                    if (nextSituation === 'Unconscious') {
+                      setShowQuestionFlow(false);
+                    }
+                  } else {
+                    setShowQuestionFlow(false);
+                  }
+                }}
+                onAnswerSave={async (answer: QuestionAnswer) => {
+                  const cycleId = await getCurrentCycleId();
+                  if (cycleId) {
+                    await saveAnswer(
+                      cycleId,
+                      currentSituation,
+                      answer.questionId,
+                      answer.answer,
+                      answer.questionText
+                    );
+                  }
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Floating button to reopen question flow */}
+      {!showQuestionFlow && currentSituation && currentSituation !== 'Unconscious' && activeCycleId && (
+        <button
+          onClick={() => setShowQuestionFlow(true)}
+          style={{
+            position: 'fixed',
+            bottom: '24px',
+            right: '24px',
+            padding: '16px 24px',
+            fontSize: '14px',
+            fontWeight: '600',
+            backgroundColor: '#3b82f6',
+            color: '#ffffff',
+            border: 'none',
+            borderRadius: '12px',
+            cursor: 'pointer',
+            boxShadow: '0 4px 12px rgba(59, 130, 246, 0.4)',
+            zIndex: 1000,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+          }}
+        >
+          <span style={{ fontSize: '18px' }}>?</span>
+          질문에 답변하기
+        </button>
+      )}
+
       {showDataViewer && (
         <WorkflowDataViewer
           onClose={() => setShowDataViewer(false)}
@@ -413,6 +559,8 @@ const App: React.FC = () => {
                     setCurrentSituation('Unconscious');
                     setSelectedSituation('Unconscious');
                     setInitialQuestionId(null);
+                    setActiveCycleId(null);
+                    setShowQuestionFlow(false);
                     setShowEnterUnconsciousModal(false);
                     setUnconsciousEntryReason('');
                   } catch (error) {
@@ -468,8 +616,12 @@ const App: React.FC = () => {
               setCurrentSituation(situation);
               setSelectedSituation(situation);
               setInitialQuestionId(lastQuestionId);
-              setSelectedCycleId(cycleId); // Store the selected cycle ID
+              setSelectedCycleId(cycleId);
+              setActiveCycleId(cycleId);
               setShowCycleList(false);
+              if (situation !== 'Unconscious') {
+                setShowQuestionFlow(true);
+              }
             } catch (error) {
               console.error('Error restarting cycle:', error);
               alert('Cycle 다시 시작에 실패했습니다.');
