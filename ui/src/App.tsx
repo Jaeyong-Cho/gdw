@@ -12,7 +12,7 @@ import WorkflowStateManager from './components/WorkflowStateManager';
 import WorkflowDataViewer from './components/WorkflowDataViewer';
 import { StatisticsViewer } from './components/StatisticsViewer';
 import { CycleListModal } from './components/CycleListModal';
-import { createCycle, getCurrentCycleId, activateCycle, recordUnconsciousEntry, recordUnconsciousExit, recordStateEntry, recordStateExit } from './data/db';
+import { createCycle, getCurrentCycleId, activateCycle, recordUnconsciousEntry, recordUnconsciousExit, recordStateEntry, recordStateExit, startUnconsciousPeriod, endUnconsciousPeriod, getCurrentUnconsciousPeriod } from './data/db';
 
 /**
  * @brief Main application component
@@ -135,8 +135,20 @@ const App: React.FC = () => {
           <button
             onClick={async () => {
               try {
+                // End current unconscious period if exists
+                const currentUnconsciousPeriod = await getCurrentUnconsciousPeriod();
+                
                 const cycleId = await createCycle();
                 console.log('New cycle created:', cycleId);
+                
+                if (currentUnconsciousPeriod) {
+                  await endUnconsciousPeriod(currentUnconsciousPeriod.id, cycleId, 'Started new cycle');
+                  // Also record in legacy cycle table
+                  if (currentUnconsciousPeriod.previousCycleId) {
+                    await recordUnconsciousExit(currentUnconsciousPeriod.previousCycleId);
+                  }
+                }
+                
                 await recordStateEntry('Dumping', cycleId);
                 setCurrentSituation('Dumping');
                 setSelectedSituation('Dumping');
@@ -384,15 +396,16 @@ const App: React.FC = () => {
               <button
                 onClick={async () => {
                   const cycleId = await getCurrentCycleId();
-                  if (!cycleId) {
-                    alert('Cycle을 먼저 시작해주세요.');
-                    return;
-                  }
                   try {
-                    if (currentSituation && currentSituation !== 'Unconscious') {
+                    if (currentSituation && currentSituation !== 'Unconscious' && cycleId) {
                       await recordStateExit(currentSituation, cycleId);
                     }
-                    await recordUnconsciousEntry(cycleId, unconsciousEntryReason.trim() || null);
+                    // Start new unconscious period (separate from conscious cycles)
+                    await startUnconsciousPeriod(cycleId, unconsciousEntryReason.trim() || null);
+                    // Also record in legacy cycle table for backward compatibility
+                    if (cycleId) {
+                      await recordUnconsciousEntry(cycleId, unconsciousEntryReason.trim() || null);
+                    }
                     setCurrentSituation('Unconscious');
                     setSelectedSituation('Unconscious');
                     setInitialQuestionId(null);

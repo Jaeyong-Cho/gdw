@@ -28,6 +28,8 @@ import {
   getStateTimeStatistics, 
   getStateTransitionHistory,
   getDailyStateStatistics,
+  getUnconsciousStatistics,
+  getAllUnconsciousPeriods,
   StateTimeStats,
   StateTransitionRecord,
   DailyStateStats,
@@ -43,7 +45,34 @@ interface DailyStat {
   unconsciousMinutes: number;
 }
 
-type TabType = 'overview' | 'states' | 'history' | 'daily-states';
+type TabType = 'overview' | 'states' | 'history' | 'daily-states' | 'unconscious';
+
+/**
+ * @brief Unconscious period data type
+ */
+interface UnconsciousPeriodData {
+  id: number;
+  startedAt: string;
+  endedAt: string | null;
+  entryReason: string | null;
+  exitReason: string | null;
+  previousCycleId: number | null;
+  nextCycleId: number | null;
+  durationMs: number | null;
+}
+
+/**
+ * @brief Unconscious statistics type
+ */
+interface UnconsciousStats {
+  totalPeriods: number;
+  completedPeriods: number;
+  activePeriod: boolean;
+  totalDurationMs: number;
+  averageDurationMs: number;
+  longestDurationMs: number;
+  shortestDurationMs: number;
+}
 
 /**
  * @brief Color palette for state charts
@@ -80,6 +109,8 @@ export const StatisticsViewer: React.FC<StatisticsViewerProps> = ({ onClose }) =
   const [stateStats, setStateStats] = useState<StateTimeStats[]>([]);
   const [transitionHistory, setTransitionHistory] = useState<StateTransitionRecord[]>([]);
   const [dailyStateStats, setDailyStateStats] = useState<DailyStateStats[]>([]);
+  const [unconsciousPeriods, setUnconsciousPeriods] = useState<UnconsciousPeriodData[]>([]);
+  const [unconsciousStats, setUnconsciousStats] = useState<UnconsciousStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
@@ -98,16 +129,20 @@ export const StatisticsViewer: React.FC<StatisticsViewerProps> = ({ onClose }) =
   const loadStatistics = async () => {
     setLoading(true);
     try {
-      const [stats, stateTimeStats, history, dailyStates] = await Promise.all([
+      const [stats, stateTimeStats, history, dailyStates, uncPeriods, uncStats] = await Promise.all([
         getDailyStatistics(startDate || undefined, endDate || undefined),
         getStateTimeStatistics(startDate || undefined, endDate || undefined),
         getStateTransitionHistory(100),
         getDailyStateStatistics(startDate || undefined, endDate || undefined),
+        getAllUnconsciousPeriods(),
+        getUnconsciousStatistics(),
       ]);
       setStatistics(stats);
       setStateStats(stateTimeStats);
       setTransitionHistory(history);
       setDailyStateStats(dailyStates);
+      setUnconsciousPeriods(uncPeriods);
+      setUnconsciousStats(uncStats);
     } catch (error) {
       console.error('Failed to load statistics:', error);
     } finally {
@@ -434,6 +469,7 @@ export const StatisticsViewer: React.FC<StatisticsViewerProps> = ({ onClose }) =
             { id: 'overview' as TabType, label: '개요' },
             { id: 'states' as TabType, label: '상태별 통계' },
             { id: 'daily-states' as TabType, label: '일별 상태 분석' },
+            { id: 'unconscious' as TabType, label: '무의식 기간' },
             { id: 'history' as TabType, label: '전환 이력' },
           ].map(tab => (
             <button
@@ -723,6 +759,177 @@ export const StatisticsViewer: React.FC<StatisticsViewerProps> = ({ onClose }) =
                       ))}
                     </BarChart>
                   </ResponsiveContainer>
+                </div>
+              </>
+            )}
+          </>
+        )}
+
+        {activeTab === 'unconscious' && (
+          <>
+            {unconsciousPeriods.length === 0 ? (
+              <div style={{
+                textAlign: 'center',
+                padding: '48px',
+                color: '#6b7280',
+                fontSize: '16px',
+              }}>
+                무의식 기간 데이터가 없습니다.
+              </div>
+            ) : (
+              <>
+                {/* Unconscious Statistics Summary */}
+                {unconsciousStats && (
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(4, 1fr)',
+                    gap: '16px',
+                    marginBottom: '32px',
+                  }}>
+                    <div style={{
+                      backgroundColor: '#f3e8ff',
+                      padding: '20px',
+                      borderRadius: '12px',
+                      textAlign: 'center',
+                    }}>
+                      <div style={{ fontSize: '32px', fontWeight: '700', color: '#9333ea' }}>
+                        {unconsciousStats.totalPeriods}
+                      </div>
+                      <div style={{ fontSize: '14px', color: '#7e22ce', marginTop: '4px' }}>
+                        총 무의식 기간
+                      </div>
+                    </div>
+                    <div style={{
+                      backgroundColor: '#fef3c7',
+                      padding: '20px',
+                      borderRadius: '12px',
+                      textAlign: 'center',
+                    }}>
+                      <div style={{ fontSize: '32px', fontWeight: '700', color: '#d97706' }}>
+                        {formatTime(Math.floor(unconsciousStats.totalDurationMs / 60000))}
+                      </div>
+                      <div style={{ fontSize: '14px', color: '#b45309', marginTop: '4px' }}>
+                        총 무의식 시간
+                      </div>
+                    </div>
+                    <div style={{
+                      backgroundColor: '#dbeafe',
+                      padding: '20px',
+                      borderRadius: '12px',
+                      textAlign: 'center',
+                    }}>
+                      <div style={{ fontSize: '32px', fontWeight: '700', color: '#2563eb' }}>
+                        {formatTime(Math.floor(unconsciousStats.averageDurationMs / 60000))}
+                      </div>
+                      <div style={{ fontSize: '14px', color: '#1d4ed8', marginTop: '4px' }}>
+                        평균 무의식 시간
+                      </div>
+                    </div>
+                    <div style={{
+                      backgroundColor: unconsciousStats.activePeriod ? '#fee2e2' : '#dcfce7',
+                      padding: '20px',
+                      borderRadius: '12px',
+                      textAlign: 'center',
+                    }}>
+                      <div style={{ 
+                        fontSize: '18px', 
+                        fontWeight: '700', 
+                        color: unconsciousStats.activePeriod ? '#dc2626' : '#16a34a' 
+                      }}>
+                        {unconsciousStats.activePeriod ? '무의식 중' : '의식 중'}
+                      </div>
+                      <div style={{ 
+                        fontSize: '14px', 
+                        color: unconsciousStats.activePeriod ? '#b91c1c' : '#15803d', 
+                        marginTop: '4px' 
+                      }}>
+                        현재 상태
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Unconscious Periods Bar Chart */}
+                <div style={{ marginBottom: '32px' }}>
+                  <h3 style={{
+                    fontSize: '18px',
+                    fontWeight: '600',
+                    color: '#111827',
+                    marginBottom: '16px',
+                  }}>
+                    무의식 기간 분포
+                  </h3>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={unconsciousPeriods.filter(p => p.durationMs !== null).slice(0, 20).reverse()}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis 
+                        dataKey="startedAt" 
+                        tickFormatter={(value) => formatDate(value)}
+                        tick={{ fontSize: 12 }}
+                      />
+                      <YAxis 
+                        tickFormatter={(value) => formatTime(Math.floor(value / 60000))}
+                        tick={{ fontSize: 12 }}
+                      />
+                      <Tooltip 
+                        formatter={(value: number) => [formatTime(Math.floor(value / 60000)), '무의식 시간']}
+                        labelFormatter={(value) => formatDateTime(value as string)}
+                      />
+                      <Bar dataKey="durationMs" name="무의식 시간" fill="#9333ea" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* Unconscious Periods Table */}
+                <div>
+                  <h3 style={{
+                    fontSize: '18px',
+                    fontWeight: '600',
+                    color: '#111827',
+                    marginBottom: '16px',
+                  }}>
+                    무의식 기간 상세
+                  </h3>
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr style={{ backgroundColor: '#f3f4f6' }}>
+                          <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #e5e7eb' }}>시작 시간</th>
+                          <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #e5e7eb' }}>종료 시간</th>
+                          <th style={{ padding: '12px', textAlign: 'right', borderBottom: '2px solid #e5e7eb' }}>소요 시간</th>
+                          <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #e5e7eb' }}>진입 사유</th>
+                          <th style={{ padding: '12px', textAlign: 'center', borderBottom: '2px solid #e5e7eb' }}>이전 Cycle</th>
+                          <th style={{ padding: '12px', textAlign: 'center', borderBottom: '2px solid #e5e7eb' }}>다음 Cycle</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {unconsciousPeriods.map((period, index) => (
+                          <tr key={period.id} style={{ backgroundColor: index % 2 === 0 ? '#ffffff' : '#f9fafb' }}>
+                            <td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb' }}>
+                              {formatDateTime(period.startedAt)}
+                            </td>
+                            <td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb' }}>
+                              {period.endedAt ? formatDateTime(period.endedAt) : (
+                                <span style={{ color: '#9333ea', fontWeight: '500' }}>진행 중</span>
+                              )}
+                            </td>
+                            <td style={{ padding: '12px', textAlign: 'right', borderBottom: '1px solid #e5e7eb', fontWeight: '600' }}>
+                              {period.durationMs !== null ? formatTime(Math.floor(period.durationMs / 60000)) : '-'}
+                            </td>
+                            <td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb', color: '#6b7280' }}>
+                              {period.entryReason || '-'}
+                            </td>
+                            <td style={{ padding: '12px', textAlign: 'center', borderBottom: '1px solid #e5e7eb' }}>
+                              {period.previousCycleId || '-'}
+                            </td>
+                            <td style={{ padding: '12px', textAlign: 'center', borderBottom: '1px solid #e5e7eb' }}>
+                              {period.nextCycleId || '-'}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </>
             )}

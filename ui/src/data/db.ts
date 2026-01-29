@@ -156,6 +156,23 @@ async function migrateDatabase(database: Database): Promise<void> {
     database.run('CREATE INDEX IF NOT EXISTS idx_state_transitions_situation ON state_transitions(situation)');
     database.run('CREATE INDEX IF NOT EXISTS idx_state_transitions_entered_at ON state_transitions(entered_at)');
     
+    // Create unconscious_periods table for tracking unconscious time separately
+    database.run(`
+      CREATE TABLE IF NOT EXISTS unconscious_periods (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        started_at TEXT NOT NULL,
+        ended_at TEXT,
+        entry_reason TEXT,
+        exit_reason TEXT,
+        previous_cycle_id INTEGER,
+        next_cycle_id INTEGER,
+        FOREIGN KEY (previous_cycle_id) REFERENCES cycles(id),
+        FOREIGN KEY (next_cycle_id) REFERENCES cycles(id)
+      )
+    `);
+    database.run('CREATE INDEX IF NOT EXISTS idx_unconscious_started_at ON unconscious_periods(started_at)');
+    database.run('CREATE INDEX IF NOT EXISTS idx_unconscious_ended_at ON unconscious_periods(ended_at)');
+    
     console.log('Database migration completed');
     
     // Save migrated database
@@ -1502,7 +1519,213 @@ export async function activateCycle(cycleId: number): Promise<void> {
 }
 
 /**
+ * @brief Start a new unconscious period
+ *
+ * @param previousCycleId - The cycle that was active before entering unconscious (optional)
+ * @param reason - Optional reason for entering unconscious state
+ * @return The ID of the created unconscious period
+ *
+ * @pre Database is initialized
+ * @post New unconscious period is created with started_at timestamp
+ */
+export async function startUnconsciousPeriod(previousCycleId?: number | null, reason?: string | null): Promise<number> {
+  await initDatabase();
+
+  if (!db) {
+    throw new Error('Database not initialized');
+  }
+
+  const startedAt = new Date().toISOString();
+  
+  db.run(
+    'INSERT INTO unconscious_periods (started_at, entry_reason, previous_cycle_id) VALUES (?, ?, ?)',
+    [startedAt, reason ?? null, previousCycleId ?? null]
+  );
+  
+  const result = db.exec('SELECT last_insert_rowid() as id');
+  const periodId = result[0]?.values[0]?.[0] as number;
+  
+  await saveDatabase();
+  
+  console.log(`Unconscious period ${periodId} started`);
+  return periodId;
+}
+
+/**
+ * @brief End the current unconscious period
+ *
+ * @param periodId - The unconscious period ID to end
+ * @param nextCycleId - The cycle that starts after exiting unconscious (optional)
+ * @param exitReason - Optional reason for exiting unconscious state
+ *
+ * @pre Database is initialized, periodId exists
+ * @post Unconscious period ended_at is set, next_cycle_id and exit_reason updated
+ */
+export async function endUnconsciousPeriod(periodId: number, nextCycleId?: number | null, exitReason?: string | null): Promise<void> {
+  await initDatabase();
+
+  if (!db) {
+    throw new Error('Database not initialized');
+  }
+
+  const endedAt = new Date().toISOString();
+  
+  db.run(
+    'UPDATE unconscious_periods SET ended_at = ?, next_cycle_id = ?, exit_reason = ? WHERE id = ?',
+    [endedAt, nextCycleId ?? null, exitReason ?? null, periodId]
+  );
+  
+  await saveDatabase();
+  
+  console.log(`Unconscious period ${periodId} ended`);
+}
+
+/**
+ * @brief Get the current active unconscious period (if any)
+ *
+ * @return The active unconscious period or null
+ *
+ * @pre Database is initialized
+ * @post Returns the unconscious period that has no ended_at
+ */
+export async function getCurrentUnconsciousPeriod(): Promise<{
+  id: number;
+  startedAt: string;
+  entryReason: string | null;
+  previousCycleId: number | null;
+} | null> {
+  await initDatabase();
+
+  if (!db) {
+    throw new Error('Database not initialized');
+  }
+
+  const stmt = db.prepare('SELECT * FROM unconscious_periods WHERE ended_at IS NULL ORDER BY started_at DESC LIMIT 1');
+  
+  if (!stmt.step()) {
+    stmt.free();
+    return null;
+  }
+  
+  const row = stmt.getAsObject();
+  stmt.free();
+  
+  return {
+    id: row.id as number,
+    startedAt: row.started_at as string,
+    entryReason: row.entry_reason as string | null,
+    previousCycleId: row.previous_cycle_id as number | null,
+  };
+}
+
+/**
+ * @brief Get all unconscious periods
+ *
+ * @return Array of all unconscious periods
+ *
+ * @pre Database is initialized
+ * @post Returns all unconscious periods ordered by started_at desc
+ */
+export async function getAllUnconsciousPeriods(): Promise<Array<{
+  id: number;
+  startedAt: string;
+  endedAt: string | null;
+  entryReason: string | null;
+  exitReason: string | null;
+  previousCycleId: number | null;
+  nextCycleId: number | null;
+  durationMs: number | null;
+}>> {
+  await initDatabase();
+
+  if (!db) {
+    throw new Error('Database not initialized');
+  }
+
+  const stmt = db.prepare('SELECT * FROM unconscious_periods ORDER BY started_at DESC');
+  const periods: Array<{
+    id: number;
+    startedAt: string;
+    endedAt: string | null;
+    entryReason: string | null;
+    exitReason: string | null;
+    previousCycleId: number | null;
+    nextCycleId: number | null;
+    durationMs: number | null;
+  }> = [];
+  
+  while (stmt.step()) {
+    const row = stmt.getAsObject();
+    const startedAt = row.started_at as string;
+    const endedAt = row.ended_at as string | null;
+    
+    let durationMs: number | null = null;
+    if (endedAt) {
+      durationMs = new Date(endedAt).getTime() - new Date(startedAt).getTime();
+    }
+    
+    periods.push({
+      id: row.id as number,
+      startedAt,
+      endedAt,
+      entryReason: row.entry_reason as string | null,
+      exitReason: row.exit_reason as string | null,
+      previousCycleId: row.previous_cycle_id as number | null,
+      nextCycleId: row.next_cycle_id as number | null,
+      durationMs,
+    });
+  }
+  stmt.free();
+  
+  return periods;
+}
+
+/**
+ * @brief Get unconscious statistics
+ *
+ * @return Statistics about unconscious periods
+ *
+ * @pre Database is initialized
+ * @post Returns aggregated statistics for unconscious periods
+ */
+export async function getUnconsciousStatistics(): Promise<{
+  totalPeriods: number;
+  completedPeriods: number;
+  activePeriod: boolean;
+  totalDurationMs: number;
+  averageDurationMs: number;
+  longestDurationMs: number;
+  shortestDurationMs: number;
+}> {
+  await initDatabase();
+
+  if (!db) {
+    throw new Error('Database not initialized');
+  }
+
+  const periods = await getAllUnconsciousPeriods();
+  const completedPeriods = periods.filter(p => p.endedAt !== null);
+  const durations = completedPeriods.map(p => p.durationMs!).filter(d => d !== null);
+  
+  const totalDurationMs = durations.reduce((sum, d) => sum + d, 0);
+  const averageDurationMs = durations.length > 0 ? totalDurationMs / durations.length : 0;
+  const longestDurationMs = durations.length > 0 ? Math.max(...durations) : 0;
+  const shortestDurationMs = durations.length > 0 ? Math.min(...durations) : 0;
+  
+  return {
+    totalPeriods: periods.length,
+    completedPeriods: completedPeriods.length,
+    activePeriod: periods.some(p => p.endedAt === null),
+    totalDurationMs,
+    averageDurationMs,
+    longestDurationMs,
+    shortestDurationMs,
+  };
+}
+
+/**
  * @brief Record the time and optional reason when the user entered the Unconscious state for a cycle
+ * @deprecated Use startUnconsciousPeriod instead for separate tracking
  *
  * @param cycleId - Cycle ID to update
  * @param reason - Optional reason for entering Unconscious (e.g. from manual button)
@@ -1527,6 +1750,7 @@ export async function recordUnconsciousEntry(cycleId: number, reason?: string | 
 
 /**
  * @brief Record the time when the user left the Unconscious state (started new cycle)
+ * @deprecated Use endUnconsciousPeriod instead for separate tracking
  *
  * @param cycleId - Cycle ID to update
  *
@@ -1771,16 +1995,16 @@ export async function recordStateEntry(situation: string, cycleId: number | null
 
   // Close any open transition for the same cycle (if transitioning from another state)
   if (cycleId !== null) {
-    const closeStmt = db.prepare(`
+    const now = new Date().toISOString();
+    db.run(`
       UPDATE state_transitions 
       SET exited_at = ? 
-      WHERE cycle_id = ? AND exited_at IS NULL
-      ORDER BY entered_at DESC LIMIT 1
-    `);
-    const now = new Date().toISOString();
-    closeStmt.bind([now, cycleId]);
-    closeStmt.step();
-    closeStmt.free();
+      WHERE id = (
+        SELECT id FROM state_transitions 
+        WHERE cycle_id = ? AND exited_at IS NULL 
+        ORDER BY entered_at DESC LIMIT 1
+      )
+    `, [now, cycleId]);
   }
 
   // Get cycle ID if not provided
@@ -1827,15 +2051,15 @@ export async function recordStateExit(situation: string, cycleId: number | null 
   }
 
   const exitedAt = new Date().toISOString();
-  const updateStmt = db.prepare(`
+  db.run(`
     UPDATE state_transitions 
     SET exited_at = ? 
-    WHERE cycle_id = ? AND situation = ? AND exited_at IS NULL
-    ORDER BY entered_at DESC LIMIT 1
-  `);
-  updateStmt.bind([exitedAt, effectiveCycleId, situation]);
-  updateStmt.step();
-  updateStmt.free();
+    WHERE id = (
+      SELECT id FROM state_transitions 
+      WHERE cycle_id = ? AND situation = ? AND exited_at IS NULL 
+      ORDER BY entered_at DESC LIMIT 1
+    )
+  `, [exitedAt, effectiveCycleId, situation]);
 
   await saveDatabase();
 }
