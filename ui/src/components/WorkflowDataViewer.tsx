@@ -10,10 +10,21 @@
 import React, { useState, useEffect } from 'react';
 import { Situation } from '../types';
 import { workflowReadModel, StateHistoryEntry } from '../data/read-model';
-import { getAllCycles } from '../data/db';
+import { getAllCycles, getAllUnconsciousPeriods } from '../data/db';
 
 interface WorkflowDataViewerProps {
   onClose: () => void;
+}
+
+interface UnconsciousPeriod {
+  id: number;
+  startedAt: string;
+  endedAt: string | null;
+  entryReason: string | null;
+  exitReason: string | null;
+  previousCycleId: number | null;
+  nextCycleId: number | null;
+  durationMs: number | null;
 }
 
 /**
@@ -30,6 +41,7 @@ export const WorkflowDataViewer: React.FC<WorkflowDataViewerProps> = ({ onClose 
   const [loading, setLoading] = useState(true);
   const [selectedEntry, setSelectedEntry] = useState<StateHistoryEntry | null>(null);
   const [viewMode, setViewMode] = useState<'card' | 'table'>('table');
+  const [activeTab, setActiveTab] = useState<'cycles' | 'unconscious'>('cycles');
   const [selectedCycleId, setSelectedCycleId] = useState<number | null>(null);
   const [cycles, setCycles] = useState<Array<{
     id: number;
@@ -41,9 +53,11 @@ export const WorkflowDataViewer: React.FC<WorkflowDataViewerProps> = ({ onClose 
     unconsciousExitedAt: string | null;
     unconsciousEntryReason: string | null;
   }>>([]);
+  const [unconsciousPeriods, setUnconsciousPeriods] = useState<UnconsciousPeriod[]>([]);
 
   useEffect(() => {
     loadCycles();
+    loadUnconsciousPeriods();
     loadWorkflowData();
   }, []);
 
@@ -63,6 +77,21 @@ export const WorkflowDataViewer: React.FC<WorkflowDataViewerProps> = ({ onClose 
       setCycles(allCycles);
     } catch (error) {
       console.error('Failed to load cycles:', error);
+    }
+  };
+
+  /**
+   * @brief Load all unconscious periods
+   * 
+   * @pre Database is available
+   * @post Unconscious periods are loaded into component state
+   */
+  const loadUnconsciousPeriods = async () => {
+    try {
+      const periods = await getAllUnconsciousPeriods();
+      setUnconsciousPeriods(periods);
+    } catch (error) {
+      console.error('Failed to load unconscious periods:', error);
     }
   };
 
@@ -302,6 +331,49 @@ export const WorkflowDataViewer: React.FC<WorkflowDataViewerProps> = ({ onClose 
           </div>
         </div>
 
+        {/* Tab Navigation */}
+        <div style={{
+          display: 'flex',
+          gap: '4px',
+          marginBottom: '24px',
+          borderBottom: '2px solid #e5e7eb',
+        }}>
+          <button
+            onClick={() => setActiveTab('cycles')}
+            style={{
+              padding: '12px 24px',
+              fontSize: '14px',
+              fontWeight: activeTab === 'cycles' ? '600' : '400',
+              backgroundColor: activeTab === 'cycles' ? '#3b82f6' : 'transparent',
+              color: activeTab === 'cycles' ? '#ffffff' : '#6b7280',
+              border: 'none',
+              borderRadius: '6px 6px 0 0',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+            }}
+          >
+            의식 Cycles
+          </button>
+          <button
+            onClick={() => setActiveTab('unconscious')}
+            style={{
+              padding: '12px 24px',
+              fontSize: '14px',
+              fontWeight: activeTab === 'unconscious' ? '600' : '400',
+              backgroundColor: activeTab === 'unconscious' ? '#8b5cf6' : 'transparent',
+              color: activeTab === 'unconscious' ? '#ffffff' : '#6b7280',
+              border: 'none',
+              borderRadius: '6px 6px 0 0',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+            }}
+          >
+            무의식 기간 ({unconsciousPeriods.length})
+          </button>
+        </div>
+
+        {activeTab === 'cycles' && (
+          <>
         {/* Current State */}
         <div style={{
           marginBottom: '24px',
@@ -638,6 +710,156 @@ export const WorkflowDataViewer: React.FC<WorkflowDataViewerProps> = ({ onClose 
           <div>• Current state: {currentState || 'None'}</div>
           <div>• Unique situations: {new Set(stateHistory.map(e => e.state)).size}</div>
         </div>
+          </>
+        )}
+
+        {activeTab === 'unconscious' && (
+          <div>
+            <h3 style={{
+              fontSize: '16px',
+              fontWeight: '600',
+              color: '#111827',
+              marginBottom: '16px',
+            }}>
+              무의식 기간 목록 ({unconsciousPeriods.length}개)
+            </h3>
+            
+            {unconsciousPeriods.length === 0 ? (
+              <div style={{
+                textAlign: 'center',
+                padding: '48px',
+                color: '#6b7280',
+                fontSize: '14px',
+              }}>
+                무의식 기간 데이터가 없습니다.
+              </div>
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: '#f3e8ff' }}>
+                      <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #c4b5fd', color: '#5b21b6' }}>ID</th>
+                      <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #c4b5fd', color: '#5b21b6' }}>시작 시간</th>
+                      <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #c4b5fd', color: '#5b21b6' }}>종료 시간</th>
+                      <th style={{ padding: '12px', textAlign: 'right', borderBottom: '2px solid #c4b5fd', color: '#5b21b6' }}>소요 시간</th>
+                      <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #c4b5fd', color: '#5b21b6' }}>진입 사유</th>
+                      <th style={{ padding: '12px', textAlign: 'center', borderBottom: '2px solid #c4b5fd', color: '#5b21b6' }}>이전 Cycle</th>
+                      <th style={{ padding: '12px', textAlign: 'center', borderBottom: '2px solid #c4b5fd', color: '#5b21b6' }}>다음 Cycle</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {unconsciousPeriods.map((period, index) => {
+                      const formatDuration = (ms: number | null): string => {
+                        if (ms === null) return '-';
+                        const minutes = Math.floor(ms / 60000);
+                        const hours = Math.floor(minutes / 60);
+                        const mins = minutes % 60;
+                        if (hours === 0) return `${mins}분`;
+                        if (mins === 0) return `${hours}시간`;
+                        return `${hours}시간 ${mins}분`;
+                      };
+                      
+                      const formatDateTime = (dateStr: string): string => {
+                        return new Date(dateStr).toLocaleString('ko-KR', {
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        });
+                      };
+                      
+                      return (
+                        <tr key={period.id} style={{ backgroundColor: index % 2 === 0 ? '#ffffff' : '#faf5ff' }}>
+                          <td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb', fontWeight: '600', color: '#8b5cf6' }}>
+                            #{period.id}
+                          </td>
+                          <td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb' }}>
+                            {formatDateTime(period.startedAt)}
+                          </td>
+                          <td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb' }}>
+                            {period.endedAt ? formatDateTime(period.endedAt) : (
+                              <span style={{ 
+                                color: '#8b5cf6', 
+                                fontWeight: '600',
+                                backgroundColor: '#f3e8ff',
+                                padding: '4px 8px',
+                                borderRadius: '4px',
+                              }}>
+                                진행 중
+                              </span>
+                            )}
+                          </td>
+                          <td style={{ padding: '12px', textAlign: 'right', borderBottom: '1px solid #e5e7eb', fontWeight: '600' }}>
+                            {formatDuration(period.durationMs)}
+                          </td>
+                          <td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb', color: '#6b7280', maxWidth: '200px' }}>
+                            {period.entryReason || '-'}
+                          </td>
+                          <td style={{ padding: '12px', textAlign: 'center', borderBottom: '1px solid #e5e7eb' }}>
+                            {period.previousCycleId ? (
+                              <span style={{
+                                backgroundColor: '#dbeafe',
+                                color: '#1d4ed8',
+                                padding: '2px 8px',
+                                borderRadius: '4px',
+                                fontSize: '12px',
+                                fontWeight: '500',
+                              }}>
+                                #{period.previousCycleId}
+                              </span>
+                            ) : '-'}
+                          </td>
+                          <td style={{ padding: '12px', textAlign: 'center', borderBottom: '1px solid #e5e7eb' }}>
+                            {period.nextCycleId ? (
+                              <span style={{
+                                backgroundColor: '#dcfce7',
+                                color: '#16a34a',
+                                padding: '2px 8px',
+                                borderRadius: '4px',
+                                fontSize: '12px',
+                                fontWeight: '500',
+                              }}>
+                                #{period.nextCycleId}
+                              </span>
+                            ) : '-'}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            
+            {/* Unconscious Summary */}
+            <div style={{
+              marginTop: '24px',
+              padding: '16px',
+              backgroundColor: '#f3e8ff',
+              borderRadius: '8px',
+              fontSize: '13px',
+              color: '#5b21b6',
+            }}>
+              <div style={{ marginBottom: '8px' }}>
+                <strong>무의식 요약:</strong>
+              </div>
+              <div>• 총 무의식 기간: {unconsciousPeriods.length}회</div>
+              <div>• 완료된 기간: {unconsciousPeriods.filter(p => p.endedAt !== null).length}회</div>
+              <div>• 진행 중: {unconsciousPeriods.filter(p => p.endedAt === null).length > 0 ? '예' : '아니오'}</div>
+              <div>• 총 무의식 시간: {(() => {
+                const totalMs = unconsciousPeriods
+                  .filter(p => p.durationMs !== null)
+                  .reduce((sum, p) => sum + (p.durationMs || 0), 0);
+                const minutes = Math.floor(totalMs / 60000);
+                const hours = Math.floor(minutes / 60);
+                const mins = minutes % 60;
+                if (hours === 0) return `${mins}분`;
+                if (mins === 0) return `${hours}시간`;
+                return `${hours}시간 ${mins}분`;
+              })()}</div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

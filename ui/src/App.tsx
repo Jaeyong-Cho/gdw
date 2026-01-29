@@ -12,7 +12,7 @@ import WorkflowStateManager from './components/WorkflowStateManager';
 import WorkflowDataViewer from './components/WorkflowDataViewer';
 import { StatisticsViewer } from './components/StatisticsViewer';
 import { CycleListModal } from './components/CycleListModal';
-import { createCycle, getCurrentCycleId, activateCycle, recordUnconsciousEntry, recordUnconsciousExit, recordStateEntry, recordStateExit, startUnconsciousPeriod, endUnconsciousPeriod, getCurrentUnconsciousPeriod } from './data/db';
+import { createCycle, getCurrentCycleId, activateCycle, recordUnconsciousEntry, recordUnconsciousExit, recordStateEntry, recordStateExit, startUnconsciousPeriod, endUnconsciousPeriod, getCurrentUnconsciousPeriod, completeCycle } from './data/db';
 
 /**
  * @brief Main application component
@@ -399,6 +399,10 @@ const App: React.FC = () => {
                   try {
                     if (currentSituation && currentSituation !== 'Unconscious' && cycleId) {
                       await recordStateExit(currentSituation, cycleId);
+                    }
+                    // Complete the current cycle when entering unconscious
+                    if (cycleId) {
+                      await completeCycle(cycleId);
                     }
                     // Start new unconscious period (separate from conscious cycles)
                     await startUnconsciousPeriod(cycleId, unconsciousEntryReason.trim() || null);
