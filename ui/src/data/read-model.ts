@@ -7,7 +7,7 @@
  * @post Provides current state and state history information
  */
 
-import { getAnswersBySituation, getCurrentIntentId } from './db';
+import { getAnswersBySituation, getCurrentIntentId, getAllCycles } from './db';
 import { Situation } from '../types';
 
 /**
@@ -18,6 +18,7 @@ export interface StateHistoryEntry {
   timestamp: string;
   questionId: string;
   answer: string;
+  cycleId: number | null;
 }
 
 /**
@@ -26,6 +27,7 @@ export interface StateHistoryEntry {
 export interface IReadModel {
   getCurrentState(): Promise<Situation | null>;
   getStateHistory(): Promise<StateHistoryEntry[]>;
+  getStateHistoryForCycle(cycleId: number | null): Promise<StateHistoryEntry[]>;
 }
 
 /**
@@ -36,6 +38,8 @@ export interface IReadModel {
  */
 export class WorkflowReadModel implements IReadModel {
   private readonly situations: Situation[] = [
+    'Dumping',
+    'WhatToDo',
     'DefiningIntent',
     'FailingIntent',
     'SelectingProblem',
@@ -48,7 +52,8 @@ export class WorkflowReadModel implements IReadModel {
     'Verified',
     'Releasing',
     'CollectingFeedback',
-    'Learning'
+    'Learning',
+    'Ending'
   ];
 
   /**
@@ -107,7 +112,8 @@ export class WorkflowReadModel implements IReadModel {
             state: situation,
             timestamp: answer.answeredAt,
             questionId: answer.questionId,
-            answer: answer.answer
+            answer: answer.answer,
+            cycleId: answer.cycleId
           });
         }
       }
@@ -138,10 +144,47 @@ export class WorkflowReadModel implements IReadModel {
         state: situation,
         timestamp: answer.answeredAt,
         questionId: answer.questionId,
-        answer: answer.answer
+        answer: answer.answer,
+        cycleId: answer.cycleId
       }));
     } catch (error) {
       console.error(`Error getting history for ${situation}:`, error);
+      return [];
+    }
+  }
+
+  /**
+   * @brief Get workflow state history for a specific cycle
+   * 
+   * @param cycleId - Cycle ID to filter by (null for all cycles)
+   * @return Array of state history entries for the cycle
+   * 
+   * @pre Database is accessible
+   * @post Returns chronologically ordered state history for the cycle
+   */
+  async getStateHistoryForCycle(cycleId: number | null): Promise<StateHistoryEntry[]> {
+    try {
+      const history: StateHistoryEntry[] = [];
+
+      for (const situation of this.situations) {
+        const answers = await getAnswersBySituation(situation, cycleId);
+        for (const answer of answers) {
+          history.push({
+            state: situation,
+            timestamp: answer.answeredAt,
+            questionId: answer.questionId,
+            answer: answer.answer,
+            cycleId: answer.cycleId
+          });
+        }
+      }
+
+      // Sort by timestamp (ascending)
+      return history.sort((a, b) =>
+        new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+      );
+    } catch (error) {
+      console.error('Error getting state history for cycle:', error);
       return [];
     }
   }

@@ -563,6 +563,7 @@ export async function getAnswersBySituation(situation: string, cycleId?: number 
   answeredAt: string;
   intentId: number | null;
   problemId: number | null;
+  cycleId: number | null;
 }>> {
   await initDatabase();
   
@@ -572,10 +573,10 @@ export async function getAnswersBySituation(situation: string, cycleId?: number 
 
   let stmt;
   if (cycleId !== undefined && cycleId !== null) {
-    stmt = db.prepare('SELECT id, question_id, answer, answered_at, intent_id, problem_id FROM question_answers WHERE situation = ? AND cycle_id = ? ORDER BY answered_at DESC');
+    stmt = db.prepare('SELECT id, question_id, answer, answered_at, intent_id, problem_id, cycle_id FROM question_answers WHERE situation = ? AND cycle_id = ? ORDER BY answered_at DESC');
     stmt.bind([situation, cycleId]);
   } else {
-    stmt = db.prepare('SELECT id, question_id, answer, answered_at, intent_id, problem_id FROM question_answers WHERE situation = ? ORDER BY answered_at DESC');
+    stmt = db.prepare('SELECT id, question_id, answer, answered_at, intent_id, problem_id, cycle_id FROM question_answers WHERE situation = ? ORDER BY answered_at DESC');
     stmt.bind([situation]);
   }
   
@@ -586,6 +587,7 @@ export async function getAnswersBySituation(situation: string, cycleId?: number 
     answeredAt: string;
     intentId: number | null;
     problemId: number | null;
+    cycleId: number | null;
   }> = [];
   while (stmt.step()) {
     const row = stmt.getAsObject();
@@ -596,6 +598,7 @@ export async function getAnswersBySituation(situation: string, cycleId?: number 
       answeredAt: row.answered_at as string,
       intentId: (row.intent_id as number) || null,
       problemId: (row.problem_id as number) || null,
+      cycleId: (row.cycle_id as number) || null,
     });
   }
   

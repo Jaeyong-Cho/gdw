@@ -10,6 +10,7 @@
 import React, { useState, useEffect } from 'react';
 import { Situation } from '../types';
 import { workflowReadModel, StateHistoryEntry } from '../data/read-model';
+import { getAllCycles } from '../data/db';
 
 interface WorkflowDataViewerProps {
   onClose: () => void;
@@ -29,10 +30,38 @@ export const WorkflowDataViewer: React.FC<WorkflowDataViewerProps> = ({ onClose 
   const [loading, setLoading] = useState(true);
   const [selectedEntry, setSelectedEntry] = useState<StateHistoryEntry | null>(null);
   const [viewMode, setViewMode] = useState<'card' | 'table'>('table');
+  const [selectedCycleId, setSelectedCycleId] = useState<number | null>(null);
+  const [cycles, setCycles] = useState<Array<{
+    id: number;
+    cycleNumber: number;
+    startedAt: string;
+    completedAt: string | null;
+    status: string;
+  }>>([]);
+
+  useEffect(() => {
+    loadCycles();
+    loadWorkflowData();
+  }, []);
 
   useEffect(() => {
     loadWorkflowData();
-  }, []);
+  }, [selectedCycleId]);
+
+  /**
+   * @brief Load all cycles
+   * 
+   * @pre Database is available
+   * @post Cycles are loaded into component state
+   */
+  const loadCycles = async () => {
+    try {
+      const allCycles = await getAllCycles();
+      setCycles(allCycles);
+    } catch (error) {
+      console.error('Failed to load cycles:', error);
+    }
+  };
 
   /**
    * @brief Load workflow current state and history
@@ -43,12 +72,22 @@ export const WorkflowDataViewer: React.FC<WorkflowDataViewerProps> = ({ onClose 
   const loadWorkflowData = async () => {
     setLoading(true);
     try {
-      const [state, history] = await Promise.all([
-        workflowReadModel.getCurrentState(),
-        workflowReadModel.getStateHistory()
-      ]);
-      setCurrentState(state);
+      const history = await workflowReadModel.getStateHistoryForCycle(selectedCycleId);
       setStateHistory(history);
+      
+      // Get current state from all cycles if no cycle is selected
+      if (selectedCycleId === null) {
+        const state = await workflowReadModel.getCurrentState();
+        setCurrentState(state);
+      } else {
+        // For specific cycle, find the latest situation
+        if (history.length > 0) {
+          const latestEntry = history[history.length - 1];
+          setCurrentState(latestEntry.state);
+        } else {
+          setCurrentState(null);
+        }
+      }
     } catch (error) {
       console.error('Failed to load workflow data:', error);
     } finally {
@@ -88,6 +127,8 @@ export const WorkflowDataViewer: React.FC<WorkflowDataViewerProps> = ({ onClose 
    */
   const getSituationColor = (situation: Situation): string => {
     const colors: Record<string, string> = {
+      'Dumping': '#3b82f6',
+      'WhatToDo': '#8b5cf6',
       'DefiningIntent': '#10b981',
       'FailingIntent': '#ef4444',
       'SelectingProblem': '#3b82f6',
@@ -100,7 +141,8 @@ export const WorkflowDataViewer: React.FC<WorkflowDataViewerProps> = ({ onClose 
       'Verified': '#14b8a6',
       'Releasing': '#84cc16',
       'CollectingFeedback': '#a855f7',
-      'Learning': '#22c55e'
+      'Learning': '#22c55e',
+      'Ending': '#fbbf24'
     };
     return colors[situation] || '#6b7280';
   };
@@ -168,7 +210,39 @@ export const WorkflowDataViewer: React.FC<WorkflowDataViewerProps> = ({ onClose 
           }}>
             워크플로우 데이터 뷰어
           </h2>
-          <div style={{ display: 'flex', gap: '8px' }}>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <label style={{
+                fontSize: '12px',
+                color: '#6b7280',
+                fontWeight: '500',
+              }}>
+                Cycle 필터
+              </label>
+              <select
+                value={selectedCycleId === null ? '' : selectedCycleId}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setSelectedCycleId(value === '' ? null : parseInt(value, 10));
+                }}
+                style={{
+                  padding: '6px 12px',
+                  fontSize: '13px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '6px',
+                  backgroundColor: '#ffffff',
+                  cursor: 'pointer',
+                  minWidth: '150px',
+                }}
+              >
+                <option value="">전체 Cycle</option>
+                {cycles.map((cycle) => (
+                  <option key={cycle.id} value={cycle.id}>
+                    Cycle {cycle.cycleNumber} ({cycle.status === 'completed' ? '완료' : '진행 중'})
+                  </option>
+                ))}
+              </select>
+            </div>
             <div style={{
               display: 'inline-flex',
               backgroundColor: '#f3f4f6',
@@ -228,14 +302,14 @@ export const WorkflowDataViewer: React.FC<WorkflowDataViewerProps> = ({ onClose 
         <div style={{
           marginBottom: '24px',
           padding: '20px',
-          backgroundColor: '#f0f9ff',
-          border: '1px solid #bae6fd',
+          backgroundColor: currentState === 'Dumping' ? '#fef3c7' : '#f0f9ff',
+          border: currentState === 'Dumping' ? '1px solid #fcd34d' : '1px solid #bae6fd',
           borderRadius: '8px',
         }}>
           <h3 style={{
             fontSize: '16px',
             fontWeight: '600',
-            color: '#0c4a6e',
+            color: currentState === 'Dumping' ? '#92400e' : '#0c4a6e',
             marginBottom: '12px',
           }}>
             현재 상태
@@ -244,7 +318,7 @@ export const WorkflowDataViewer: React.FC<WorkflowDataViewerProps> = ({ onClose 
             <div style={{
               display: 'inline-block',
               padding: '8px 16px',
-              backgroundColor: getSituationColor(currentState),
+              backgroundColor: currentState === 'Dumping' ? '#f59e0b' : getSituationColor(currentState),
               color: '#ffffff',
               borderRadius: '6px',
               fontSize: '14px',
@@ -268,6 +342,16 @@ export const WorkflowDataViewer: React.FC<WorkflowDataViewerProps> = ({ onClose 
             marginBottom: '16px',
           }}>
             상태 이력 ({stateHistory.length}개)
+            {selectedCycleId !== null && (
+              <span style={{
+                fontSize: '14px',
+                fontWeight: '400',
+                color: '#6b7280',
+                marginLeft: '8px',
+              }}>
+                - Cycle {cycles.find(c => c.id === selectedCycleId)?.cycleNumber || selectedCycleId}
+              </span>
+            )}
           </h3>
           
           {stateHistory.length === 0 ? (
@@ -324,78 +408,112 @@ export const WorkflowDataViewer: React.FC<WorkflowDataViewerProps> = ({ onClose 
                       textAlign: 'left',
                       fontWeight: '600',
                       color: '#374151',
-                      width: '20%',
+                      width: '10%',
+                    }}>
+                      Cycle
+                    </th>
+                    <th style={{
+                      padding: '12px',
+                      textAlign: 'left',
+                      fontWeight: '600',
+                      color: '#374151',
+                      width: '15%',
                     }}>
                       Timestamp
                     </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {stateHistory.map((entry, index) => (
-                    <tr
-                      key={`${entry.questionId}-${entry.timestamp}-${index}`}
-                      onClick={() => setSelectedEntry(selectedEntry === entry ? null : entry)}
-                      style={{
-                        backgroundColor: selectedEntry === entry ? '#f0f9ff' : index % 2 === 0 ? '#ffffff' : '#f9fafb',
-                        borderBottom: '1px solid #e5e7eb',
-                        cursor: 'pointer',
-                        transition: 'background-color 0.15s',
-                      }}
-                      onMouseEnter={(e) => {
-                        if (selectedEntry !== entry) {
-                          e.currentTarget.style.backgroundColor = '#f3f4f6';
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (selectedEntry !== entry) {
-                          e.currentTarget.style.backgroundColor = index % 2 === 0 ? '#ffffff' : '#f9fafb';
-                        }
-                      }}
-                    >
-                      <td style={{ padding: '12px' }}>
-                        <div style={{
-                          display: 'inline-block',
-                          padding: '4px 8px',
-                          backgroundColor: getSituationColor(entry.state),
-                          color: '#ffffff',
-                          borderRadius: '4px',
-                          fontSize: '11px',
-                          fontWeight: '500',
+                  {stateHistory.map((entry, index) => {
+                    const cycle = entry.cycleId ? cycles.find(c => c.id === entry.cycleId) : null;
+                    return (
+                      <tr
+                        key={`${entry.questionId}-${entry.timestamp}-${index}`}
+                        onClick={() => setSelectedEntry(selectedEntry === entry ? null : entry)}
+                        style={{
+                          backgroundColor: selectedEntry === entry ? '#f0f9ff' : index % 2 === 0 ? '#ffffff' : '#f9fafb',
+                          borderBottom: '1px solid #e5e7eb',
+                          cursor: 'pointer',
+                          transition: 'background-color 0.15s',
+                        }}
+                        onMouseEnter={(e) => {
+                          if (selectedEntry !== entry) {
+                            e.currentTarget.style.backgroundColor = '#f3f4f6';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (selectedEntry !== entry) {
+                            e.currentTarget.style.backgroundColor = index % 2 === 0 ? '#ffffff' : '#f9fafb';
+                          }
+                        }}
+                      >
+                        <td style={{ padding: '12px' }}>
+                          <div style={{
+                            display: 'inline-block',
+                            padding: '4px 8px',
+                            backgroundColor: getSituationColor(entry.state),
+                            color: '#ffffff',
+                            borderRadius: '4px',
+                            fontSize: '11px',
+                            fontWeight: '500',
+                          }}>
+                            {entry.state}
+                          </div>
+                        </td>
+                        <td style={{
+                          padding: '12px',
+                          color: '#374151',
+                          fontSize: '12px',
                         }}>
-                          {entry.state}
-                        </div>
-                      </td>
-                      <td style={{
-                        padding: '12px',
-                        color: '#374151',
-                        fontSize: '12px',
-                      }}>
-                        {entry.questionId}
-                      </td>
-                      <td style={{
-                        padding: '12px',
-                        color: '#374151',
-                        maxWidth: '400px',
-                      }}>
-                        <div style={{
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: selectedEntry === entry ? 'pre-wrap' : 'nowrap',
-                          wordBreak: 'break-word',
+                          {entry.questionId}
+                        </td>
+                        <td style={{
+                          padding: '12px',
+                          color: '#374151',
+                          maxWidth: '400px',
                         }}>
-                          {entry.answer}
-                        </div>
-                      </td>
-                      <td style={{
-                        padding: '12px',
-                        color: '#6b7280',
-                        fontSize: '12px',
-                        whiteSpace: 'nowrap',
-                      }}>
-                        {formatTimestamp(entry.timestamp)}
-                      </td>
-                    </tr>
-                  ))}
+                          <div style={{
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: selectedEntry === entry ? 'pre-wrap' : 'nowrap',
+                            wordBreak: 'break-word',
+                          }}>
+                            {entry.answer}
+                          </div>
+                        </td>
+                        <td style={{
+                          padding: '12px',
+                          color: '#6b7280',
+                          fontSize: '12px',
+                          whiteSpace: 'nowrap',
+                        }}>
+                          {cycle ? (
+                            <div style={{
+                              display: 'inline-block',
+                              padding: '2px 6px',
+                              backgroundColor: cycle.status === 'completed' ? '#dbeafe' : '#fef3c7',
+                              color: cycle.status === 'completed' ? '#1e40af' : '#92400e',
+                              borderRadius: '4px',
+                              fontSize: '11px',
+                              fontWeight: '500',
+                            }}>
+                              Cycle {cycle.cycleNumber}
+                            </div>
+                          ) : (
+                            <span style={{ color: '#9ca3af' }}>-</span>
+                          )}
+                        </td>
+                        <td style={{
+                          padding: '12px',
+                          color: '#6b7280',
+                          fontSize: '12px',
+                          whiteSpace: 'nowrap',
+                        }}>
+                          {formatTimestamp(entry.timestamp)}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
