@@ -244,6 +244,24 @@ export const CytoscapeDiagram: React.FC<CytoscapeDiagramProps> = ({
           },
         },
         {
+          selector: 'node[id = "Dumping"]',
+          style: {
+            'background-color': '#dbeafe',
+            'border-color': '#3b82f6',
+            'border-width': 3,
+            'font-weight': '700',
+          },
+        },
+        {
+          selector: 'node[id = "Ending"]',
+          style: {
+            'background-color': '#fef3c7',
+            'border-color': '#f59e0b',
+            'border-width': 3,
+            'font-weight': '700',
+          },
+        },
+        {
           selector: 'edge',
           style: {
             'width': 2.5,
@@ -313,17 +331,32 @@ export const CytoscapeDiagram: React.FC<CytoscapeDiagramProps> = ({
   useEffect(() => {
     if (!cyRef.current) return;
 
-    // Reset all nodes
+    // Reset all nodes to default or special styles
     cyRef.current.nodes().forEach((node) => {
-      node.style({
-        'background-color': '#ffffff',
-        'border-color': '#e5e7eb',
-        'border-width': 2,
-      });
+      const nodeId = node.data('id');
+      if (nodeId === 'Dumping') {
+        node.style({
+          'background-color': '#dbeafe',
+          'border-color': '#3b82f6',
+          'border-width': 3,
+        });
+      } else if (nodeId === 'Ending') {
+        node.style({
+          'background-color': '#fef3c7',
+          'border-color': '#f59e0b',
+          'border-width': 3,
+        });
+      } else {
+        node.style({
+          'background-color': '#ffffff',
+          'border-color': '#e5e7eb',
+          'border-width': 2,
+        });
+      }
     });
 
-    // Highlight selected node
-    if (selectedSituation) {
+    // Highlight selected node (if not Dumping or Ending)
+    if (selectedSituation && selectedSituation !== 'Dumping' && selectedSituation !== 'Ending') {
       const selectedNode = cyRef.current.getElementById(selectedSituation);
       if (selectedNode.length > 0) {
         selectedNode.style({
@@ -331,6 +364,24 @@ export const CytoscapeDiagram: React.FC<CytoscapeDiagramProps> = ({
           'border-color': '#3b82f6',
           'border-width': 3,
         });
+      }
+    } else if (selectedSituation === 'Dumping' || selectedSituation === 'Ending') {
+      // Make selected Dumping or Ending even more prominent
+      const selectedNode = cyRef.current.getElementById(selectedSituation);
+      if (selectedNode.length > 0) {
+        if (selectedSituation === 'Dumping') {
+          selectedNode.style({
+            'background-color': '#93c5fd',
+            'border-color': '#2563eb',
+            'border-width': 4,
+          });
+        } else {
+          selectedNode.style({
+            'background-color': '#fde68a',
+            'border-color': '#d97706',
+            'border-width': 4,
+          });
+        }
       }
     }
   }, [selectedSituation]);
