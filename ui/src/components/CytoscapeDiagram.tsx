@@ -267,10 +267,15 @@ export const CytoscapeDiagram: React.FC<CytoscapeDiagramProps> = ({
         {
           selector: 'node[id = "Unconscious"]',
           style: {
-            'background-color': '#ede9fe',
-            'border-color': '#8b5cf6',
-            'border-width': 3,
+            'background-color': '#f3e8ff',
+            'background-opacity': 0.9,
+            'border-color': '#9333ea',
+            'border-width': 4,
+            'border-style': 'dashed',
             'font-weight': '700',
+            'shape': 'ellipse',
+            'width': 200,
+            'height': 100,
           },
         },
         {
@@ -360,9 +365,14 @@ export const CytoscapeDiagram: React.FC<CytoscapeDiagramProps> = ({
         });
       } else if (nodeId === 'Unconscious') {
         node.style({
-          'background-color': '#ede9fe',
-          'border-color': '#8b5cf6',
-          'border-width': 3,
+          'background-color': '#f3e8ff',
+          'background-opacity': 0.9,
+          'border-color': '#9333ea',
+          'border-width': 4,
+          'border-style': 'dashed',
+          'shape': 'ellipse',
+          'width': 200,
+          'height': 100,
         });
       } else {
         node.style({
@@ -395,9 +405,14 @@ export const CytoscapeDiagram: React.FC<CytoscapeDiagramProps> = ({
           });
         } else if (selectedSituation === 'Unconscious') {
           selectedNode.style({
-            'background-color': '#c4b5fd',
-            'border-color': '#6d28d9',
-            'border-width': 4,
+            'background-color': '#e9d5ff',
+            'background-opacity': 1,
+            'border-color': '#7e22ce',
+            'border-width': 5,
+            'border-style': 'dashed',
+            'shape': 'ellipse',
+            'width': 220,
+            'height': 110,
           });
         } else {
           selectedNode.style({

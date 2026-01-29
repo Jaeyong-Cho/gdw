@@ -335,6 +335,29 @@ export const SituationInfoPanel: React.FC<SituationInfoPanelProps> = ({
             </p>
           </div>
 
+          {guide.whenToExit && (
+            <div style={sectionStyle}>
+              <h4 style={{
+                ...sectionTitleStyle,
+                fontSize: '14px',
+                color: '#6b7280',
+              }}>
+                빠져나와야 할 때
+              </h4>
+              <div style={{
+                ...contentStyle,
+                fontSize: '13px',
+                whiteSpace: 'pre-line',
+                padding: '12px',
+                backgroundColor: '#fef3c7',
+                borderLeft: '3px solid #f59e0b',
+                borderRadius: '4px',
+              }}>
+                {guide.whenToExit}
+              </div>
+            </div>
+          )}
+
           <div style={sectionStyle}>
             <h4 style={{
               ...sectionTitleStyle,

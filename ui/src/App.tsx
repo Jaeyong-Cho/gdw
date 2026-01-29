@@ -10,8 +10,9 @@ import { LayoutSelector } from './components/LayoutSelector';
 import { DatabaseSettings } from './components/DatabaseSettings';
 import WorkflowStateManager from './components/WorkflowStateManager';
 import WorkflowDataViewer from './components/WorkflowDataViewer';
+import { StatisticsViewer } from './components/StatisticsViewer';
 import { CycleListModal } from './components/CycleListModal';
-import { createCycle, getCurrentCycleId, activateCycle, recordUnconsciousEntry, recordUnconsciousExit } from './data/db';
+import { createCycle, getCurrentCycleId, activateCycle, recordUnconsciousEntry, recordUnconsciousExit, recordStateEntry, recordStateExit } from './data/db';
 
 /**
  * @brief Main application component
@@ -38,6 +39,7 @@ const App: React.FC = () => {
   const [showSettings, setShowSettings] = useState<boolean>(false);
   const [showStateManager, setShowStateManager] = useState<boolean>(false);
   const [showDataViewer, setShowDataViewer] = useState<boolean>(false);
+  const [showStatisticsViewer, setShowStatisticsViewer] = useState<boolean>(false);
   const [currentSituation, setCurrentSituation] = useState<Situation>('FailingIntent');
   const [showCycleList, setShowCycleList] = useState<boolean>(false);
   const [initialQuestionId, setInitialQuestionId] = useState<string | null>(null);
@@ -133,6 +135,7 @@ const App: React.FC = () => {
               try {
                 const cycleId = await createCycle();
                 console.log('New cycle created:', cycleId);
+                await recordStateEntry('Dumping', cycleId);
                 setCurrentSituation('Dumping');
                 setSelectedSituation('Dumping');
               } catch (error) {
@@ -193,6 +196,22 @@ const App: React.FC = () => {
             데이터 뷰어
           </button>
           <button
+            onClick={() => setShowStatisticsViewer(true)}
+            style={{
+              padding: '10px 20px',
+              fontSize: '14px',
+              fontWeight: '500',
+              backgroundColor: '#ec4899',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              transition: 'background-color 0.2s',
+            }}
+          >
+            통계 보기
+          </button>
+          <button
             onClick={() => setShowStateManager(true)}
             style={{
               padding: '10px 20px',
@@ -233,6 +252,12 @@ const App: React.FC = () => {
         />
       )}
 
+      {showStatisticsViewer && (
+        <StatisticsViewer
+          onClose={() => setShowStatisticsViewer(false)}
+        />
+      )}
+
       {showStateManager && (
         <WorkflowStateManager
           currentSituation={currentSituation}
@@ -254,6 +279,12 @@ const App: React.FC = () => {
               await activateCycle(cycleId);
               console.log('Cycle activated:', cycleId);
               const situation = lastSituation as Situation || 'Dumping';
+              
+              // Record state entry for the resumed situation
+              if (situation && situation !== 'Unconscious') {
+                await recordStateEntry(situation, cycleId);
+              }
+              
               setCurrentSituation(situation);
               setSelectedSituation(situation);
               setInitialQuestionId(lastQuestionId);
@@ -352,19 +383,36 @@ const App: React.FC = () => {
                   initialQuestionId={initialQuestionId}
                   selectedCycleId={selectedCycleId}
                   onSituationChange={async (sit) => {
+                    const cycleId = await getCurrentCycleId();
+                    
+                    // Record exit from previous conscious state (if not Unconscious)
+                    if (currentSituation && currentSituation !== 'Unconscious' && sit !== currentSituation) {
+                      await recordStateExit(currentSituation, cycleId);
+                    }
+                    
+                    // Record entry into new state
                     if (sit === 'Unconscious') {
-                      const cycleId = await getCurrentCycleId();
                       if (cycleId) {
                         await recordUnconsciousEntry(cycleId);
                       }
+                    } else if (sit && sit !== 'Unconscious') {
+                      // Record entry into conscious state
+                      await recordStateEntry(sit, cycleId);
                     }
+                    
+                    // Handle transition from Unconscious to Dumping (new cycle)
                     if (sit === 'Dumping' && currentSituation === 'Unconscious') {
-                      const cycleId = await getCurrentCycleId();
                       if (cycleId) {
                         await recordUnconsciousExit(cycleId);
                       }
                       await createCycle();
+                      // Record entry into Dumping for new cycle
+                      const newCycleId = await getCurrentCycleId();
+                      if (newCycleId) {
+                        await recordStateEntry('Dumping', newCycleId);
+                      }
                     }
+                    
                     setSelectedSituation(sit);
                     if (sit) {
                       setCurrentSituation(sit);

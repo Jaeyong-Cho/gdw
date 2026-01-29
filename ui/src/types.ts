@@ -97,6 +97,7 @@ export interface SituationGuide {
   warning: string;
   tip: string;
   aiUsage: string;
+  whenToExit?: string;
   quickCheck: {
     items: QuickCheckItem[];
     nextStep: string;

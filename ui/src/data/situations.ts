@@ -171,12 +171,14 @@ export const situationDefinitions: Record<Situation, SituationDefinition> = {
   },
   Unconscious: {
     name: 'Unconscious',
-    description: 'Rest period between cycles; time spent not actively working',
+    description: 'State of fast thinking and judgment, ideal for familiar tasks; rest period between cycles',
     required_facts: [
       { description: 'Cycle has been completed' },
       { description: 'User has entered unconscious rest period' },
       { description: 'Unconscious period start time is recorded' },
       { description: 'Unconscious period end time is recorded when starting next cycle' },
+      { description: 'User is in a state of rapid thinking and judgment' },
+      { description: 'State is suitable for handling familiar tasks efficiently' },
     ],
   },
 };
