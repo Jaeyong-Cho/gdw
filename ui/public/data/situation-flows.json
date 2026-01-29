@@ -15,7 +15,7 @@
           "source": "getIntentSummary"
         },
         "aiPromptTemplate": {
-          "template": "# 개발 의도(Intent) 작성 도움\n\n## [INPUT – Human]\n\n1. Who is suffering:\n- {{intent}}\n\n2. What pain exists:\n- {{pain-exists}}\n\n3. Why this matters now:\n- {{why-now}}\n\n## [AI PROMPT]\n\nYou are acting as a critical systems analyst.\n\nRules:\n- Do NOT propose solutions, features, or implementations.\n- Do NOT use technical language.\n- Focus only on intent clarity and assumptions.\n\nTasks:\n1. Ask clarifying questions until the intent is logically stable.\n2. Produce exactly ONE intent sentence.\n3. Extract 3 hidden assumptions.\n4. Identify ambiguity or contradiction.\n\n## [EXIT CONDITION]\n\n- Intent is one sentence\n- No solution language\n- Assumptions are explicit",
+          "template": "# 개발 의도(Intent) 작성 도움\n\n## [INPUT – Human]\n\n1. Who is suffering:\n- {{intent}}\n\n2. What pain exists:\n- {{pain-exists}}\n\n3. Why this matters now:\n- {{why-now}}\n\n## [AI PROMPT]\n\nYou are acting as a critical systems analyst.\n\nRules:\n- Do NOT propose solutions, features, or implementations.\n- Do NOT use technical language.\n- Focus only on intent clarity and assumptions.\n\nTasks:\n1. Ask clarifying questions until the intent is logically stable.\n2. Produce exactly ONE intent sentence.\n3. Extract 3 hidden assumptions.\n4. Identify ambiguity or contradiction.\n\n## [OUTPUT FORMAT]\n\n- 답변을 markdown code block 또는 d2 code block으로 복사 가능하게 출력할 것\n\n## [EXIT CONDITION]\n\n- Intent is one sentence\n- No solution language\n- Assumptions are explicit",
           "inputFields": [
             {
               "id": "pain-exists",
@@ -97,7 +97,7 @@
         "required": true,
         "nextQuestionId": "problem-distinct",
         "aiPromptTemplate": {
-          "template": "# 문제 선택 및 경계 정의 도움\n\n## [INPUT – Human]\n\n1. System intent summary:\n- {{intent}}\n\n2. Proposed improvement points (선택적):\n{{improvements}}\n\n## [AI PROMPT]\n\nYou are performing problem decomposition.\n\nRules:\n- No solution framing.\n- No implementation hints.\n\nTasks:\n1. Enumerate all problems implied by the intent.\n2. Rank them by urgency, impact, and dependency depth.\n3. Select exactly ONE problem.\n4. Rewrite it as a single precise question.\n5. If oversized, decompose and select the smallest viable unit.\n6. If improvement points are provided, consider them in problem selection.\n\n## [EXIT CONDITION]\n\n- One problem only\n- Expressed as a question\n- Solvable independently",
+          "template": "# 문제 선택 및 경계 정의 도움\n\n## [INPUT – Human]\n\n1. System intent summary:\n- {{intent}}\n\n2. Proposed improvement points (선택적):\n{{improvements}}\n\n## [AI PROMPT]\n\nYou are performing problem decomposition.\n\nRules:\n- No solution framing.\n- No implementation hints.\n\nTasks:\n1. Enumerate all problems implied by the intent.\n2. Rank them by urgency, impact, and dependency depth.\n3. Select exactly ONE problem.\n4. Rewrite it as a single precise question.\n5. If oversized, decompose and select the smallest viable unit.\n6. If improvement points are provided, consider them in problem selection.\n\n## [OUTPUT FORMAT]\n\n- 답변을 markdown code block 또는 d2 code block으로 복사 가능하게 출력할 것\n\n## [EXIT CONDITION]\n\n- One problem only\n- Expressed as a question\n- Solvable independently",
           "selectableAnswers": {
             "questionId": "learned-improvements-text",
             "label": "이전 개선점 선택",
@@ -139,7 +139,7 @@
         "required": true,
         "nextQuestionId": "criteria-measurable",
         "aiPromptTemplate": {
-          "template": "# 완료 기준(Acceptance Criteria) 정의 도움\n\n## [INPUT – Human]\n\n1. Selected problem:\n- {{problem}}\n\n## [AI PROMPT]\n\nYou are defining verification contracts.\n\nRules:\n- Each criterion must be objectively testable.\n- No subjective or vague wording.\n\nTasks:\n1. Generate 3–5 Given–When–Then acceptance criteria.\n2. Validate testability of each criterion.\n3. Rewrite non-testable criteria.\n4. Mark logical dependencies between criteria.\n\n## [EXIT CONDITION]\n\n- Criteria are testable\n- Completion is objectively decidable"
+          "template": "# 완료 기준(Acceptance Criteria) 정의 도움\n\n## [INPUT – Human]\n\n1. Selected problem:\n- {{problem}}\n\n## [AI PROMPT]\n\nYou are defining verification contracts.\n\nRules:\n- Each criterion must be objectively testable.\n- No subjective or vague wording.\n\nTasks:\n1. Generate 3–5 Given–When–Then acceptance criteria.\n2. Validate testability of each criterion.\n3. Rewrite non-testable criteria.\n4. Mark logical dependencies between criteria.\n\n## [OUTPUT FORMAT]\n\n- 답변을 markdown code block 또는 d2 code block으로 복사 가능하게 출력할 것\n\n## [EXIT CONDITION]\n\n- Criteria are testable\n- Completion is objectively decidable"
         }
       },
       {
@@ -187,7 +187,7 @@
         "required": true,
         "nextQuestionId": "resources-text",
         "aiPromptTemplate": {
-          "template": "# 실행 가능성 검증 및 리스크 분석 도움\n\n## [INPUT – Human]\n\n1. Problem + acceptance criteria:\n- Problem: {{problem}}\n- Acceptance Criteria: {{acceptanceCriteria}}\n\n## [AI PROMPT]\n\nYou are performing risk intelligence analysis.\n\nRules:\n- Expose risk, do not hide it.\n- Focus on learning, not safety.\n\nTasks:\n1. Identify technical, time, and dependency risks.\n2. Rank risks by failure impact.\n3. Select the SINGLE highest-risk assumption.\n4. Define the smallest experiment to validate it.\n5. Describe what failure would teach.\n\n## [EXIT CONDITION]\n\n- One dominant risk identified\n- One learning experiment defined"
+          "template": "# 실행 가능성 검증 및 리스크 분석 도움\n\n## [INPUT – Human]\n\n1. Problem + acceptance criteria:\n- Problem: {{problem}}\n- Acceptance Criteria: {{acceptanceCriteria}}\n\n## [AI PROMPT]\n\nYou are performing risk intelligence analysis.\n\nRules:\n- Expose risk, do not hide it.\n- Focus on learning, not safety.\n\nTasks:\n1. Identify technical, time, and dependency risks.\n2. Rank risks by failure impact.\n3. Select the SINGLE highest-risk assumption.\n4. Define the smallest experiment to validate it.\n5. Describe what failure would teach.\n\n## [OUTPUT FORMAT]\n\n- 답변을 markdown code block 또는 d2 code block으로 복사 가능하게 출력할 것\n\n## [EXIT CONDITION]\n\n- One dominant risk identified\n- One learning experiment defined"
         }
       },
       {
@@ -197,7 +197,7 @@
         "required": true,
         "nextQuestionId": "feasibility-decision",
         "aiPromptTemplate": {
-          "template": "# 리소스 요구사항 추정 도움\n\n## [INPUT – Human]\n\n1. Problem + acceptance criteria:\n- Problem: {{problem}}\n- Acceptance Criteria: {{acceptanceCriteria}}\n- Technical Constraints: {{constraints-text}}\n\n## [AI PROMPT]\n\nYou are estimating resource requirements.\n\nTasks:\n1. Estimate time requirements (hours/days).\n2. Estimate human resources needed.\n3. Identify external dependencies.\n4. Define resource constraints.\n\n## [EXIT CONDITION]\n\n- Time estimate provided\n- Resource dependencies identified"
+          "template": "# 리소스 요구사항 추정 도움\n\n## [INPUT – Human]\n\n1. Problem + acceptance criteria:\n- Problem: {{problem}}\n- Acceptance Criteria: {{acceptanceCriteria}}\n- Technical Constraints: {{constraints-text}}\n\n## [AI PROMPT]\n\nYou are estimating resource requirements.\n\nTasks:\n1. Estimate time requirements (hours/days).\n2. Estimate human resources needed.\n3. Identify external dependencies.\n4. Define resource constraints.\n\n## [OUTPUT FORMAT]\n\n- 답변을 markdown code block 또는 d2 code block으로 복사 가능하게 출력할 것\n\n## [EXIT CONDITION]\n\n- Time estimate provided\n- Resource dependencies identified"
         }
       },
       {
@@ -220,7 +220,7 @@
         "required": true,
         "nextQuestionId": "design-covers-criteria",
         "aiPromptTemplate": {
-          "template": "# 최소 설계(Design) 작성 도움\n\n## [INPUT – Human]\n\n1. Acceptance criteria:\n- {{acceptanceCriteria}}\n\n## [AI PROMPT]\n\nYou are designing a minimal execution architecture.\n\nPrimary Goal:\n- Satisfy acceptance criteria with the simplest possible structure.\n\nRules:\n- Design ONLY what acceptance requires.\n- No future-proofing.\n- No speculative features.\n- Design patterns are OPTIONAL, not mandatory.\n- Patterns must never drive the design; acceptance criteria do.\n- Write design with d2 lang (diagram modeling language: https://d2lang.com/)\n\nTasks:\n1. Define minimal components (maximum 5).\n2. Describe state transitions or data flow between components.\n3. Map each acceptance criterion to the responsible component.\n\nDesign Pattern Evaluation:\n4. List relevant design pattern candidates (for example: State, Strategy, Pipeline, Observer, Command).\n5. For each candidate pattern:\n   - Why it could fit this problem\n   - What problem it would solve\n   - What complexity it would introduce\n6. Explicitly decide:\n   - Pattern selected (if any) and justification\n   - Patterns rejected and reasons for rejection\n\nSimplification:\n7. Identify unnecessary abstractions or indirections.\n8. Propose a simpler structure if possible.\n9. Explain how the design could be simplified further if requirements were reduced.\n\nOutput Constraint:\n- The design must make implementation order naturally inferable.\n- The design must be explainable without referencing patterns.\n\n## [EXIT CONDITION]\n\n- Structure is minimal\n- State or data flow is explicit\n- Design decisions (including pattern usage or rejection) are justified\n- Implementation order is obvious"
+          "template": "# 최소 설계(Design) 작성 도움\n\n## [INPUT – Human]\n\n1. Acceptance criteria:\n- {{acceptanceCriteria}}\n\n## [AI PROMPT]\n\nYou are designing a minimal execution architecture.\n\nPrimary Goal:\n- Satisfy acceptance criteria with the simplest possible structure.\n\nRules:\n- Design ONLY what acceptance requires.\n- No future-proofing.\n- No speculative features.\n- Design patterns are OPTIONAL, not mandatory.\n- Patterns must never drive the design; acceptance criteria do.\n- Write design with d2 lang (diagram modeling language: https://d2lang.com/)\n\nTasks:\n1. Define minimal components (maximum 5).\n2. Describe state transitions or data flow between components.\n3. Map each acceptance criterion to the responsible component.\n\nDesign Pattern Evaluation:\n4. List relevant design pattern candidates (for example: State, Strategy, Pipeline, Observer, Command).\n5. For each candidate pattern:\n   - Why it could fit this problem\n   - What problem it would solve\n   - What complexity it would introduce\n6. Explicitly decide:\n   - Pattern selected (if any) and justification\n   - Patterns rejected and reasons for rejection\n\nSimplification:\n7. Identify unnecessary abstractions or indirections.\n8. Propose a simpler structure if possible.\n9. Explain how the design could be simplified further if requirements were reduced.\n\nOutput Constraint:\n- The design must make implementation order naturally inferable.\n- The design must be explainable without referencing patterns.\n\n## [OUTPUT FORMAT]\n\n- 답변을 markdown code block 또는 d2 code block으로 복사 가능하게 출력할 것\n\n## [EXIT CONDITION]\n\n- Structure is minimal\n- State or data flow is explicit\n- Design decisions (including pattern usage or rejection) are justified\n- Implementation order is obvious"
         }
       },
       {
@@ -252,7 +252,7 @@
         "required": true,
         "nextQuestionId": "tasks-independent",
         "aiPromptTemplate": {
-          "template": "# 작업 분해(Task Breakdown) 도움\n\n## [INPUT – Human]\n\n1. Design output:\n- {{design}}\n\n## [AI PROMPT]\n\nYou are generating executable micro-tasks.\n\nDefinition:\nA task is a single state change with a verifiable outcome.\n\nRules:\n- Less than 90 minutes per task\n- Single responsibility\n- One verification method\n\nTasks:\n1. Decompose design into atomic tasks.\n2. For each task define:\n   - start state\n   - action\n   - end state\n3. Order tasks by dependency.\n4. Identify parallelizable tasks.\n5. Flag vague or oversized tasks.\n\n## [EXIT CONDITION]\n\n- Tasks are immediately executable\n- Dependencies are explicit"
+          "template": "# 작업 분해(Task Breakdown) 도움\n\n## [INPUT – Human]\n\n1. Design output:\n- {{design}}\n\n## [AI PROMPT]\n\nYou are generating executable micro-tasks.\n\nDefinition:\nA task is a single state change with a verifiable outcome.\n\nRules:\n- Less than 90 minutes per task\n- Single responsibility\n- One verification method\n\nTasks:\n1. Decompose design into atomic tasks.\n2. For each task define:\n   - start state\n   - action\n   - end state\n3. Order tasks by dependency.\n4. Identify parallelizable tasks.\n5. Flag vague or oversized tasks.\n\n## [OUTPUT FORMAT]\n\n- 답변을 markdown code block 또는 d2 code block으로 복사 가능하게 출력할 것\n\n## [EXIT CONDITION]\n\n- Tasks are immediately executable\n- Dependencies are explicit"
         }
       },
       {
@@ -284,7 +284,7 @@
         "required": true,
         "nextQuestionId": "task-complete",
         "aiPromptTemplate": {
-          "template": "# 구현(Implementation) 도움\n\n## [INPUT – Human]\n\n1. Current task:\n- {{task}}\n\n## [AI PROMPT]\n\nYou are assisting implementation.\n\nRules:\n- No system redesign.\n- No scope expansion.\n\nTasks:\n1. Produce a minimal implementation skeleton.\n2. Identify failure-prone areas.\n3. Define quick sanity checks.\n4. Suggest fast validation steps.\n\n## [EXIT CONDITION]\n\n- Code runs\n- Task end state achieved"
+          "template": "# 구현(Implementation) 도움\n\n## [INPUT – Human]\n\n1. Current task:\n- {{task}}\n\n## [AI PROMPT]\n\nYou are assisting implementation.\n\nRules:\n- No system redesign.\n- No scope expansion.\n\nTasks:\n1. Produce a minimal implementation skeleton.\n2. Identify failure-prone areas.\n3. Define quick sanity checks.\n4. Suggest fast validation steps.\n\n## [OUTPUT FORMAT]\n\n- 답변을 markdown code block 또는 d2 code block으로 복사 가능하게 출력할 것\n\n## [EXIT CONDITION]\n\n- Code runs\n- Task end state achieved"
         }
       },
       {
@@ -316,7 +316,7 @@
         "required": true,
         "nextQuestionId": "all-criteria-met",
         "aiPromptTemplate": {
-          "template": "# 검증(Verification) 도움\n\n## [INPUT – Human]\n\n1. Implementation + acceptance criteria:\n- Implementation: {{task-implementation-text}}\n- Acceptance Criteria: {{acceptanceCriteria}}\n\n## [AI PROMPT]\n\nYou are validating correctness.\n\nTasks:\n1. Generate verification tests.\n2. Define observable success signals.\n3. Define observable failure signals.\n4. Classify failure origin:\n   - implementation fault\n   - acceptance fault\n   - design fault\n\n## [EXIT CONDITION]\n\n- Tests are reproducible\n- Results are evidence-based"
+          "template": "# 검증(Verification) 도움\n\n## [INPUT – Human]\n\n1. Implementation + acceptance criteria:\n- Implementation: {{task-implementation-text}}\n- Acceptance Criteria: {{acceptanceCriteria}}\n\n## [AI PROMPT]\n\nYou are validating correctness.\n\nTasks:\n1. Generate verification tests.\n2. Define observable success signals.\n3. Define observable failure signals.\n4. Classify failure origin:\n   - implementation fault\n   - acceptance fault\n   - design fault\n\n## [OUTPUT FORMAT]\n\n- 답변을 markdown code block 또는 d2 code block으로 복사 가능하게 출력할 것\n\n## [EXIT CONDITION]\n\n- Tests are reproducible\n- Results are evidence-based"
         }
       },
       {
@@ -348,7 +348,7 @@
         "required": true,
         "nextQuestionId": "ready-for-release",
         "aiPromptTemplate": {
-          "template": "# 검증 완료 판단 도움\n\n## [INPUT – Human]\n\n1. Test results:\n- {{verification-test-text}}\n\n## [AI PROMPT]\n\nYou are performing decision analysis.\n\nTasks:\n1. Evaluate acceptance satisfaction.\n2. Decide pass or fail.\n3. If failed:\n   - identify broken assumption\n   - specify rollback stage\n4. Justify decision logically.\n\n## [EXIT CONDITION]\n\n- Clear yes or no decision\n- Rollback path defined"
+          "template": "# 검증 완료 판단 도움\n\n## [INPUT – Human]\n\n1. Test results:\n- {{verification-test-text}}\n\n## [AI PROMPT]\n\nYou are performing decision analysis.\n\nTasks:\n1. Evaluate acceptance satisfaction.\n2. Decide pass or fail.\n3. If failed:\n   - identify broken assumption\n   - specify rollback stage\n4. Justify decision logically.\n\n## [OUTPUT FORMAT]\n\n- 답변을 markdown code block 또는 d2 code block으로 복사 가능하게 출력할 것\n\n## [EXIT CONDITION]\n\n- Clear yes or no decision\n- Rollback path defined"
         }
       },
       {
@@ -372,7 +372,7 @@
         "required": true,
         "nextQuestionId": "release-announced",
         "aiPromptTemplate": {
-          "template": "# 릴리스(Release) 준비 도움\n\n## [INPUT – Human]\n\n1. Verified solution:\n- Problem: {{problem}}\n- Solution: {{task-implementation-text}}\n\n## [AI PROMPT]\n\nYou are preparing delivery.\n\nTasks:\n1. Generate a minimal release note.\n2. Define known limitations.\n3. Create a release checklist.\n4. Identify deployment risks.\n\n## [EXIT CONDITION]\n\n- Delivered to real user or system"
+          "template": "# 릴리스(Release) 준비 도움\n\n## [INPUT – Human]\n\n1. Verified solution:\n- Problem: {{problem}}\n- Solution: {{task-implementation-text}}\n\n## [AI PROMPT]\n\nYou are preparing delivery.\n\nTasks:\n1. Generate a minimal release note.\n2. Define known limitations.\n3. Create a release checklist.\n4. Identify deployment risks.\n\n## [OUTPUT FORMAT]\n\n- 답변을 markdown code block 또는 d2 code block으로 복사 가능하게 출력할 것\n\n## [EXIT CONDITION]\n\n- Delivered to real user or system"
         }
       },
       {
@@ -396,7 +396,7 @@
         "required": true,
         "nextSituation": "Learned",
         "aiPromptTemplate": {
-          "template": "# 피드백 수집 및 문서화 도움\n\n## [INPUT – Human]\n\n1. Feedback and observations:\n- Intent: {{intent}}\n- Released solution: {{problem}}\n- Release note: {{release-note-text}}\n\n## [AI PROMPT]\n\nYou are extracting learning.\n\nTasks:\n1. Compare expectation versus reality.\n2. Identify incorrect assumptions.\n3. Propose updates to:\n   - intent\n   - problem\n   - acceptance\n4. Extract reusable lessons.\n\n## [EXIT CONDITION]\n\n- Learning captured\n- Next cycle defined"
+          "template": "# 피드백 수집 및 문서화 도움\n\n## [INPUT – Human]\n\n1. Feedback and observations:\n- Intent: {{intent}}\n- Released solution: {{problem}}\n- Release note: {{release-note-text}}\n\n## [AI PROMPT]\n\nYou are extracting learning.\n\nTasks:\n1. Compare expectation versus reality.\n2. Identify incorrect assumptions.\n3. Propose updates to:\n   - intent\n   - problem\n   - acceptance\n4. Extract reusable lessons.\n\n## [OUTPUT FORMAT]\n\n- 답변을 markdown code block 또는 d2 code block으로 복사 가능하게 출력할 것\n\n## [EXIT CONDITION]\n\n- Learning captured\n- Next cycle defined"
         }
       }
     ]
@@ -420,7 +420,7 @@
         "required": true,
         "nextQuestionId": "learned-improvements",
         "aiPromptTemplate": {
-          "template": "# 학습 내용 추출 도움\n\n## [INPUT – Human]\n\n1. Feedback and observations:\n- Intent: {{intent}}\n- Problem: {{problem}}\n- Feedback: {{feedback-documented-text}}\n\n## [AI PROMPT]\n\nYou are extracting learning.\n\nTasks:\n1. Compare expectation versus reality.\n2. Identify incorrect assumptions.\n3. Extract reusable lessons.\n4. Identify patterns in failures or successes.\n\n## [EXIT CONDITION]\n\n- Learning captured\n- Assumptions updated"
+          "template": "# 학습 내용 추출 도움\n\n## [INPUT – Human]\n\n1. Feedback and observations:\n- Intent: {{intent}}\n- Problem: {{problem}}\n- Feedback: {{feedback-documented-text}}\n\n## [AI PROMPT]\n\nYou are extracting learning.\n\nTasks:\n1. Compare expectation versus reality.\n2. Identify incorrect assumptions.\n3. Extract reusable lessons.\n4. Identify patterns in failures or successes.\n\n## [OUTPUT FORMAT]\n\n- 답변을 markdown code block 또는 d2 code block으로 복사 가능하게 출력할 것\n\n## [EXIT CONDITION]\n\n- Learning captured\n- Assumptions updated"
         }
       },
       {
@@ -438,7 +438,7 @@
         "required": true,
         "nextQuestionId": "learned-clear-implementation",
         "aiPromptTemplate": {
-          "template": "# 개선점 도출 도움\n\n## [INPUT – Human]\n\n1. Learning and feedback:\n- New facts: {{learned-new-facts-text}}\n- Feedback: {{feedback-documented-text}}\n- Intent: {{intent}}\n- Problem: {{problem}}\n\n## [AI PROMPT]\n\nYou are identifying improvement opportunities.\n\nTasks:\n1. Analyze gaps between intent and reality.\n2. Identify improvement opportunities.\n3. Propose updates to:\n   - intent\n   - problem\n   - acceptance criteria\n4. Prioritize improvements by impact.\n\n## [EXIT CONDITION]\n\n- Improvement opportunities identified\n- Next cycle defined"
+          "template": "# 개선점 도출 도움\n\n## [INPUT – Human]\n\n1. Learning and feedback:\n- New facts: {{learned-new-facts-text}}\n- Feedback: {{feedback-documented-text}}\n- Intent: {{intent}}\n- Problem: {{problem}}\n\n## [AI PROMPT]\n\nYou are identifying improvement opportunities.\n\nTasks:\n1. Analyze gaps between intent and reality.\n2. Identify improvement opportunities.\n3. Propose updates to:\n   - intent\n   - problem\n   - acceptance criteria\n4. Prioritize improvements by impact.\n\n## [OUTPUT FORMAT]\n\n- 답변을 markdown code block 또는 d2 code block으로 복사 가능하게 출력할 것\n\n## [EXIT CONDITION]\n\n- Improvement opportunities identified\n- Next cycle defined"
         }
       },
       {
