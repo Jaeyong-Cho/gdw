@@ -14,9 +14,13 @@ import {
  * @brief Build comprehensive context for AI prompts with relationships
  * 
  * @param currentSituation - Current situation
+ * @param cycleId - Optional cycle ID to filter answers (current cycle)
  * @return Context object with all related data
+ * 
+ * @pre currentSituation is provided
+ * @post Returns context with relationships filtered by cycle if provided
  */
-export async function buildRelatedContext(currentSituation: string): Promise<{
+export async function buildRelatedContext(currentSituation: string, cycleId?: number | null): Promise<{
   intent?: string;
   problems?: string[];
   design?: string[];
@@ -38,18 +42,36 @@ export async function buildRelatedContext(currentSituation: string): Promise<{
   } = {};
 
   try {
-    // Get current intent and problem IDs
+    // Get current intent and problem IDs (these are from current cycle by design)
     const intentId = await getCurrentIntentId();
     const problemId = await getCurrentProblemId();
 
     const allRelated = new Map<string, string>();
 
     // If we have an intent, get all related data
+    // Note: getAnswersByIntent returns answers linked to this intent
+    // Since intentId comes from getCurrentIntentId which gets the most recent intent,
+    // and answers are linked by intent_id, they should already be from the current cycle
+    // But we'll filter by cycle if provided for safety
     if (intentId) {
       const intentRelated = await getAnswersByIntent(intentId);
       
+      // Filter by cycle if provided
+      // Since getAnswersByIntent doesn't return cycle_id, we check each answer
+      let filteredIntentRelated = intentRelated;
+      if (cycleId !== undefined && cycleId !== null) {
+        filteredIntentRelated = [];
+        for (const answer of intentRelated) {
+          const cycleAnswers = await getAnswersBySituation(answer.situation, cycleId);
+          const cycleAnswer = cycleAnswers.find(a => a.id === answer.id);
+          if (cycleAnswer) {
+            filteredIntentRelated.push(answer);
+          }
+        }
+      }
+      
       // Get the intent itself
-      const intentAnswers = intentRelated.filter(a => 
+      const intentAnswers = filteredIntentRelated.filter(a => 
         a.situation === 'DefiningIntent' && a.questionId.includes('intent-')
       );
       if (intentAnswers.length > 0) {
@@ -58,7 +80,7 @@ export async function buildRelatedContext(currentSituation: string): Promise<{
       }
 
       // Get all problems under this intent
-      const problemAnswers = intentRelated.filter(a => 
+      const problemAnswers = filteredIntentRelated.filter(a => 
         a.situation === 'SelectingProblem' && a.questionId.includes('problem-')
       );
       if (problemAnswers.length > 0) {
@@ -66,7 +88,7 @@ export async function buildRelatedContext(currentSituation: string): Promise<{
       }
 
       // Get designs
-      const designAnswers = intentRelated.filter(a => 
+      const designAnswers = filteredIntentRelated.filter(a => 
         a.situation === 'Designing' && !['true', 'false'].includes(a.answer)
       );
       if (designAnswers.length > 0) {
@@ -74,7 +96,7 @@ export async function buildRelatedContext(currentSituation: string): Promise<{
       }
 
       // Get acceptance criteria
-      const acceptanceAnswers = intentRelated.filter(a => 
+      const acceptanceAnswers = filteredIntentRelated.filter(a => 
         a.situation === 'DefiningAcceptance' && !['true', 'false'].includes(a.answer)
       );
       if (acceptanceAnswers.length > 0) {
@@ -82,7 +104,7 @@ export async function buildRelatedContext(currentSituation: string): Promise<{
       }
 
       // Get implementation details
-      const implementAnswers = intentRelated.filter(a => 
+      const implementAnswers = filteredIntentRelated.filter(a => 
         a.situation === 'Implementing' && !['true', 'false'].includes(a.answer)
       );
       if (implementAnswers.length > 0) {
@@ -90,7 +112,7 @@ export async function buildRelatedContext(currentSituation: string): Promise<{
       }
 
       // Get feedback
-      const feedbackAnswers = intentRelated.filter(a => 
+      const feedbackAnswers = filteredIntentRelated.filter(a => 
         a.situation === 'CollectingFeedback' && !['true', 'false'].includes(a.answer)
       );
       if (feedbackAnswers.length > 0) {
@@ -98,7 +120,7 @@ export async function buildRelatedContext(currentSituation: string): Promise<{
       }
 
       // Get improvements
-      const improvementAnswers = intentRelated.filter(a => 
+      const improvementAnswers = filteredIntentRelated.filter(a => 
         a.situation === 'Learning' && a.questionId.includes('improvements')
       );
       if (improvementAnswers.length > 0) {
@@ -106,7 +128,7 @@ export async function buildRelatedContext(currentSituation: string): Promise<{
       }
 
       // Store all in map
-      intentRelated.forEach(a => {
+      filteredIntentRelated.forEach(a => {
         if (!['true', 'false'].includes(a.answer)) {
           allRelated.set(a.questionId, a.answer);
         }
@@ -114,18 +136,36 @@ export async function buildRelatedContext(currentSituation: string): Promise<{
     }
 
     // If we have a problem, get problem-specific data
+    // Note: getAnswersByProblem returns answers linked to this problem
+    // Since problemId comes from getCurrentProblemId which gets the most recent problem,
+    // and answers are linked by problem_id, they should already be from the current cycle
+    // But we'll filter by cycle if provided for safety
     if (problemId) {
       const problemRelated = await getAnswersByProblem(problemId);
       
-      problemRelated.forEach(a => {
+      // Filter by cycle if provided
+      // Since getAnswersByProblem doesn't return cycle_id, we check each answer
+      let filteredProblemRelated = problemRelated;
+      if (cycleId !== undefined && cycleId !== null) {
+        filteredProblemRelated = [];
+        for (const answer of problemRelated) {
+          const cycleAnswers = await getAnswersBySituation(answer.situation, cycleId);
+          const cycleAnswer = cycleAnswers.find(a => a.id === answer.id);
+          if (cycleAnswer) {
+            filteredProblemRelated.push(answer);
+          }
+        }
+      }
+      
+      filteredProblemRelated.forEach(a => {
         if (!['true', 'false'].includes(a.answer)) {
           allRelated.set(a.questionId, a.answer);
         }
       });
     }
 
-    // Also get current situation answers
-    const currentAnswers = await getAnswersBySituation(currentSituation);
+    // Also get current situation answers (from current cycle)
+    const currentAnswers = await getAnswersBySituation(currentSituation, cycleId);
     currentAnswers.forEach(a => {
       if (!['true', 'false'].includes(a.answer)) {
         allRelated.set(a.questionId, a.answer);

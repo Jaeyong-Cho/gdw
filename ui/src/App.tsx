@@ -11,7 +11,7 @@ import { DatabaseSettings } from './components/DatabaseSettings';
 import WorkflowStateManager from './components/WorkflowStateManager';
 import WorkflowDataViewer from './components/WorkflowDataViewer';
 import { CycleListModal } from './components/CycleListModal';
-import { createCycle, getCurrentCycleId } from './data/db';
+import { createCycle, getCurrentCycleId, activateCycle } from './data/db';
 
 /**
  * @brief Main application component
@@ -41,6 +41,7 @@ const App: React.FC = () => {
   const [currentSituation, setCurrentSituation] = useState<Situation>('FailingIntent');
   const [showCycleList, setShowCycleList] = useState<boolean>(false);
   const [initialQuestionId, setInitialQuestionId] = useState<string | null>(null);
+  const [selectedCycleId, setSelectedCycleId] = useState<number | null>(null);
   const sidebarRef = useRef<HTMLDivElement>(null);
 
   const handleNodeClick = useCallback((situation: Situation) => {
@@ -249,12 +250,14 @@ const App: React.FC = () => {
           onClose={() => setShowCycleList(false)}
           onRestartCycle={async (cycleId: number, lastSituation: string, lastQuestionId: string | null) => {
             try {
-              const newCycleId = await createCycle();
-              console.log('New cycle created from previous cycle:', newCycleId);
+              // Activate the selected cycle instead of creating a new one
+              await activateCycle(cycleId);
+              console.log('Cycle activated:', cycleId);
               const situation = lastSituation as Situation || 'Dumping';
               setCurrentSituation(situation);
               setSelectedSituation(situation);
               setInitialQuestionId(lastQuestionId);
+              setSelectedCycleId(cycleId); // Store the selected cycle ID
               setShowCycleList(false);
             } catch (error) {
               console.error('Error restarting cycle:', error);
@@ -347,6 +350,7 @@ const App: React.FC = () => {
                 <SituationInfoPanel 
                   situation={selectedSituation} 
                   initialQuestionId={initialQuestionId}
+                  selectedCycleId={selectedCycleId}
                   onSituationChange={(sit) => {
                     setSelectedSituation(sit);
                     if (sit) {

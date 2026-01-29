@@ -131,27 +131,51 @@ async function migrateDatabase(database: Database): Promise<void> {
 }
 
 /**
- * @brief Load database from backend or localStorage
+ * @brief Load database from backend file or localStorage
  * 
  * @return Database binary data or null
+ * 
+ * @pre None
+ * @post Returns database data from file if path configured, otherwise from localStorage
  */
 async function loadDatabaseData(): Promise<Uint8Array | null> {
   const serverAvailable = await isServerAvailable();
   
   if (serverAvailable) {
+    // Check if database path is configured
     try {
-      const response = await fetch(`${SERVER_URL}/api/db`);
-      if (response.ok) {
-        const arrayBuffer = await response.arrayBuffer();
-        console.log('Database loaded from backend server');
-        return new Uint8Array(arrayBuffer);
+      const pathResponse = await fetch(`${SERVER_URL}/api/db/path`);
+      if (pathResponse.ok) {
+        const pathInfo = await pathResponse.json();
+        if (pathInfo.path) {
+          // Path is configured, try to load from file
+          try {
+            const response = await fetch(`${SERVER_URL}/api/db`);
+            if (response.ok) {
+              const arrayBuffer = await response.arrayBuffer();
+              const fileData = new Uint8Array(arrayBuffer);
+              
+              if (fileData.length > 0) {
+                console.log('Database loaded from backend server file:', pathInfo.path);
+                return fileData;
+              } else {
+                console.log('Database file exists but is empty:', pathInfo.path);
+                // File exists but is empty, fall through to localStorage check
+              }
+            }
+          } catch (error) {
+            console.warn('Failed to load from backend file:', error);
+            // Fall through to localStorage fallback
+          }
+        }
       }
     } catch (error) {
-      console.warn('Failed to load from backend:', error);
+      console.warn('Error checking database path:', error);
+      // Fall through to localStorage fallback
     }
   }
 
-  // Fallback to localStorage
+  // Fallback to localStorage only if file path is not configured or file doesn't exist
   const savedDb = localStorage.getItem(DB_KEY);
   if (savedDb) {
     const binaryString = atob(savedDb);
@@ -170,7 +194,7 @@ async function loadDatabaseData(): Promise<Uint8Array | null> {
  * @brief Save database to backend or localStorage
  * 
  * @pre Database is initialized
- * @post Database is saved
+ * @post Database is saved (to backend if path configured, otherwise localStorage)
  */
 async function saveDatabase(): Promise<void> {
   if (!db) {
@@ -181,23 +205,38 @@ async function saveDatabase(): Promise<void> {
   const serverAvailable = await isServerAvailable();
 
   if (serverAvailable) {
+    // Check if database path is configured
     try {
-      const response = await fetch(`${SERVER_URL}/api/db`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/octet-stream' },
-        body: new Uint8Array(data)
-      });
+      const pathResponse = await fetch(`${SERVER_URL}/api/db/path`);
+      if (pathResponse.ok) {
+        const pathInfo = await pathResponse.json();
+        if (pathInfo.path) {
+          // Path is configured, save to backend file system
+          try {
+            const response = await fetch(`${SERVER_URL}/api/db`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/octet-stream' },
+              body: new Uint8Array(data)
+            });
 
-      if (response.ok) {
-        console.log('Database saved to backend server');
-        return;
+            if (response.ok) {
+              console.log('Database saved to backend server file:', pathInfo.path);
+              return;
+            }
+          } catch (error) {
+            console.error('Error saving to backend:', error);
+            // Fall through to localStorage fallback only if backend save fails
+          }
+        }
       }
     } catch (error) {
-      console.error('Error saving to backend:', error);
+      console.warn('Error checking database path:', error);
+      // Fall through to localStorage fallback
     }
   }
 
-  // Fallback to localStorage
+  // Fallback to localStorage only if backend is not available or path is not configured
+  // Do not overwrite localStorage if path is configured (to preserve data)
   try {
     const base64 = btoa(String.fromCharCode(...data));
     localStorage.setItem(DB_KEY, base64);
@@ -511,9 +550,13 @@ export async function getAllAnswersByQuestionId(questionId: string): Promise<Arr
  * @brief Get answers by situation
  * 
  * @param situation - Situation name
+ * @param cycleId - Optional cycle ID to filter answers
  * @return Array of answers
+ * 
+ * @pre Database is initialized
+ * @post Returns answers filtered by situation and optionally by cycle
  */
-export async function getAnswersBySituation(situation: string): Promise<Array<{ 
+export async function getAnswersBySituation(situation: string, cycleId?: number | null): Promise<Array<{ 
   id: number;
   questionId: string; 
   answer: string; 
@@ -527,8 +570,14 @@ export async function getAnswersBySituation(situation: string): Promise<Array<{
     throw new Error('Database not initialized');
   }
 
-  const stmt = db.prepare('SELECT id, question_id, answer, answered_at, intent_id, problem_id FROM question_answers WHERE situation = ? ORDER BY answered_at DESC');
-  stmt.bind([situation]);
+  let stmt;
+  if (cycleId !== undefined && cycleId !== null) {
+    stmt = db.prepare('SELECT id, question_id, answer, answered_at, intent_id, problem_id FROM question_answers WHERE situation = ? AND cycle_id = ? ORDER BY answered_at DESC');
+    stmt.bind([situation, cycleId]);
+  } else {
+    stmt = db.prepare('SELECT id, question_id, answer, answered_at, intent_id, problem_id FROM question_answers WHERE situation = ? ORDER BY answered_at DESC');
+    stmt.bind([situation]);
+  }
   
   const answers: Array<{ 
     id: number;
@@ -700,6 +749,9 @@ export async function getIntentDocument(): Promise<string | null> {
  * 
  * @param filePath - Full file path
  * @return Configured path
+ * 
+ * @pre Backend server is available
+ * @post Path is set, database is loaded from file if exists, or current db is saved to file
  */
 export async function setDatabaseLocationWithPath(filePath: string): Promise<string> {
   if (!filePath || filePath.trim() === '') {
@@ -712,6 +764,7 @@ export async function setDatabaseLocationWithPath(filePath: string): Promise<str
   }
 
   try {
+    // Set the path
     const response = await fetch(`${SERVER_URL}/api/db/path`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -725,8 +778,44 @@ export async function setDatabaseLocationWithPath(filePath: string): Promise<str
 
     const result = await response.json();
     
-    // Save current database to new location
+    // Try to load database from the file
+    try {
+      const loadResponse = await fetch(`${SERVER_URL}/api/db`);
+      if (loadResponse.ok) {
+        const arrayBuffer = await loadResponse.arrayBuffer();
+        const fileData = new Uint8Array(arrayBuffer);
+        
+        if (fileData.length > 0) {
+          // File exists and has data, load it
+          const SQL = await initSqlJs({
+            locateFile: file => `https://sql.js.org/dist/${file}`
+          });
+          
+          // Close existing database if any
+          if (db) {
+            db.close();
+          }
+          
+          db = new SQL.Database(fileData);
+          console.log('Database loaded from file:', filePath);
+          
+          // Run migrations
+          await migrateDatabase(db);
+          
+          return result.path;
+        }
+      }
+    } catch (loadError) {
+      console.warn('File does not exist or could not be loaded, will save current database:', loadError);
+    }
+    
+    // File doesn't exist or is empty, save current database to new location
     if (db) {
+      await saveDatabase();
+      console.log('Current database saved to file:', filePath);
+    } else {
+      // Initialize empty database if none exists
+      await initDatabase();
       await saveDatabase();
     }
     
@@ -1310,6 +1399,49 @@ export async function completeCycle(cycleId: number): Promise<void> {
   await saveDatabase();
   
   console.log(`Cycle ${cycleId} completed`);
+}
+
+/**
+ * @brief Activate a cycle (set as active and deactivate other active cycles)
+ * 
+ * @param cycleId - Cycle ID to activate
+ * 
+ * @pre Database is initialized, cycleId exists
+ * @post Cycle is set to active, other active cycles are set to completed
+ */
+export async function activateCycle(cycleId: number): Promise<void> {
+  await initDatabase();
+  
+  if (!db) {
+    throw new Error('Database not initialized');
+  }
+
+  // First, complete any other active cycles
+  const activeStmt = db.prepare('SELECT id FROM cycles WHERE status = ? AND id != ?');
+  activeStmt.bind(['active', cycleId]);
+  
+  const activeCycles: number[] = [];
+  while (activeStmt.step()) {
+    const row = activeStmt.getAsObject();
+    activeCycles.push(row.id as number);
+  }
+  activeStmt.free();
+  
+  // Complete other active cycles
+  for (const activeCycleId of activeCycles) {
+    await completeCycle(activeCycleId);
+  }
+  
+  // Activate the selected cycle
+  // If it was completed, clear completed_at
+  db.run(
+    'UPDATE cycles SET status = ?, completed_at = NULL WHERE id = ?',
+    ['active', cycleId]
+  );
+  
+  await saveDatabase();
+  
+  console.log(`Cycle ${cycleId} activated`);
 }
 
 /**

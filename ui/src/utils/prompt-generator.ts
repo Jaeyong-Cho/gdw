@@ -2,7 +2,7 @@
  * @fileoverview Utility for generating AI prompts from templates
  */
 
-import { getIntentSummary, getAnswersBySituation } from '../data/db';
+import { getIntentSummary, getAnswersBySituation, getCurrentCycleId, getPreviousCycleData } from '../data/db';
 import { buildRelatedContext, formatRelatedContextForPrompt } from '../data/relationships';
 
 /**
@@ -43,17 +43,64 @@ export function generatePrompt(template: string, context: PromptContext): string
  * 
  * @param situation - Current situation
  * @param selectedProblemId - Optional selected problem ID to filter acceptance criteria
+ * @param selectedCycleId - Optional selected cycle ID to use instead of current cycle
  * @return Promise resolving to context object with relevant answers and relationships
  * 
  * @pre situation is provided
- * @post Returns context with intent, problem, and other relevant data including relationships
+ * @post Returns context with intent, problem, and other relevant data including relationships from current cycle and previous cycle
  */
-export async function buildPromptContext(situation: string, selectedProblemId?: number | null): Promise<PromptContext> {
+export async function buildPromptContext(situation: string, selectedProblemId?: number | null, selectedCycleId?: number | null): Promise<PromptContext> {
   const context: PromptContext = {};
   
   try {
-    // Get related context using relationships
-    const relatedContext = await buildRelatedContext(situation);
+    // Get current cycle ID
+    const currentCycleId = await getCurrentCycleId();
+    
+    // Get previous cycle data for context
+    const previousCycleData = await getPreviousCycleData();
+    
+    // If a specific cycle is selected, use it as the effective cycle
+    let effectiveCycleId: number | null = selectedCycleId || currentCycleId;
+    
+    // If no selected cycle and current cycle has no data, check if we should use previous cycle
+    if (!selectedCycleId) {
+      // Check if current cycle has any answers (check all situations, not just current)
+      let currentCycleHasData = false;
+      if (currentCycleId !== null) {
+        // Check a few key situations to determine if cycle has data
+        const checkSituations = ['Dumping', 'WhatToDo', 'DefiningIntent', 'SelectingProblem', situation];
+        for (const sit of checkSituations) {
+          const answers = await getAnswersBySituation(sit, currentCycleId);
+          if (answers.length > 0) {
+            currentCycleHasData = true;
+            break;
+          }
+        }
+      }
+      
+      // If current cycle has no data but previous cycle exists, use previous cycle data as current
+      if (!currentCycleHasData && previousCycleData && previousCycleData.answers.length > 0) {
+        // Current cycle is empty, use previous cycle data as current cycle data
+        effectiveCycleId = previousCycleData.id;
+        console.log('[DEBUG] buildPromptContext: Current cycle has no data, using previous cycle data as current cycle');
+      }
+    } else {
+      console.log('[DEBUG] buildPromptContext: Using selected cycle ID:', selectedCycleId);
+    }
+    
+    // Add previous cycle data to context with prefix to distinguish from current cycle
+    // Only add if it's different from the effective cycle
+    if (previousCycleData && previousCycleData.answers.length > 0 && previousCycleData.id !== effectiveCycleId) {
+      previousCycleData.answers.forEach(answer => {
+        if (!['true', 'false'].includes(answer.answer)) {
+          const key = `previous-cycle-${answer.questionId}`;
+          context[key] = answer.answer;
+        }
+      });
+    }
+    
+    // Get related context using relationships (from effective cycle)
+    const relatedContext = await buildRelatedContext(situation, effectiveCycleId);
     
     // Add intent
     if (relatedContext.intent) {
@@ -73,9 +120,9 @@ export async function buildPromptContext(situation: string, selectedProblemId?: 
     // If a specific problem is selected, use only that problem
     if (selectedProblemId !== undefined && selectedProblemId !== null) {
       console.log('[DEBUG] buildPromptContext: selectedProblemId provided:', selectedProblemId);
-      const { getAnswersBySituation } = await import('../data/db');
       // Get the problem answer directly by ID (selectedProblemId is the answer ID, not problem_id)
-      const allAnswers = await getAnswersBySituation('SelectingProblem');
+      // From effective cycle (current cycle if it has data, otherwise previous cycle)
+      const allAnswers = await getAnswersBySituation('SelectingProblem', effectiveCycleId);
       const problemAnswer = allAnswers.find(a => a.id === selectedProblemId && a.questionId === 'problem-boundaries-text');
       if (problemAnswer) {
         context.problem = problemAnswer.answer;
@@ -83,8 +130,8 @@ export async function buildPromptContext(situation: string, selectedProblemId?: 
         
         // Get acceptance criteria related to this problem
         // selectedProblemId is the problem answer's id, so we need to find acceptance answers
-        // that have problem_id = selectedProblemId
-        const allAcceptanceAnswers = await getAnswersBySituation('DefiningAcceptance');
+        // that have problem_id = selectedProblemId (from effective cycle)
+        const allAcceptanceAnswers = await getAnswersBySituation('DefiningAcceptance', effectiveCycleId);
         const acceptanceAnswers = allAcceptanceAnswers.filter(a => 
           !['true', 'false'].includes(a.answer) && a.problemId === selectedProblemId
         );
@@ -139,7 +186,7 @@ export async function buildPromptContext(situation: string, selectedProblemId?: 
       });
     }
     
-    // Fallback: Get all answers from current and related situations
+    // Get all answers from current cycle only
     const situations = [
       'Dumping',
       'WhatToDo',
@@ -158,7 +205,8 @@ export async function buildPromptContext(situation: string, selectedProblemId?: 
     
     for (const sit of situations) {
       try {
-        const answers = await getAnswersBySituation(sit);
+        // Get answers from effective cycle (current cycle if it has data, otherwise previous cycle)
+        const answers = await getAnswersBySituation(sit, effectiveCycleId);
         answers.forEach(a => {
           if (!['true', 'false'].includes(a.answer)) {
             // Use question ID as key

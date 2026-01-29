@@ -14,6 +14,7 @@ import { getTransitionCount, incrementTransitionCount, resetTransitionCount, get
 interface InteractiveFlowProps {
   situation: Situation;
   initialQuestionId?: string | null;
+  selectedCycleId?: number | null;
   onComplete: (nextSituation: Situation | null) => void;
   onAnswerSave: (answer: QuestionAnswer) => void;
 }
@@ -32,6 +33,7 @@ interface InteractiveFlowProps {
 export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({ 
   situation,
   initialQuestionId,
+  selectedCycleId,
   onComplete,
   onAnswerSave,
 }) => {
@@ -195,7 +197,7 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
       console.log('[DEBUG] selectedProblemId state:', selectedProblemId);
       console.log('[DEBUG] selectedProblemIdForPrompt:', selectedProblemIdForPrompt);
       
-      const context = await buildPromptContext(situation, selectedProblemIdForPrompt);
+      const context = await buildPromptContext(situation, selectedProblemIdForPrompt, selectedCycleId);
       
       console.log('[DEBUG] Context problem:', context.problem);
       console.log('[DEBUG] Context acceptanceCriteria:', context.acceptanceCriteria);
@@ -223,7 +225,7 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
     } catch (error) {
       console.error('Error generating AI prompt:', error);
     }
-  }, [flow, currentQuestionId, situation, selectableAnswers, selectedAnswerIds, selectedProblemId]);
+  }, [flow, currentQuestionId, situation, selectableAnswers, selectedAnswerIds, selectedProblemId, selectedCycleId]);
 
   /**
    * @brief Show AI prompt input form
