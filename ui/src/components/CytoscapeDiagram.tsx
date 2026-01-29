@@ -417,15 +417,15 @@ export const CytoscapeDiagram: React.FC<CytoscapeDiagramProps> = ({
           });
         } else if (selectedSituation === 'Unconscious') {
           selectedNode.style({
-            'background-color': '#a855f7', // Purple for unconscious
+            'background-color': '#fce7f3', // Pink background
             'background-opacity': 1,
-            'border-color': '#7e22ce',
+            'border-color': '#e11d48', // Crimson/coral border
             'border-width': 5,
             'border-style': 'dashed',
             'shape': 'ellipse',
             'width': 220,
             'height': 110,
-            'color': '#ffffff',
+            'color': '#1f2937', // Black text
             'font-weight': '700',
           });
         } else {
@@ -440,7 +440,7 @@ export const CytoscapeDiagram: React.FC<CytoscapeDiagramProps> = ({
         }
       }
     }
-  }, [selectedSituation]);
+  }, [selectedSituation, isUnconscious, layoutType]);
 
   // Update layout when layoutType changes
   useEffect(() => {

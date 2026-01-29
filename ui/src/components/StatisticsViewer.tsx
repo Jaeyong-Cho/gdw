@@ -727,6 +727,7 @@ export const StatisticsViewer: React.FC<StatisticsViewerProps> = ({ onClose }) =
                         dataKey="consciousMinutes"
                         stroke="#3b82f6"
                         strokeWidth={2}
+                        strokeDasharray="5 5"
                         name="의식 시간"
                         dot={{ r: 4 }}
                       />
@@ -735,6 +736,7 @@ export const StatisticsViewer: React.FC<StatisticsViewerProps> = ({ onClose }) =
                         dataKey="unconsciousMinutes"
                         stroke="#8b5cf6"
                         strokeWidth={2}
+                        strokeDasharray="5 5"
                         name="무의식 시간"
                         dot={{ r: 4 }}
                       />
