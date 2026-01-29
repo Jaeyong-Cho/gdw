@@ -3,20 +3,16 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Situation, QuestionAnswer, SituationGuide } from '../types';
+import { Situation, SituationGuide } from '../types';
 import { situationDefinitions } from '../data/situations';
-import { InteractiveFlow } from './InteractiveFlow';
 import { SituationAnswers } from './SituationAnswers';
-import { getSituationGuides, getSituationFlows } from '../data/data-loader';
+import { getSituationGuides } from '../data/data-loader';
 
 /**
  * @brief Props for SituationInfoPanel component
  */
 interface SituationInfoPanelProps {
   situation: Situation | null;
-  initialQuestionId?: string | null;
-  selectedCycleId?: number | null;
-  onSituationChange?: (situation: Situation) => void;
 }
 
 /**
@@ -29,44 +25,12 @@ interface SituationInfoPanelProps {
  * @post Panel displays situation information or placeholder if none selected
  */
 export const SituationInfoPanel: React.FC<SituationInfoPanelProps> = ({ 
-  situation, 
-  initialQuestionId,
-  selectedCycleId,
-  onSituationChange 
+  situation
 }) => {
   const [guide, setGuide] = useState<SituationGuide | undefined>(undefined);
-  const [hasFlow, setHasFlow] = useState<boolean>(false);
-  const [showFlow, setShowFlow] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
 
   const [answersUpdated, setAnswersUpdated] = useState<number>(0);
-
-  const handleAnswerSave = async (answer: QuestionAnswer) => {
-    if (!situation) {
-      return;
-    }
-    
-    try {
-      const { saveAnswer } = await import('../data/db');
-      await saveAnswer(
-        answer.questionId,
-        situation,
-        answer.answer,
-        answer.answeredAt
-      );
-      setAnswersUpdated(prev => prev + 1);
-    } catch (error) {
-      console.error('Failed to save answer to database:', error);
-    }
-  };
-
-  const handleFlowComplete = (nextSituation: Situation | null) => {
-    if (nextSituation && onSituationChange) {
-      onSituationChange(nextSituation);
-    } else {
-      setShowFlow(false);
-    }
-  };
 
   useEffect(() => {
     const loadData = async () => {
@@ -77,15 +41,8 @@ export const SituationInfoPanel: React.FC<SituationInfoPanelProps> = ({
 
       setLoading(true);
       try {
-        const [guides, flows] = await Promise.all([
-          getSituationGuides(),
-          getSituationFlows(),
-        ]);
-
+        const guides = await getSituationGuides();
         setGuide(guides[situation]);
-        const hasFlowForSituation = flows[situation] !== undefined;
-        setHasFlow(hasFlowForSituation);
-        setShowFlow(hasFlowForSituation);
       } catch (error) {
         console.error('Error loading data:', error);
       } finally {
@@ -205,17 +162,7 @@ export const SituationInfoPanel: React.FC<SituationInfoPanelProps> = ({
         </div>
       )}
 
-      {!loading && hasFlow && showFlow && (
-        <div style={{ marginBottom: '32px' }}>
-          <InteractiveFlow
-            situation={situation}
-            initialQuestionId={initialQuestionId}
-            selectedCycleId={selectedCycleId}
-            onComplete={handleFlowComplete}
-            onAnswerSave={handleAnswerSave}
-          />
-        </div>
-      )}
+      {/* InteractiveFlow disabled - view-only mode */}
 
       {!loading && situation && (
         <div style={{ marginBottom: '32px' }}>

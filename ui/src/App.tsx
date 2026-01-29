@@ -543,45 +543,6 @@ const App: React.FC = () => {
               }}>
                 <SituationInfoPanel 
                   situation={selectedSituation} 
-                  initialQuestionId={initialQuestionId}
-                  selectedCycleId={selectedCycleId}
-                  onSituationChange={async (sit) => {
-                    const cycleId = await getCurrentCycleId();
-                    
-                    // Record exit from previous conscious state (if not Unconscious)
-                    if (currentSituation && currentSituation !== 'Unconscious' && sit !== currentSituation) {
-                      await recordStateExit(currentSituation, cycleId);
-                    }
-                    
-                    // Record entry into new state
-                    if (sit === 'Unconscious') {
-                      if (cycleId) {
-                        await recordUnconsciousEntry(cycleId);
-                      }
-                    } else if (sit && sit !== 'Unconscious') {
-                      // Record entry into conscious state
-                      await recordStateEntry(sit, cycleId);
-                    }
-                    
-                    // Handle transition from Unconscious to Dumping (new cycle)
-                    if (sit === 'Dumping' && currentSituation === 'Unconscious') {
-                      if (cycleId) {
-                        await recordUnconsciousExit(cycleId);
-                      }
-                      await createCycle();
-                      // Record entry into Dumping for new cycle
-                      const newCycleId = await getCurrentCycleId();
-                      if (newCycleId) {
-                        await recordStateEntry('Dumping', newCycleId);
-                      }
-                    }
-                    
-                    setSelectedSituation(sit);
-                    if (sit) {
-                      setCurrentSituation(sit);
-                      setInitialQuestionId(null);
-                    }
-                  }}
                 />
               </aside>
             </div>
