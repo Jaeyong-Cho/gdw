@@ -184,7 +184,7 @@ export const situationDefinitions: Record<Situation, SituationDefinition> = {
 export const nodePositions: Record<Situation, NodePosition> = {
   // Top Center: Cycle Start
   Dumping: { x: 1800, y: 0 },
-  DefiningActionIntent: { x: 1800, y: 150 },
+  WhatToDo: { x: 1800, y: 150 },
   
   // Column 0: Start (x=200)
   DefiningIntent: { x: 200, y: 300 },

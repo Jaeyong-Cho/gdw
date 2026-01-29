@@ -6,7 +6,7 @@ import React, { useMemo, useCallback, useEffect, useRef } from 'react';
 import cytoscape, { Core, LayoutOptions } from 'cytoscape';
 import dagre from 'cytoscape-dagre';
 import { Situation, LayoutType } from '../types';
-import { stateTransitions, situationDefinitions } from '../data/situations';
+import { stateTransitions, situationDefinitions, nodePositions } from '../data/situations';
 
 // Register dagre layout
 cytoscape.use(dagre);
@@ -82,9 +82,17 @@ function getLayoutConfig(layoutType: LayoutType): LayoutOptions {
         ...baseConfig,
         name: 'circle',
         radius: 500, // Increased from 400
-        startAngle: 0,
+        startAngle: -90, // Start from top (-90 degrees = top, 0 degrees = right)
         sweep: undefined,
         padding: 50,
+        sort: (a: any, b: any) => {
+          // Put Dumping first so it appears at the top
+          const aId = a.data('id');
+          const bId = b.data('id');
+          if (aId === 'Dumping') return -1;
+          if (bId === 'Dumping') return 1;
+          return 0;
+        },
       };
     
     case 'concentric':
@@ -158,12 +166,27 @@ export const CytoscapeDiagram: React.FC<CytoscapeDiagramProps> = ({
 
   // Prepare elements
   const elements = useMemo(() => {
-    const nodes = Object.entries(situationDefinitions).map(([situation]) => ({
-      data: {
-        id: situation,
-        label: situation,
-      },
-    }));
+    // Sort situations to put Dumping first for circle layout
+    const situationEntries = Object.entries(situationDefinitions);
+    const sortedEntries = layoutType === 'circle' 
+      ? [...situationEntries].sort(([a], [b]) => {
+          if (a === 'Dumping') return -1;
+          if (b === 'Dumping') return 1;
+          return 0;
+        })
+      : situationEntries;
+    
+    const nodes = sortedEntries.map(([situation]) => {
+      // Only set position for preset layout
+      const position = layoutType === 'preset' ? nodePositions[situation as Situation] : undefined;
+      return {
+        data: {
+          id: situation,
+          label: situation,
+        },
+        position: position ? { x: position.x, y: position.y } : undefined,
+      };
+    });
 
     const edges = stateTransitions.map(([from, to, label], index) => {
       // Determine if this is a backward edge based on label
@@ -189,7 +212,7 @@ export const CytoscapeDiagram: React.FC<CytoscapeDiagramProps> = ({
     });
 
     return [...nodes, ...edges];
-  }, []);
+  }, [layoutType]);
 
   // Initialize cytoscape
   useEffect(() => {
