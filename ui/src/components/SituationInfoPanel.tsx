@@ -14,6 +14,7 @@ import { getSituationGuides, getSituationFlows } from '../data/data-loader';
  */
 interface SituationInfoPanelProps {
   situation: Situation | null;
+  initialQuestionId?: string | null;
   onSituationChange?: (situation: Situation) => void;
 }
 
@@ -28,6 +29,7 @@ interface SituationInfoPanelProps {
  */
 export const SituationInfoPanel: React.FC<SituationInfoPanelProps> = ({ 
   situation, 
+  initialQuestionId,
   onSituationChange 
 }) => {
   const [guide, setGuide] = useState<SituationGuide | undefined>(undefined);
@@ -205,6 +207,7 @@ export const SituationInfoPanel: React.FC<SituationInfoPanelProps> = ({
         <div style={{ marginBottom: '32px' }}>
           <InteractiveFlow
             situation={situation}
+            initialQuestionId={initialQuestionId}
             onComplete={handleFlowComplete}
             onAnswerSave={handleAnswerSave}
           />

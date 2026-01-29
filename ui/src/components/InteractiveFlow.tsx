@@ -13,6 +13,7 @@ import { getTransitionCount, incrementTransitionCount, resetTransitionCount, get
  */
 interface InteractiveFlowProps {
   situation: Situation;
+  initialQuestionId?: string | null;
   onComplete: (nextSituation: Situation | null) => void;
   onAnswerSave: (answer: QuestionAnswer) => void;
 }
@@ -28,8 +29,9 @@ interface InteractiveFlowProps {
  * @pre situation must be a valid Situation
  * @post Questions are displayed and answers are collected
  */
-export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
+export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({ 
   situation,
+  initialQuestionId,
   onComplete,
   onAnswerSave,
 }) => {
@@ -60,7 +62,15 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
         const flows = await getSituationFlows();
         const situationFlow = flows[situation];
         if (situationFlow) {
-          const startQuestionId = situationFlow.startQuestionId;
+          // Use initialQuestionId if provided and exists in flow, otherwise use startQuestionId
+          let startQuestionId = situationFlow.startQuestionId;
+          if (initialQuestionId) {
+            const questionExists = situationFlow.questions.some(q => q.id === initialQuestionId);
+            if (questionExists) {
+              startQuestionId = initialQuestionId;
+            }
+          }
+          
           setFlow(situationFlow);
           setAnswers({});
           setTextAnswer('');
@@ -103,7 +113,7 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
     };
 
     loadFlow();
-  }, [situation]);
+  }, [situation, initialQuestionId]);
 
   /**
    * @brief Load display data based on question configuration

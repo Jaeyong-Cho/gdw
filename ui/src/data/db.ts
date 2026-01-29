@@ -1449,3 +1449,54 @@ export async function getPreviousCycleData(): Promise<{
     })),
   };
 }
+
+/**
+ * @brief Get all cycles
+ * 
+ * @return Array of cycle summaries
+ * 
+ * @pre Database is initialized
+ * @post Returns all cycles ordered by cycle number descending
+ */
+export async function getAllCycles(): Promise<Array<{
+  id: number;
+  cycleNumber: number;
+  startedAt: string;
+  completedAt: string | null;
+  status: string;
+}>> {
+  await initDatabase();
+  
+  if (!db) {
+    throw new Error('Database not initialized');
+  }
+
+  const stmt = db.prepare(`
+    SELECT id, cycle_number, started_at, completed_at, status 
+    FROM cycles 
+    ORDER BY cycle_number DESC
+  `);
+  
+  const cycles: Array<{
+    id: number;
+    cycleNumber: number;
+    startedAt: string;
+    completedAt: string | null;
+    status: string;
+  }> = [];
+  
+  while (stmt.step()) {
+    const row = stmt.getAsObject();
+    cycles.push({
+      id: row.id as number,
+      cycleNumber: row.cycle_number as number,
+      startedAt: row.started_at as string,
+      completedAt: (row.completed_at as string) || null,
+      status: row.status as string,
+    });
+  }
+  
+  stmt.free();
+  
+  return cycles;
+}

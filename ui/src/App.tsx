@@ -10,6 +10,7 @@ import { LayoutSelector } from './components/LayoutSelector';
 import { DatabaseSettings } from './components/DatabaseSettings';
 import WorkflowStateManager from './components/WorkflowStateManager';
 import WorkflowDataViewer from './components/WorkflowDataViewer';
+import { CycleListModal } from './components/CycleListModal';
 import { createCycle, getCurrentCycleId } from './data/db';
 
 /**
@@ -38,6 +39,8 @@ const App: React.FC = () => {
   const [showStateManager, setShowStateManager] = useState<boolean>(false);
   const [showDataViewer, setShowDataViewer] = useState<boolean>(false);
   const [currentSituation, setCurrentSituation] = useState<Situation>('FailingIntent');
+  const [showCycleList, setShowCycleList] = useState<boolean>(false);
+  const [initialQuestionId, setInitialQuestionId] = useState<string | null>(null);
   const sidebarRef = useRef<HTMLDivElement>(null);
 
   const handleNodeClick = useCallback((situation: Situation) => {
@@ -157,6 +160,22 @@ const App: React.FC = () => {
             Cycle 시작
           </button>
           <button
+            onClick={() => setShowCycleList(!showCycleList)}
+            style={{
+              padding: '10px 20px',
+              fontSize: '14px',
+              fontWeight: '500',
+              backgroundColor: showCycleList ? '#3b82f6' : '#6366f1',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              transition: 'background-color 0.2s',
+            }}
+          >
+            이전 Cycle
+          </button>
+          <button
             onClick={() => setShowDataViewer(true)}
             style={{
               padding: '10px 20px',
@@ -222,6 +241,26 @@ const App: React.FC = () => {
             setShowStateManager(false);
           }}
           onClose={() => setShowStateManager(false)}
+        />
+      )}
+
+      {showCycleList && (
+        <CycleListModal
+          onClose={() => setShowCycleList(false)}
+          onRestartCycle={async (cycleId: number, lastSituation: string, lastQuestionId: string | null) => {
+            try {
+              const newCycleId = await createCycle();
+              console.log('New cycle created from previous cycle:', newCycleId);
+              const situation = lastSituation as Situation || 'Dumping';
+              setCurrentSituation(situation);
+              setSelectedSituation(situation);
+              setInitialQuestionId(lastQuestionId);
+              setShowCycleList(false);
+            } catch (error) {
+              console.error('Error restarting cycle:', error);
+              alert('Cycle 다시 시작에 실패했습니다.');
+            }
+          }}
         />
       )}
 
@@ -307,9 +346,13 @@ const App: React.FC = () => {
               }}>
                 <SituationInfoPanel 
                   situation={selectedSituation} 
+                  initialQuestionId={initialQuestionId}
                   onSituationChange={(sit) => {
                     setSelectedSituation(sit);
-                    if (sit) setCurrentSituation(sit);
+                    if (sit) {
+                      setCurrentSituation(sit);
+                      setInitialQuestionId(null); // Reset after situation change
+                    }
                   }}
                 />
               </aside>
