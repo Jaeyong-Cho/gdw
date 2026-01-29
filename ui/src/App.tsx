@@ -40,7 +40,7 @@ const App: React.FC = () => {
   const [showStateManager, setShowStateManager] = useState<boolean>(false);
   const [showDataViewer, setShowDataViewer] = useState<boolean>(false);
   const [showStatisticsViewer, setShowStatisticsViewer] = useState<boolean>(false);
-  const [currentSituation, setCurrentSituation] = useState<Situation>('FailingIntent');
+  const [currentSituation, setCurrentSituation] = useState<Situation>('Unconscious');
   const [showCycleList, setShowCycleList] = useState<boolean>(false);
   const [showEnterUnconsciousModal, setShowEnterUnconsciousModal] = useState<boolean>(false);
   const [unconsciousEntryReason, setUnconsciousEntryReason] = useState<string>('');
@@ -494,6 +494,7 @@ const App: React.FC = () => {
                 <CytoscapeDiagram
                   selectedSituation={selectedSituation}
                   layoutType={layoutType}
+                  isUnconscious={currentSituation === 'Unconscious'}
                   onNodeClick={handleNodeClick}
                 />
               </div>

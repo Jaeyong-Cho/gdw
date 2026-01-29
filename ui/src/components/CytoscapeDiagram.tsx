@@ -17,6 +17,7 @@ cytoscape.use(dagre);
 interface CytoscapeDiagramProps {
   selectedSituation: Situation | null;
   layoutType: LayoutType;
+  isUnconscious?: boolean;
   onNodeClick?: (situation: Situation) => void;
 }
 
@@ -161,10 +162,13 @@ function getLayoutConfig(layoutType: LayoutType): LayoutOptions {
 export const CytoscapeDiagram: React.FC<CytoscapeDiagramProps> = ({
   selectedSituation,
   layoutType,
+  isUnconscious = false,
   onNodeClick,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const cyRef = useRef<Core | null>(null);
+  const rotationRef = useRef<number>(0);
+  const animationFrameRef = useRef<number | null>(null);
 
   // Prepare elements
   const elements = useMemo(() => {
@@ -340,6 +344,9 @@ export const CytoscapeDiagram: React.FC<CytoscapeDiagramProps> = ({
 
     // Cleanup
     return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
       cy.destroy();
       cyRef.current = null;
     };
@@ -436,6 +443,69 @@ export const CytoscapeDiagram: React.FC<CytoscapeDiagramProps> = ({
     // Fit to viewport after layout
     cyRef.current.fit(undefined, 50);
   }, [layoutType]);
+
+  // Rotation animation for Unconscious state in circle layout
+  useEffect(() => {
+    if (!cyRef.current) return;
+
+    const cy = cyRef.current;
+    
+    if (isUnconscious && layoutType === 'circle') {
+      const centerX = cy.width() / 2;
+      const centerY = cy.height() / 2;
+      
+      // Store initial positions
+      const initialPositions = new Map<string, { x: number; y: number; angle: number; radius: number }>();
+      cy.nodes().forEach((node) => {
+        const pos = node.position();
+        const dx = pos.x - centerX;
+        const dy = pos.y - centerY;
+        const radius = Math.sqrt(dx * dx + dy * dy);
+        const angle = Math.atan2(dy, dx);
+        initialPositions.set(node.id(), { x: pos.x, y: pos.y, angle, radius });
+      });
+
+      const rotationSpeed = 0.002; // radians per frame
+      let lastTime = performance.now();
+
+      const animate = (currentTime: number) => {
+        const deltaTime = currentTime - lastTime;
+        lastTime = currentTime;
+        
+        rotationRef.current += rotationSpeed * (deltaTime / 16.67); // normalize to 60fps
+
+        cy.batch(() => {
+          cy.nodes().forEach((node) => {
+            const initial = initialPositions.get(node.id());
+            if (initial) {
+              const newAngle = initial.angle + rotationRef.current;
+              const newX = centerX + initial.radius * Math.cos(newAngle);
+              const newY = centerY + initial.radius * Math.sin(newAngle);
+              node.position({ x: newX, y: newY });
+            }
+          });
+        });
+
+        animationFrameRef.current = requestAnimationFrame(animate);
+      };
+
+      animationFrameRef.current = requestAnimationFrame(animate);
+
+      return () => {
+        if (animationFrameRef.current) {
+          cancelAnimationFrame(animationFrameRef.current);
+          animationFrameRef.current = null;
+        }
+      };
+    } else {
+      // Stop animation and reset
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
+      rotationRef.current = 0;
+    }
+  }, [isUnconscious, layoutType]);
 
   return (
     <div
