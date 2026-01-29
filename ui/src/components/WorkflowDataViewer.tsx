@@ -39,6 +39,7 @@ export const WorkflowDataViewer: React.FC<WorkflowDataViewerProps> = ({ onClose 
     status: string;
     unconsciousEnteredAt: string | null;
     unconsciousExitedAt: string | null;
+    unconsciousEntryReason: string | null;
   }>>([]);
 
   useEffect(() => {

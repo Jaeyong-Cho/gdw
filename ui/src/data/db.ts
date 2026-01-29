@@ -109,7 +109,8 @@ async function migrateDatabase(database: Database): Promise<void> {
         completed_at TEXT,
         status TEXT NOT NULL DEFAULT 'active',
         unconscious_entered_at TEXT,
-        unconscious_exited_at TEXT
+        unconscious_exited_at TEXT,
+        unconscious_entry_reason TEXT
       )
     `);
     database.run('CREATE INDEX IF NOT EXISTS idx_cycle_number ON cycles(cycle_number)');
@@ -128,6 +129,9 @@ async function migrateDatabase(database: Database): Promise<void> {
     }
     if (!cycleColumns.includes('unconscious_exited_at')) {
       database.run('ALTER TABLE cycles ADD COLUMN unconscious_exited_at TEXT');
+    }
+    if (!cycleColumns.includes('unconscious_entry_reason')) {
+      database.run('ALTER TABLE cycles ADD COLUMN unconscious_entry_reason TEXT');
     }
     
     // Add cycle_id column to question_answers if it doesn't exist
@@ -341,7 +345,8 @@ export async function initDatabase(): Promise<void> {
           completed_at TEXT,
           status TEXT NOT NULL DEFAULT 'active',
           unconscious_entered_at TEXT,
-          unconscious_exited_at TEXT
+          unconscious_exited_at TEXT,
+          unconscious_entry_reason TEXT
         )
       `);
       db.run(`CREATE INDEX IF NOT EXISTS idx_cycle_number ON cycles(cycle_number)`);
@@ -1497,14 +1502,15 @@ export async function activateCycle(cycleId: number): Promise<void> {
 }
 
 /**
- * @brief Record the time when the user entered the Unconscious state for a cycle
+ * @brief Record the time and optional reason when the user entered the Unconscious state for a cycle
  *
  * @param cycleId - Cycle ID to update
+ * @param reason - Optional reason for entering Unconscious (e.g. from manual button)
  *
  * @pre Database is initialized, cycleId exists
- * @post unconscious_entered_at is set to current ISO timestamp for the cycle
+ * @post unconscious_entered_at and optional unconscious_entry_reason are set for the cycle
  */
-export async function recordUnconsciousEntry(cycleId: number): Promise<void> {
+export async function recordUnconsciousEntry(cycleId: number, reason?: string | null): Promise<void> {
   await initDatabase();
 
   if (!db) {
@@ -1513,8 +1519,8 @@ export async function recordUnconsciousEntry(cycleId: number): Promise<void> {
 
   const enteredAt = new Date().toISOString();
   db.run(
-    'UPDATE cycles SET unconscious_entered_at = ? WHERE id = ?',
-    [enteredAt, cycleId]
+    'UPDATE cycles SET unconscious_entered_at = ?, unconscious_entry_reason = ? WHERE id = ?',
+    [enteredAt, reason ?? null, cycleId]
   );
   await saveDatabase();
 }
@@ -1559,6 +1565,7 @@ export async function getCycleData(cycleId: number): Promise<{
   status: string;
   unconsciousEnteredAt: string | null;
   unconsciousExitedAt: string | null;
+  unconsciousEntryReason: string | null;
   answers: Array<{
     id: number;
     questionId: string;
@@ -1623,6 +1630,7 @@ export async function getCycleData(cycleId: number): Promise<{
     status: cycleRow.status as string,
     unconsciousEnteredAt: (cycleRow.unconscious_entered_at as string) || null,
     unconsciousExitedAt: (cycleRow.unconscious_exited_at as string) || null,
+    unconsciousEntryReason: (cycleRow.unconscious_entry_reason as string) || null,
     answers,
   };
 }
@@ -1700,6 +1708,7 @@ export async function getAllCycles(): Promise<Array<{
   status: string;
   unconsciousEnteredAt: string | null;
   unconsciousExitedAt: string | null;
+  unconsciousEntryReason: string | null;
 }>> {
   await initDatabase();
   
@@ -1709,7 +1718,7 @@ export async function getAllCycles(): Promise<Array<{
 
   const stmt = db.prepare(`
     SELECT id, cycle_number, started_at, completed_at, status,
-           unconscious_entered_at, unconscious_exited_at
+           unconscious_entered_at, unconscious_exited_at, unconscious_entry_reason
     FROM cycles 
     ORDER BY cycle_number DESC
   `);
@@ -1722,6 +1731,7 @@ export async function getAllCycles(): Promise<Array<{
     status: string;
     unconsciousEnteredAt: string | null;
     unconsciousExitedAt: string | null;
+    unconsciousEntryReason: string | null;
   }> = [];
   
   while (stmt.step()) {
@@ -1734,6 +1744,7 @@ export async function getAllCycles(): Promise<Array<{
       status: row.status as string,
       unconsciousEnteredAt: (row.unconscious_entered_at as string) || null,
       unconsciousExitedAt: (row.unconscious_exited_at as string) || null,
+      unconsciousEntryReason: (row.unconscious_entry_reason as string) || null,
     });
   }
   

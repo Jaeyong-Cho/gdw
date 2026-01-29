@@ -42,6 +42,8 @@ const App: React.FC = () => {
   const [showStatisticsViewer, setShowStatisticsViewer] = useState<boolean>(false);
   const [currentSituation, setCurrentSituation] = useState<Situation>('FailingIntent');
   const [showCycleList, setShowCycleList] = useState<boolean>(false);
+  const [showEnterUnconsciousModal, setShowEnterUnconsciousModal] = useState<boolean>(false);
+  const [unconsciousEntryReason, setUnconsciousEntryReason] = useState<string>('');
   const [initialQuestionId, setInitialQuestionId] = useState<string | null>(null);
   const [selectedCycleId, setSelectedCycleId] = useState<number | null>(null);
   const sidebarRef = useRef<HTMLDivElement>(null);
@@ -211,6 +213,32 @@ const App: React.FC = () => {
           >
             통계 보기
           </button>
+          {currentSituation !== 'Unconscious' && (
+            <button
+              onClick={async () => {
+                const cycleId = await getCurrentCycleId();
+                if (!cycleId) {
+                  alert('Cycle을 먼저 시작해주세요.');
+                  return;
+                }
+                setUnconsciousEntryReason('');
+                setShowEnterUnconsciousModal(true);
+              }}
+              style={{
+                padding: '10px 20px',
+                fontSize: '14px',
+                fontWeight: '500',
+                backgroundColor: '#a78bfa',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                transition: 'background-color 0.2s',
+              }}
+            >
+              무의식으로 이동
+            </button>
+          )}
           <button
             onClick={() => setShowStateManager(true)}
             style={{
@@ -256,6 +284,141 @@ const App: React.FC = () => {
         <StatisticsViewer
           onClose={() => setShowStatisticsViewer(false)}
         />
+      )}
+
+      {showEnterUnconsciousModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+        }}>
+          <div style={{
+            backgroundColor: '#ffffff',
+            borderRadius: '8px',
+            padding: '24px',
+            width: '100%',
+            maxWidth: '420px',
+            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)',
+          }}>
+            <h3 style={{
+              margin: '0 0 16px 0',
+              fontSize: '18px',
+              fontWeight: '600',
+              color: '#1f2937',
+            }}>
+              무의식으로 이동
+            </h3>
+            <div style={{
+              marginBottom: '16px',
+              padding: '12px',
+              fontSize: '13px',
+              lineHeight: '1.5',
+              color: '#4b5563',
+              backgroundColor: '#f5f3ff',
+              border: '1px solid #e9e5ff',
+              borderRadius: '6px',
+            }}>
+              <strong style={{ color: '#5b21b6' }}>무의식에 들어가면 좋은 상황</strong>
+              <ul style={{ margin: '8px 0 0 0', paddingLeft: '20px' }}>
+                <li>익숙한 업무를 처리할 때 (생각과 판단이 빨라짐)</li>
+                <li>반복적·루틴 작업을 할 때</li>
+                <li>이미 알고 있는 문제를 해결할 때</li>
+                <li>패턴이 정해진 작업을 진행할 때</li>
+              </ul>
+              <p style={{ margin: '8px 0 0 0', fontSize: '12px', color: '#6b7280' }}>
+                새로운 문제나 중요한 결정이 필요하면 의식 상태에서 진행하는 것이 좋습니다.
+              </p>
+            </div>
+            <p style={{
+              margin: '0 0 12px 0',
+              fontSize: '14px',
+              color: '#6b7280',
+            }}>
+              무의식으로 들어가는 사유를 간단히 적어주세요.
+            </p>
+            <textarea
+              value={unconsciousEntryReason}
+              onChange={(e) => setUnconsciousEntryReason(e.target.value)}
+              placeholder="예: 익숙한 리팩터링 작업으로 전환"
+              rows={3}
+              style={{
+                width: '100%',
+                padding: '12px',
+                fontSize: '14px',
+                border: '1px solid #d1d5db',
+                borderRadius: '6px',
+                resize: 'vertical',
+                boxSizing: 'border-box',
+              }}
+            />
+            <div style={{
+              display: 'flex',
+              gap: '12px',
+              justifyContent: 'flex-end',
+              marginTop: '20px',
+            }}>
+              <button
+                onClick={() => {
+                  setShowEnterUnconsciousModal(false);
+                  setUnconsciousEntryReason('');
+                }}
+                style={{
+                  padding: '8px 16px',
+                  fontSize: '14px',
+                  backgroundColor: '#e5e7eb',
+                  color: '#374151',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                }}
+              >
+                취소
+              </button>
+              <button
+                onClick={async () => {
+                  const cycleId = await getCurrentCycleId();
+                  if (!cycleId) {
+                    alert('Cycle을 먼저 시작해주세요.');
+                    return;
+                  }
+                  try {
+                    if (currentSituation && currentSituation !== 'Unconscious') {
+                      await recordStateExit(currentSituation, cycleId);
+                    }
+                    await recordUnconsciousEntry(cycleId, unconsciousEntryReason.trim() || null);
+                    setCurrentSituation('Unconscious');
+                    setSelectedSituation('Unconscious');
+                    setInitialQuestionId(null);
+                    setShowEnterUnconsciousModal(false);
+                    setUnconsciousEntryReason('');
+                  } catch (error) {
+                    console.error('Error entering Unconscious:', error);
+                    alert('무의식으로 이동에 실패했습니다.');
+                  }
+                }}
+                style={{
+                  padding: '8px 16px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  backgroundColor: '#8b5cf6',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                }}
+              >
+                이동
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {showStateManager && (
