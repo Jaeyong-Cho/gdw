@@ -11,7 +11,7 @@ import { DatabaseSettings } from './components/DatabaseSettings';
 import WorkflowStateManager from './components/WorkflowStateManager';
 import WorkflowDataViewer from './components/WorkflowDataViewer';
 import { CycleListModal } from './components/CycleListModal';
-import { createCycle, getCurrentCycleId, activateCycle } from './data/db';
+import { createCycle, getCurrentCycleId, activateCycle, recordUnconsciousEntry, recordUnconsciousExit } from './data/db';
 
 /**
  * @brief Main application component
@@ -351,11 +351,24 @@ const App: React.FC = () => {
                   situation={selectedSituation} 
                   initialQuestionId={initialQuestionId}
                   selectedCycleId={selectedCycleId}
-                  onSituationChange={(sit) => {
+                  onSituationChange={async (sit) => {
+                    if (sit === 'Unconscious') {
+                      const cycleId = await getCurrentCycleId();
+                      if (cycleId) {
+                        await recordUnconsciousEntry(cycleId);
+                      }
+                    }
+                    if (sit === 'Dumping' && currentSituation === 'Unconscious') {
+                      const cycleId = await getCurrentCycleId();
+                      if (cycleId) {
+                        await recordUnconsciousExit(cycleId);
+                      }
+                      await createCycle();
+                    }
                     setSelectedSituation(sit);
                     if (sit) {
                       setCurrentSituation(sit);
-                      setInitialQuestionId(null); // Reset after situation change
+                      setInitialQuestionId(null);
                     }
                   }}
                 />

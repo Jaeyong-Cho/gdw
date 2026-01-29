@@ -436,7 +436,27 @@
         { "question": "학습이 문서화되었나요?" },
         { "question": "Cycle이 완료되었나요?" }
       ],
-      "nextStep": "모두 \"예\"면 새로운 Cycle을 시작할 수 있습니다 (Dumping으로 이동)"
+      "nextStep": "모두 \"예\"면 무의식 시간으로 이동 후, 새 Cycle을 시작할 수 있습니다"
+    }
+  },
+  "Unconscious": {
+    "whatToDo": "Cycle 완료 후 무의식(휴식) 시간입니다. 이 시간은 기록되며, 새 Cycle을 시작할 준비가 되면 '새 Cycle 시작'을 선택하세요. 예상 소요 시간: 자유.",
+    "conditionsToProceed": [
+      "Cycle이 완료됨",
+      "무의식 구간 진입 시간이 기록됨",
+      "새 Cycle 시작 시 무의식 구간 종료 시간이 기록됨"
+    ],
+    "failure": [],
+    "goBackTo": "해당 없음 (다음 단계는 Dumping으로 새 Cycle 시작)",
+    "warning": "무의식 구간에 머무는 시간이 cycle에 기록됩니다.",
+    "tip": "준비가 되면 '새 Cycle 시작'을 선택하세요. 진입/종료 시간이 자동으로 기록됩니다.",
+    "aiUsage": "해당 없음.",
+    "quickCheck": {
+      "items": [
+        { "question": "무의식 구간에 진입했나요?" },
+        { "question": "새 Cycle을 시작할 준비가 되었나요?" }
+      ],
+      "nextStep": "'새 Cycle 시작' 선택 시 무의식 종료 시간 기록 후 Dumping으로 이동"
     }
   },
   "Undetermined": {

@@ -610,11 +610,24 @@
     "questions": [
       {
         "id": "cycle-finished",
-        "question": "이번 Cycle이 완료되었습니다. 새로운 Cycle을 시작하시겠습니까?",
+        "question": "이번 Cycle이 완료되었습니다. 무의식 시간으로 이동하시겠습니까?",
         "type": "yesno",
         "required": true,
-        "onYesNextSituation": "Dumping",
+        "onYesNextSituation": "Unconscious",
         "onNoNextQuestionId": "cycle-finished"
+      }
+    ]
+  },
+  "Unconscious": {
+    "situation": "Unconscious",
+    "startQuestionId": "unconscious-wait",
+    "questions": [
+      {
+        "id": "unconscious-wait",
+        "question": "무의식 시간을 보내고 있습니다. 새 Cycle을 시작할 준비가 되면 선택하세요.",
+        "type": "multiple",
+        "required": true,
+        "options": ["새 Cycle 시작"]
       }
     ]
   },

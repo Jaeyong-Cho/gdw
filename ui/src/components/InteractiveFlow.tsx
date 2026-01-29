@@ -1325,13 +1325,15 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
               const validSituations: Situation[] = [
                 'DefiningIntent', 'FailingIntent', 'SelectingProblem', 'DefiningAcceptance',
                 'CheckingFeasibility', 'Designing', 'BreakingTasks', 'Implementing',
-                'Verifying', 'Verified', 'Releasing', 'CollectingFeedback', 'Learning', 'Ending'
+                'Verifying', 'Verified', 'Releasing', 'CollectingFeedback', 'Learning', 'Ending', 'Unconscious'
               ];
               
               let nextSituation: Situation | undefined;
               
               if (option === '새로운 문제 선택') {
                 nextSituation = 'SelectingProblem';
+              } else if (option === '새 Cycle 시작') {
+                nextSituation = 'Dumping';
               } else if (option === '같은 문제 심화') {
                 nextSituation = 'DefiningAcceptance';
               } else if (option === 'Intent 조정') {

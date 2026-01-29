@@ -53,7 +53,8 @@ export class WorkflowReadModel implements IReadModel {
     'Releasing',
     'CollectingFeedback',
     'Learning',
-    'Ending'
+    'Ending',
+    'Unconscious'
   ];
 
   /**

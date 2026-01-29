@@ -169,6 +169,16 @@ export const situationDefinitions: Record<Situation, SituationDefinition> = {
       { description: 'The cycle is finished' },
     ],
   },
+  Unconscious: {
+    name: 'Unconscious',
+    description: 'Rest period between cycles; time spent not actively working',
+    required_facts: [
+      { description: 'Cycle has been completed' },
+      { description: 'User has entered unconscious rest period' },
+      { description: 'Unconscious period start time is recorded' },
+      { description: 'Unconscious period end time is recorded when starting next cycle' },
+    ],
+  },
 };
 
 /**
@@ -221,6 +231,8 @@ export const nodePositions: Record<Situation, NodePosition> = {
   
   // Column 10: Ending (x=4200)
   Ending: { x: 4200, y: 300 },
+  // Column 11: Unconscious (after Ending)
+  Unconscious: { x: 4600, y: 300 },
 };
 
 /**
@@ -260,4 +272,6 @@ export const stateTransitions: Array<[Situation, Situation, string]> = [
   ['Learning', 'DefiningIntent', 'adjust intent'],
   ['Learning', 'Implementing', 'clear implementation task'],
   ['Learning', 'Ending', 'cycle complete'],
+  ['Ending', 'Unconscious', 'yes'],
+  ['Unconscious', 'Dumping', 'start new cycle'],
 ];

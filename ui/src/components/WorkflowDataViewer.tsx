@@ -37,6 +37,8 @@ export const WorkflowDataViewer: React.FC<WorkflowDataViewerProps> = ({ onClose 
     startedAt: string;
     completedAt: string | null;
     status: string;
+    unconsciousEnteredAt: string | null;
+    unconsciousExitedAt: string | null;
   }>>([]);
 
   useEffect(() => {
@@ -142,7 +144,8 @@ export const WorkflowDataViewer: React.FC<WorkflowDataViewerProps> = ({ onClose 
       'Releasing': '#84cc16',
       'CollectingFeedback': '#a855f7',
       'Learning': '#22c55e',
-      'Ending': '#fbbf24'
+      'Ending': '#fbbf24',
+      'Unconscious': '#a78bfa'
     };
     return colors[situation] || '#6b7280';
   };
@@ -302,14 +305,14 @@ export const WorkflowDataViewer: React.FC<WorkflowDataViewerProps> = ({ onClose 
         <div style={{
           marginBottom: '24px',
           padding: '20px',
-          backgroundColor: currentState === 'Dumping' ? '#fef3c7' : '#f0f9ff',
-          border: currentState === 'Dumping' ? '1px solid #fcd34d' : '1px solid #bae6fd',
+          backgroundColor: currentState === 'Dumping' ? '#fef3c7' : currentState === 'Unconscious' ? '#ede9fe' : '#f0f9ff',
+          border: currentState === 'Dumping' ? '1px solid #fcd34d' : currentState === 'Unconscious' ? '1px solid #a78bfa' : '1px solid #bae6fd',
           borderRadius: '8px',
         }}>
           <h3 style={{
             fontSize: '16px',
             fontWeight: '600',
-            color: currentState === 'Dumping' ? '#92400e' : '#0c4a6e',
+            color: currentState === 'Dumping' ? '#92400e' : currentState === 'Unconscious' ? '#5b21b6' : '#0c4a6e',
             marginBottom: '12px',
           }}>
             현재 상태
@@ -318,7 +321,7 @@ export const WorkflowDataViewer: React.FC<WorkflowDataViewerProps> = ({ onClose 
             <div style={{
               display: 'inline-block',
               padding: '8px 16px',
-              backgroundColor: currentState === 'Dumping' ? '#f59e0b' : getSituationColor(currentState),
+              backgroundColor: currentState === 'Dumping' ? '#f59e0b' : currentState === 'Unconscious' ? '#8b5cf6' : getSituationColor(currentState),
               color: '#ffffff',
               borderRadius: '6px',
               fontSize: '14px',
@@ -343,14 +346,32 @@ export const WorkflowDataViewer: React.FC<WorkflowDataViewerProps> = ({ onClose 
           }}>
             상태 이력 ({stateHistory.length}개)
             {selectedCycleId !== null && (
-              <span style={{
-                fontSize: '14px',
-                fontWeight: '400',
-                color: '#6b7280',
-                marginLeft: '8px',
-              }}>
-                - Cycle {cycles.find(c => c.id === selectedCycleId)?.cycleNumber || selectedCycleId}
-              </span>
+              <>
+                <span style={{
+                  fontSize: '14px',
+                  fontWeight: '400',
+                  color: '#6b7280',
+                  marginLeft: '8px',
+                }}>
+                  - Cycle {cycles.find(c => c.id === selectedCycleId)?.cycleNumber || selectedCycleId}
+                </span>
+                {(() => {
+                  const cycle = cycles.find(c => c.id === selectedCycleId);
+                  if (!cycle?.unconsciousEnteredAt || !cycle?.unconsciousExitedAt) return null;
+                  const entered = new Date(cycle.unconsciousEnteredAt).getTime();
+                  const exited = new Date(cycle.unconsciousExitedAt).getTime();
+                  const minutes = Math.round((exited - entered) / 60000);
+                  return (
+                    <span style={{
+                      fontSize: '13px',
+                      color: '#7c3aed',
+                      marginLeft: '12px',
+                    }}>
+                      Unconscious: {minutes} min
+                    </span>
+                  );
+                })()}
+              </>
             )}
           </h3>
           

@@ -21,7 +21,8 @@ export type Situation =
   | 'Releasing'
   | 'CollectingFeedback'
   | 'Learning'
-  | 'Ending';
+  | 'Ending'
+  | 'Unconscious';
 
 /**
  * Layout algorithm types for cytoscape

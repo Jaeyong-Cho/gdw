@@ -86,11 +86,13 @@ function getLayoutConfig(layoutType: LayoutType): LayoutOptions {
         sweep: undefined,
         padding: 50,
         sort: (a: any, b: any) => {
-          // Put Dumping first so it appears at the top
+          // Put Dumping first, Unconscious last (after Ending)
           const aId = a.data('id');
           const bId = b.data('id');
           if (aId === 'Dumping') return -1;
           if (bId === 'Dumping') return 1;
+          if (aId === 'Unconscious') return 1;
+          if (bId === 'Unconscious') return -1;
           return 0;
         },
       };
@@ -263,6 +265,15 @@ export const CytoscapeDiagram: React.FC<CytoscapeDiagramProps> = ({
           },
         },
         {
+          selector: 'node[id = "Unconscious"]',
+          style: {
+            'background-color': '#ede9fe',
+            'border-color': '#8b5cf6',
+            'border-width': 3,
+            'font-weight': '700',
+          },
+        },
+        {
           selector: 'edge',
           style: {
             'width': 2.5,
@@ -347,6 +358,12 @@ export const CytoscapeDiagram: React.FC<CytoscapeDiagramProps> = ({
           'border-color': '#f59e0b',
           'border-width': 3,
         });
+      } else if (nodeId === 'Unconscious') {
+        node.style({
+          'background-color': '#ede9fe',
+          'border-color': '#8b5cf6',
+          'border-width': 3,
+        });
       } else {
         node.style({
           'background-color': '#ffffff',
@@ -356,8 +373,8 @@ export const CytoscapeDiagram: React.FC<CytoscapeDiagramProps> = ({
       }
     });
 
-    // Highlight selected node (if not Dumping or Ending)
-    if (selectedSituation && selectedSituation !== 'Dumping' && selectedSituation !== 'Ending') {
+    // Highlight selected node (if not Dumping, Ending, or Unconscious)
+    if (selectedSituation && selectedSituation !== 'Dumping' && selectedSituation !== 'Ending' && selectedSituation !== 'Unconscious') {
       const selectedNode = cyRef.current.getElementById(selectedSituation);
       if (selectedNode.length > 0) {
         selectedNode.style({
@@ -366,14 +383,20 @@ export const CytoscapeDiagram: React.FC<CytoscapeDiagramProps> = ({
           'border-width': 3,
         });
       }
-    } else if (selectedSituation === 'Dumping' || selectedSituation === 'Ending') {
-      // Make selected Dumping or Ending even more prominent
+    } else if (selectedSituation === 'Dumping' || selectedSituation === 'Ending' || selectedSituation === 'Unconscious') {
+      // Make selected Dumping, Ending, or Unconscious even more prominent
       const selectedNode = cyRef.current.getElementById(selectedSituation);
       if (selectedNode.length > 0) {
         if (selectedSituation === 'Dumping') {
           selectedNode.style({
             'background-color': '#93c5fd',
             'border-color': '#2563eb',
+            'border-width': 4,
+          });
+        } else if (selectedSituation === 'Unconscious') {
+          selectedNode.style({
+            'background-color': '#c4b5fd',
+            'border-color': '#6d28d9',
             'border-width': 4,
           });
         } else {
