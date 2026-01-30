@@ -637,6 +637,50 @@ export async function getAllAnswersByQuestionId(questionId: string): Promise<Arr
 }
 
 /**
+ * @brief Get all answers by question ID within the current cycle
+ * 
+ * @param questionId - Question ID
+ * @param cycleId - Optional cycle ID (uses current cycle if not provided)
+ * @return Array of answers with timestamps from the specified cycle
+ * 
+ * @pre Database is initialized
+ * @post Returns all answers for the question in the specified cycle
+ */
+export async function getAllAnswersByQuestionIdInCycle(questionId: string, cycleId?: number | null): Promise<Array<{ answer: string; answeredAt: string }>> {
+  await initDatabase();
+  
+  if (!db) {
+    throw new Error('Database not initialized');
+  }
+
+  // Use provided cycleId or get current cycle
+  const effectiveCycleId = cycleId !== undefined ? cycleId : await getCurrentCycleId();
+  
+  if (effectiveCycleId === null) {
+    return [];
+  }
+
+  const stmt = db.prepare('SELECT answer, answered_at FROM question_answers WHERE question_id = ? AND cycle_id = ? ORDER BY answered_at ASC');
+  stmt.bind([questionId, effectiveCycleId]);
+  
+  const answers: Array<{ answer: string; answeredAt: string }> = [];
+  while (stmt.step()) {
+    const row = stmt.getAsObject();
+    // Filter out boolean answers
+    const answer = row.answer as string;
+    if (answer !== 'true' && answer !== 'false') {
+      answers.push({
+        answer: answer,
+        answeredAt: row.answered_at as string
+      });
+    }
+  }
+  
+  stmt.free();
+  return answers;
+}
+
+/**
  * @brief Get answers by situation
  * 
  * @param situation - Situation name

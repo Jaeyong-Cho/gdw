@@ -41,7 +41,7 @@ interface InteractiveFlowProps {
   initialQuestionId?: string | null;
   selectedCycleId?: number | null;
   onComplete: (nextSituation: Situation | null) => void;
-  onAnswerSave: (answer: QuestionAnswer) => void;
+  onAnswerSave: (answer: QuestionAnswer) => Promise<void>;
 }
 
 /**
@@ -178,7 +178,15 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
                 break;
               case 'getAnswerByQuestionId':
                 if (startQuestion.showData.sourceParam) {
-                  data = await db.getAnswerByQuestionId(startQuestion.showData.sourceParam);
+                  // Get all answers from current cycle, not just the most recent one
+                  const allAnswers = await db.getAllAnswersByQuestionIdInCycle(startQuestion.showData.sourceParam, selectedCycleId);
+                  if (allAnswers.length > 0) {
+                    if (allAnswers.length === 1) {
+                      data = allAnswers[0].answer;
+                    } else {
+                      data = allAnswers.map((a, index) => `${index + 1}. ${a.answer}`).join('\n\n');
+                    }
+                  }
                 }
                 break;
               default:
@@ -222,7 +230,16 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
           break;
         case 'getAnswerByQuestionId':
           if (showData.sourceParam) {
-            data = await db.getAnswerByQuestionId(showData.sourceParam);
+            // Get all answers from current cycle, not just the most recent one
+            const allAnswers = await db.getAllAnswersByQuestionIdInCycle(showData.sourceParam, selectedCycleId);
+            if (allAnswers.length > 0) {
+              // Format multiple answers with numbering
+              if (allAnswers.length === 1) {
+                data = allAnswers[0].answer;
+              } else {
+                data = allAnswers.map((a, index) => `${index + 1}. ${a.answer}`).join('\n\n');
+              }
+            }
           }
           break;
         case 'getPreviousCycleData':
@@ -246,7 +263,7 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
       setDisplayData(null);
       setDisplayDataLabel('');
     }
-  }, []);
+  }, [selectedCycleId]);
 
   /**
    * @brief Generate AI prompt from template with user inputs
@@ -682,7 +699,7 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
                 <div style={{ fontWeight: '600', marginBottom: '8px', color: '#374151' }}>
                   {displayDataLabel}:
                 </div>
-                <div style={{ color: '#6b7280', fontStyle: 'italic' }}>
+                <div style={{ color: '#6b7280', fontStyle: 'italic', whiteSpace: 'pre-wrap' }}>
                   {displayData}
                 </div>
               </div>
@@ -1137,14 +1154,48 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
           ? textAnswers.some(a => a.trim())
           : textAnswer.trim();
         
-        const handleMultiTextSubmit = () => {
+        const handleMultiTextSubmit = async () => {
           if (allowMultipleAnswers) {
             const validAnswers = textAnswers.filter(a => a.trim());
             if (validAnswers.length > 0) {
-              const combinedAnswer = validAnswers.length === 1 
-                ? validAnswers[0] 
-                : validAnswers.map((a, i) => `${i + 1}. ${a}`).join('\n');
-              handleAnswer(combinedAnswer);
+              // Save each answer separately to database
+              for (let i = 0; i < validAnswers.length; i++) {
+                const answerRecord: QuestionAnswer = {
+                  questionId: currentQuestion.id,
+                  answer: validAnswers[i],
+                  answeredAt: new Date().toISOString(),
+                };
+                await onAnswerSave(answerRecord);
+                console.log(`[DEBUG] Saved answer ${i + 1}/${validAnswers.length}: ${validAnswers[i].substring(0, 30)}`);
+              }
+              console.log(`[DEBUG] All ${validAnswers.length} answers saved for ${currentQuestion.id}`);
+              
+              // Clear input and navigate (use last answer for state tracking)
+              setTextAnswers(['']);
+              setAnswers({ ...answers, [currentQuestion.id]: validAnswers[validAnswers.length - 1] });
+              
+              // Handle navigation
+              let nextQuestionId: string | undefined;
+              let nextSituation: Situation | undefined;
+              
+              if (currentQuestion.onAnswerNextSituation) {
+                nextSituation = currentQuestion.onAnswerNextSituation;
+              } else if (currentQuestion.nextQuestionId) {
+                nextQuestionId = currentQuestion.nextQuestionId;
+              } else if (currentQuestion.nextSituation) {
+                nextSituation = currentQuestion.nextSituation;
+              }
+              
+              if (nextSituation) {
+                setTimeout(() => {
+                  onComplete(nextSituation);
+                }, 300);
+              } else if (nextQuestionId) {
+                setQuestionHistory([...questionHistory, nextQuestionId]);
+                setCurrentQuestionId(nextQuestionId);
+              } else {
+                onComplete(null);
+              }
             }
           } else {
             handleTextSubmit();
@@ -1399,7 +1450,7 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
                 <div style={{ fontWeight: '600', marginBottom: '8px', color: '#374151' }}>
                   {displayDataLabel}:
                 </div>
-                <div style={{ color: '#6b7280', fontStyle: 'italic' }}>
+                <div style={{ color: '#6b7280', fontStyle: 'italic', whiteSpace: 'pre-wrap' }}>
                   {displayData}
                 </div>
               </div>

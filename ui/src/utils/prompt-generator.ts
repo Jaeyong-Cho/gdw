@@ -164,20 +164,50 @@ export async function buildPromptContext(situation: string, selectedProblemId?: 
         // effectiveProblemId is the problem answer's id, so we need to find acceptance answers
         // that have problem_id = effectiveProblemId (from effective cycle)
         const allAcceptanceAnswers = await getAnswersBySituation('DefiningAcceptance', effectiveCycleId);
-        const acceptanceAnswers = allAcceptanceAnswers.filter(a => 
-          !['true', 'false'].includes(a.answer) && a.problemId === effectiveProblemId
+        console.log('[DEBUG] buildPromptContext: allAcceptanceAnswers count:', allAcceptanceAnswers.length);
+        console.log('[DEBUG] buildPromptContext: allAcceptanceAnswers:', allAcceptanceAnswers.map(a => ({ questionId: a.questionId, problemId: a.problemId, answer: a.answer?.substring(0, 50) })));
+        
+        // Filter to only criteria-text answers (not yesno responses)
+        const criteriaAnswers = allAcceptanceAnswers.filter(a => 
+          a.questionId === 'criteria-text' && !['true', 'false'].includes(a.answer)
         );
+        console.log('[DEBUG] buildPromptContext: criteriaAnswers (criteria-text only) count:', criteriaAnswers.length);
+        
+        // First try to filter by problemId
+        let acceptanceAnswers = criteriaAnswers.filter(a => a.problemId === effectiveProblemId);
+        
+        // If no answers found with problemId filter, get all acceptance criteria from the cycle
+        if (acceptanceAnswers.length === 0) {
+          console.log('[DEBUG] buildPromptContext: No acceptance criteria with problemId, getting all from cycle');
+          acceptanceAnswers = criteriaAnswers;
+        }
+        
         if (acceptanceAnswers.length > 0) {
-          context.acceptanceCriteria = acceptanceAnswers.map(a => a.answer).join('\n\n');
-          console.log('[DEBUG] buildPromptContext: Set acceptanceCriteria from problem_id:', effectiveProblemId, 'count:', acceptanceAnswers.length);
+          // Format each acceptance criterion with numbering
+          context.acceptanceCriteria = acceptanceAnswers.map((a, index) => 
+            `${index + 1}. ${a.answer}`
+          ).join('\n\n');
+          console.log('[DEBUG] buildPromptContext: Set acceptanceCriteria, count:', acceptanceAnswers.length);
         } else {
-          console.log('[DEBUG] buildPromptContext: No acceptance criteria found with problem_id:', effectiveProblemId);
+          console.log('[DEBUG] buildPromptContext: No acceptance criteria found');
         }
       } else {
         console.log('[DEBUG] buildPromptContext: No problem-boundaries-text found with id:', effectiveProblemId);
       }
     } else {
       console.log('[DEBUG] buildPromptContext: No effectiveProblemId available');
+      
+      // If no problem ID, still try to get acceptance criteria from the cycle
+      const allAcceptanceAnswers = await getAnswersBySituation('DefiningAcceptance', effectiveCycleId);
+      const acceptanceAnswers = allAcceptanceAnswers.filter(a => 
+        a.questionId === 'criteria-text' && !['true', 'false'].includes(a.answer)
+      );
+      if (acceptanceAnswers.length > 0) {
+        context.acceptanceCriteria = acceptanceAnswers.map((a, index) => 
+          `${index + 1}. ${a.answer}`
+        ).join('\n\n');
+        console.log('[DEBUG] buildPromptContext: Set acceptanceCriteria without problemId, count:', acceptanceAnswers.length);
+      }
     }
     
     if (relatedContext.design && relatedContext.design.length > 0) {
@@ -188,7 +218,10 @@ export async function buildPromptContext(situation: string, selectedProblemId?: 
     // Only fall back to relatedContext.acceptance if no acceptance criteria was found
     if (!context.acceptanceCriteria) {
       if (relatedContext.acceptance && relatedContext.acceptance.length > 0) {
-        context.acceptanceCriteria = relatedContext.acceptance.join('\n\n');
+        // Format with numbering for multiple criteria
+        context.acceptanceCriteria = relatedContext.acceptance.map((a, index) => 
+          `${index + 1}. ${a}`
+        ).join('\n\n');
         console.log('[DEBUG] buildPromptContext: Set acceptanceCriteria from relatedContext.acceptance');
       }
     }
@@ -240,42 +273,68 @@ export async function buildPromptContext(situation: string, selectedProblemId?: 
     console.log('[DEBUG] buildPromptContext - effectiveCycleId:', effectiveCycleId);
     console.log('[DEBUG] buildPromptContext - currentCycleId:', currentCycleId);
     
+    // Collect all answers by questionId to handle multiple answers
+    const answersByQuestionId: Map<string, string[]> = new Map();
+    
     for (const sit of situations) {
       try {
         // Get answers from effective cycle (current cycle if it has data, otherwise previous cycle)
         const answers = await getAnswersBySituation(sit, effectiveCycleId);
         console.log(`[DEBUG] buildPromptContext - ${sit} answers:`, answers.length, answers.map(a => ({ questionId: a.questionId, answer: a.answer?.substring(0, 50) })));
-        answers.forEach(a => {
+        
+        // Sort by answeredAt ASC to maintain order
+        const sortedAnswers = [...answers].sort((a, b) => 
+          new Date(a.answeredAt).getTime() - new Date(b.answeredAt).getTime()
+        );
+        
+        sortedAnswers.forEach(a => {
           if (!['true', 'false'].includes(a.answer)) {
-            // Use question ID as key
-            if (!context[a.questionId]) {
-              context[a.questionId] = a.answer;
-              console.log(`[DEBUG] buildPromptContext - Added to context: ${a.questionId}`);
+            // Collect all answers for the same questionId
+            if (!answersByQuestionId.has(a.questionId)) {
+              answersByQuestionId.set(a.questionId, []);
             }
-            
-            // Also map common patterns to standard keys
-            if (a.questionId.includes('intent') && !context.intent) {
-              context.intent = a.answer;
-            }
-            // Only set problem if no problem was already set
-            if (a.questionId.includes('problem') && !context.problem) {
-              context.problem = a.answer;
-            }
-            if (a.questionId.includes('design') && !context.design) {
-              context.design = a.answer;
-            }
-            // Only add acceptance criteria if not already set
-            if (a.questionId.includes('acceptance') || a.questionId.includes('criteria')) {
-              if (!context.acceptanceCriteria) {
-                context.acceptanceCriteria = a.answer;
-              }
-            }
+            answersByQuestionId.get(a.questionId)!.push(a.answer);
           }
         });
       } catch (error) {
         console.error(`Error fetching answers for ${sit}:`, error);
       }
     }
+    
+    // Now populate context with formatted answers
+    // This should OVERWRITE any previously set values from relatedContext
+    // because this collection has ALL answers properly aggregated
+    answersByQuestionId.forEach((answers, questionId) => {
+      // Format multiple answers with numbering
+      let formattedAnswer: string;
+      if (answers.length === 1) {
+        formattedAnswer = answers[0];
+      } else {
+        formattedAnswer = answers.map((a, index) => `${index + 1}. ${a}`).join('\n\n');
+      }
+      
+      // Always overwrite - this aggregated data takes priority
+      context[questionId] = formattedAnswer;
+      console.log(`[DEBUG] buildPromptContext - Set context: ${questionId} = ${answers.length} answers`);
+      
+      // Also map common patterns to standard keys
+      if (questionId.includes('intent') && !context.intent) {
+        context.intent = formattedAnswer;
+      }
+      // Only set problem if no problem was already set
+      if (questionId.includes('problem') && !context.problem) {
+        context.problem = formattedAnswer;
+      }
+      if (questionId.includes('design') && !context.design) {
+        context.design = formattedAnswer;
+      }
+      // Only add acceptance criteria if not already set
+      if (questionId.includes('acceptance') || questionId.includes('criteria')) {
+        if (!context.acceptanceCriteria) {
+          context.acceptanceCriteria = formattedAnswer;
+        }
+      }
+    });
     
   } catch (error) {
     console.error('Error building prompt context:', error);
