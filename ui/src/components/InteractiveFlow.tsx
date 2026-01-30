@@ -1030,6 +1030,8 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
           </div>
         );
 
+      case 'multitext':
+        // Fall through to text case - multitext is handled by allowMultipleAnswers logic in text case
       case 'text':
         // Special handling for problem-select question
         if (currentQuestion.id === 'problem-select' && currentQuestion.aiPromptTemplate?.selectableAnswers) {
@@ -1149,7 +1151,8 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
         const hasAIPromptForText = currentQuestion.aiPromptTemplate !== undefined;
         
         // Check if multiple answers are allowed
-        const allowMultipleAnswers = currentQuestion.allowMultiple !== false;
+        // For 'multitext' type, always allow multiple answers
+        const allowMultipleAnswers = currentQuestion.type === 'multitext' || currentQuestion.allowMultiple !== false;
         const hasValidAnswers = allowMultipleAnswers 
           ? textAnswers.some(a => a.trim())
           : textAnswer.trim();
@@ -1850,8 +1853,27 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
         );
 
       case 'multiple':
+        const showDataForMultiple = currentQuestion.showData && displayData;
         return (
-          <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div style={{ marginTop: '16px' }}>
+            {showDataForMultiple && (
+              <div style={{
+                marginBottom: '16px',
+                padding: '12px',
+                backgroundColor: '#f3f4f6',
+                border: '1px solid #d1d5db',
+                borderRadius: '8px',
+                fontSize: '14px',
+              }}>
+                <div style={{ fontWeight: '600', marginBottom: '8px', color: '#374151' }}>
+                  {displayDataLabel}:
+                </div>
+                <div style={{ color: '#6b7280', fontStyle: 'italic', whiteSpace: 'pre-wrap' }}>
+                  {displayData}
+                </div>
+              </div>
+            )}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {currentQuestion.options?.map((option, index) => {
               const validSituations: Situation[] = [
                 'DefiningIntent', 'FailingIntent', 'SelectingProblem', 'DefiningAcceptance',
@@ -1915,6 +1937,7 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
                 </button>
               );
             })}
+            </div>
           </div>
         );
 

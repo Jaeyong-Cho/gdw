@@ -253,6 +253,7 @@ export const WorkflowDataViewer: React.FC<WorkflowDataViewerProps> = ({ onClose 
       'WhatToDo': '#8b5cf6',
       'DefiningIntent': '#10b981',
       'FailingIntent': '#ef4444',
+      'GatheringFacts': '#f59e0b',
       'SelectingProblem': '#3b82f6',
       'DefiningAcceptance': '#8b5cf6',
       'CheckingFeasibility': '#f59e0b',

@@ -43,6 +43,7 @@ export class WorkflowReadModel implements IReadModel {
     'WhatToDo',
     'DefiningIntent',
     'FailingIntent',
+    'GatheringFacts',
     'SelectingProblem',
     'DefiningAcceptance',
     'CheckingFeasibility',

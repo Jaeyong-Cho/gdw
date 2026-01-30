@@ -10,6 +10,7 @@ export type Situation =
   | 'WhatToDo'
   | 'DefiningIntent'
   | 'FailingIntent'
+  | 'GatheringFacts'
   | 'SelectingProblem'
   | 'DefiningAcceptance'
   | 'CheckingFeasibility'

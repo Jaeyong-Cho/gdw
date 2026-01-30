@@ -117,7 +117,7 @@
         "question": "기능이나 기술을 언급하지 않았나요?",
         "type": "yesno",
         "required": true,
-        "onYesNextSituation": "SelectingProblem",
+        "onYesNextSituation": "GatheringFacts",
         "onNoNextSituation": "FailingIntent"
       }
     ]
@@ -158,6 +158,43 @@
       }
     ]
   },
+  "GatheringFacts": {
+    "situation": "GatheringFacts",
+    "startQuestionId": "current-facts-text",
+    "questions": [
+      {
+        "id": "current-facts-text",
+        "question": "현재 상황에 대한 사실들을 나열해주세요 (관찰 가능한 것, 측정된 것, 확인된 것)",
+        "type": "multitext",
+        "required": true,
+        "nextQuestionId": "facts-complete",
+        "showData": {
+          "type": "intent-summary",
+          "label": "의도 요약",
+          "source": "getIntentSummary"
+        },
+        "aiPromptTemplate": {
+          "template": "# 현재 상황 사실 수집 도움\n\n## [INPUT - Human]\n\n1. Dumping 단계의 생각:\n- {{dump-thoughts-text}}\n\n2. 하고 싶은 행동/일:\n- {{action-intent-text}}\n\n3. 행동/일을 하고 싶은 이유:\n- {{intent-why-action}}\n\n4. 가정:\n- {{intent-assumptions}}\n\n5. 의도 요약:\n- {{intent-summary-text}}\n\n## [AI PROMPT]\n\nYou are helping to gather facts about the current situation before problem definition.\n\nRules:\n- Focus only on FACTS (observable, measurable, verified)\n- No opinions, assumptions, or interpretations\n- No proposed solutions or problems yet\n- Facts should be specific and concrete\n\nTasks:\n1. Based on the intent and context, identify what factual information is needed.\n2. Suggest categories of facts to collect:\n   - Current state observations (what exists now)\n   - Measurements and metrics (quantifiable data)\n   - Constraints and limitations (verified boundaries)\n   - Stakeholders and their verified needs\n   - Historical facts (what happened, when)\n3. For each category, provide example questions to gather facts.\n4. Identify what facts are already implied in the context.\n5. Highlight gaps where facts are needed but not yet collected.\n\nImportant: Facts are objective truths, not interpretations. \"The system is slow\" is an interpretation. \"Response time is 5 seconds\" is a fact.\n\n## [OUTPUT FORMAT]\n\n- Output the answer as a copyable markdown code block or d2 code block\n- Use a list instead of a table\n- Do not nest d2 code blocks inside markdown code blocks\n\n## [EXIT CONDITION]\n\n- Fact categories identified\n- Example questions provided\n- Clear distinction between facts and interpretations"
+        }
+      },
+      {
+        "id": "facts-complete",
+        "question": "충분한 사실을 수집했나요?",
+        "type": "yesno",
+        "required": true,
+        "onYesNextQuestionId": "facts-verified",
+        "onNoNextQuestionId": "current-facts-text"
+      },
+      {
+        "id": "facts-verified",
+        "question": "나열한 것들이 모두 사실(관찰/측정/확인된 것)인가요? (의견이나 가정이 아닌)",
+        "type": "yesno",
+        "required": true,
+        "onYesNextSituation": "SelectingProblem",
+        "onNoNextQuestionId": "current-facts-text"
+      }
+    ]
+  },
   "SelectingProblem": {
     "situation": "SelectingProblem",
     "startQuestionId": "problem-boundaries-text",
@@ -167,20 +204,29 @@
         "question": "문제의 경계를 명확히 작성해주세요 (포함/제외)",
         "type": "text",
         "required": true,
-        "nextQuestionId": "problem-distinct",
+        "nextQuestionId": "problem-facts-sufficient",
         "showData": {
-          "type": "intent-summary",
-          "label": "의도 요약",
-          "source": "getIntentSummary"
+          "type": "gathered-facts",
+          "label": "수집된 사실들",
+          "source": "getAnswerByQuestionId",
+          "sourceParam": "current-facts-text"
         },
         "aiPromptTemplate": {
-          "template": "# 문제 선택 및 경계 정의 도움\n\n## [INPUT – Human]\n\n1. Dumping 단계의 생각:\n- {{dump-thoughts-text}}\n\n2. 하고 싶은 행동/일:\n- {{action-intent-text}}\n\n3. 행동/일을 하고 싶은 이유:\n- {{intent-why-action}}\n\n4. 가정:\n- {{intent-assumptions}}\n\n5. 의도 요약:\n- {{intent-summary-text}}\n\n6. 이전 개선점 (선택적):\n{{improvements}}\n\n## [AI PROMPT]\n\nYou are performing problem decomposition.\n\nRules:\n- No solution framing.\n- No implementation hints.\n- Consider the full context from Dumping, WhatToDo, and DefiningIntent phases.\n\nPriority Principle:\n- **Problems that rarely change must be resolved first.**\n- When ranking problems, prioritize stability: problems with stable requirements, clear boundaries, and minimal expected changes should be addressed before problems that are likely to evolve.\n- This reduces rework and establishes a solid foundation.\n\nTasks:\n1. Review the thoughts from Dumping phase, the action intent, reasons, and assumptions.\n2. Enumerate all problems implied by the intent summary and underlying context.\n3. For each problem, assess its expected change frequency:\n   - Stable problems: clear boundaries, well-understood requirements, minimal expected changes\n   - Volatile problems: evolving requirements, unclear boundaries, likely to change\n4. Rank problems by:\n   - **Primary: Change frequency (stable first)**\n   - Secondary: Urgency, impact, and dependency depth\n   - Consider alignment with the reasons and assumptions from DefiningIntent\n5. Select exactly ONE problem (prefer the most stable one that is still actionable).\n6. Rewrite it as a single precise question.\n7. If oversized, decompose and select the smallest viable unit.\n8. If improvement points are provided, consider them in problem selection.\n\n## [OUTPUT FORMAT]\n\n- Output the answer as a copyable markdown code block or d2 code block\n- Use a list instead of a table\n- Do not nest d2 code blocks inside markdown code blocks\n\n## [EXIT CONDITION]\n\n- One problem only\n- Expressed as a question\n- Solvable independently\n- Change frequency assessment included\n- Aligned with intent and assumptions",
+          "template": "# 문제 선택 및 경계 정의 도움\n\n## [INPUT – Human]\n\n1. Dumping 단계의 생각:\n- {{dump-thoughts-text}}\n\n2. 하고 싶은 행동/일:\n- {{action-intent-text}}\n\n3. 행동/일을 하고 싶은 이유:\n- {{intent-why-action}}\n\n4. 가정:\n- {{intent-assumptions}}\n\n5. 의도 요약:\n- {{intent-summary-text}}\n\n6. 수집된 사실들:\n{{current-facts-text}}\n\n7. 이전 개선점 (선택적):\n{{improvements}}\n\n## [AI PROMPT]\n\nYou are performing problem decomposition based on GATHERED FACTS.\n\nRules:\n- No solution framing.\n- No implementation hints.\n- Problems must be grounded in the gathered facts.\n- If facts are insufficient, indicate what additional facts are needed.\n\nPriority Principle:\n- **Problems that rarely change must be resolved first.**\n- When ranking problems, prioritize stability: problems with stable requirements, clear boundaries, and minimal expected changes should be addressed before problems that are likely to evolve.\n- This reduces rework and establishes a solid foundation.\n\nTasks:\n1. Review the gathered facts about the current situation.\n2. Based on the facts (not assumptions), enumerate problems that are evidenced by the facts.\n3. For each problem:\n   - Cite the supporting facts\n   - Assess expected change frequency (stable vs volatile)\n4. Rank problems by:\n   - **Primary: Evidence strength (well-supported by facts first)**\n   - **Secondary: Change frequency (stable first)**\n   - Tertiary: Urgency, impact, and dependency depth\n5. If the facts are insufficient to define a clear problem:\n   - Indicate what additional facts need to be gathered\n   - Suggest returning to GatheringFacts phase\n6. Select exactly ONE problem (prefer the most fact-supported and stable one).\n7. Rewrite it as a single precise question.\n8. If oversized, decompose and select the smallest viable unit.\n\n## [OUTPUT FORMAT]\n\n- Output the answer as a copyable markdown code block or d2 code block\n- Use a list instead of a table\n- Do not nest d2 code blocks inside markdown code blocks\n\n## [EXIT CONDITION]\n\n- One problem only\n- Grounded in gathered facts\n- Expressed as a question\n- Solvable independently\n- Change frequency assessment included\n- OR: Clear indication that more facts are needed",
           "selectableAnswers": {
             "questionId": "learned-improvements-text",
             "label": "이전 개선점 선택",
             "variableName": "improvements"
           }
         }
+      },
+      {
+        "id": "problem-facts-sufficient",
+        "question": "문제를 정의하기 위한 사실이 충분한가요? (추가 사실 수집이 필요하면 '아니오')",
+        "type": "yesno",
+        "required": true,
+        "onYesNextQuestionId": "problem-distinct",
+        "onNoNextSituation": "GatheringFacts"
       },
       {
         "id": "problem-distinct",

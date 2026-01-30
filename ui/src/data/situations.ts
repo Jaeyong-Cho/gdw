@@ -49,6 +49,16 @@ export const situationDefinitions: Record<Situation, SituationDefinition> = {
       { description: 'The intent cannot be expressed in a single, clear statement' },
     ],
   },
+  GatheringFacts: {
+    name: 'GatheringFacts',
+    description: 'Gathering observable facts about the current situation before problem selection',
+    required_facts: [
+      { description: 'Facts about the current situation have been listed' },
+      { description: 'Each item is an observable, measurable, or verified fact' },
+      { description: 'Opinions and assumptions are separated from facts' },
+      { description: 'Sufficient facts exist to inform problem selection' },
+    ],
+  },
   SelectingProblem: {
     name: 'SelectingProblem',
     description: 'A specific problem has been selected to work on',
@@ -202,6 +212,9 @@ export const nodePositions: Record<Situation, NodePosition> = {
   DefiningIntent: { x: 200, y: 300 },
   FailingIntent: { x: 200, y: 150 },
   
+  // Column 0.5: Facts (x=400)
+  GatheringFacts: { x: 400, y: 300 },
+  
   // Column 1: Problem (x=600)
   SelectingProblem: { x: 600, y: 300 },
   
@@ -244,9 +257,11 @@ export const nodePositions: Record<Situation, NodePosition> = {
 export const stateTransitions: Array<[Situation, Situation, string]> = [
   ['Dumping', 'WhatToDo', 'thoughts organized'],
   ['WhatToDo', 'DefiningIntent', 'action intent clear'],
-  ['DefiningIntent', 'SelectingProblem', 'intent clear'],
+  ['DefiningIntent', 'GatheringFacts', 'intent clear'],
   ['DefiningIntent', 'FailingIntent', 'intent unclear'],
   ['FailingIntent', 'DefiningIntent', ''],
+  ['GatheringFacts', 'SelectingProblem', 'facts gathered'],
+  ['SelectingProblem', 'GatheringFacts', 'need more facts'],
   ['SelectingProblem', 'DefiningAcceptance', 'problem focused'],
   ['SelectingProblem', 'DefiningIntent', 'problem drifting'],
   ['DefiningAcceptance', 'CheckingFeasibility', 'criteria measurable'],

@@ -258,6 +258,7 @@ export async function buildPromptContext(situation: string, selectedProblemId?: 
       'Dumping',
       'WhatToDo',
       'DefiningIntent',
+      'GatheringFacts',
       'SelectingProblem', 
       'DefiningAcceptance',
       'Designing',

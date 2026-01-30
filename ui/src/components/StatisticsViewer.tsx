@@ -80,6 +80,7 @@ interface UnconsciousStats {
 const STATE_COLORS: Record<string, string> = {
   Dumping: '#3b82f6',
   DefiningIntent: '#8b5cf6',
+  GatheringFacts: '#f59e0b',
   SelectingProblem: '#ec4899',
   DefiningAcceptance: '#f59e0b',
   CheckingFeasibility: '#10b981',
