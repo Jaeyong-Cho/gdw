@@ -1383,7 +1383,7 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
-                  marginBottom: '12px',
+                  marginBottom: showContextSelector ? '12px' : 0,
                 }}>
                   <h4 style={{
                     margin: 0,
@@ -1391,7 +1391,7 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
                     fontWeight: '600',
                     color: '#854d0e',
                   }}>
-                    이전 Cycle Context ({selectedContexts.length}개 선택됨)
+                    이전 Cycle Context
                   </h4>
                   <button
                     onClick={() => setShowContextSelector(!showContextSelector)}
@@ -1410,62 +1410,7 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
                   </button>
                 </div>
                 
-                {/* Selected Contexts Display */}
-                {selectedContexts.length > 0 && (
-                  <div style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '8px',
-                    marginBottom: showContextSelector ? '16px' : '0',
-                  }}>
-                    {selectedContexts.map(ctx => (
-                      <div key={ctx.id} style={{
-                        display: 'flex',
-                        alignItems: 'flex-start',
-                        gap: '8px',
-                        padding: '10px',
-                        backgroundColor: '#ffffff',
-                        border: '1px solid #e5e7eb',
-                        borderRadius: '6px',
-                      }}>
-                        <div style={{ flex: 1 }}>
-                          <div style={{
-                            fontSize: '11px',
-                            color: '#6b7280',
-                            marginBottom: '4px',
-                          }}>
-                            Cycle #{ctx.cycleNumber} - {ctx.situation}
-                          </div>
-                          <div style={{
-                            fontSize: '13px',
-                            color: '#374151',
-                            lineHeight: '1.4',
-                            whiteSpace: 'pre-wrap',
-                          }}>
-                            {ctx.answerText.length > 200 ? ctx.answerText.slice(0, 200) + '...' : ctx.answerText}
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => handleRemoveContext(ctx.id)}
-                          style={{
-                            padding: '4px 8px',
-                            fontSize: '12px',
-                            backgroundColor: '#fee2e2',
-                            color: '#dc2626',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            flexShrink: 0,
-                          }}
-                        >
-                          삭제
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                
-                {/* Context Selector */}
+                {/* Context Selector - selected items are highlighted in the list only */}
                 {showContextSelector && (
                   <div style={{
                     maxHeight: '300px',
