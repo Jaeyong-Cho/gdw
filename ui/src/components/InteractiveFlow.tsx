@@ -694,7 +694,15 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
         await completeCycle(cycleId);
       }
       nextSituation = 'CollectingFeedback';
-    } 
+    }
+    // Special handling for cycle-finished (Ending -> Unconscious): complete cycle before moving
+    else if (currentQuestion.id === 'cycle-finished' && answer === true) {
+      const cycleId = await getCurrentCycleId();
+      if (cycleId) {
+        await completeCycle(cycleId);
+      }
+      nextSituation = 'Unconscious';
+    }
     else if (currentQuestion.type === 'yesno') {
       if (answer === true && currentQuestion.onYesNextQuestionId) {
         nextQuestionId = currentQuestion.onYesNextQuestionId;
