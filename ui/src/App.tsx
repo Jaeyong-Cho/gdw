@@ -13,7 +13,7 @@ import WorkflowDataViewer from './components/WorkflowDataViewer';
 import { StatisticsViewer } from './components/StatisticsViewer';
 import { CycleListModal } from './components/CycleListModal';
 import { InteractiveFlow } from './components/InteractiveFlow';
-import { createCycle, getCurrentCycleId, activateCycle, recordUnconsciousEntry, recordUnconsciousExit, recordStateEntry, recordStateExit, startUnconsciousPeriod, endUnconsciousPeriod, getCurrentUnconsciousPeriod, completeCycle, saveAnswer } from './data/db';
+import { createCycle, getCurrentCycleId, getCurrentWorkflowState, updateWorkflowUIState, activateCycle, recordUnconsciousEntry, recordUnconsciousExit, recordStateEntry, recordStateExit, startUnconsciousPeriod, endUnconsciousPeriod, getCurrentUnconsciousPeriod, completeCycle, saveAnswer } from './data/db';
 
 /**
  * @brief Main application component
@@ -50,6 +50,28 @@ const App: React.FC = () => {
   const [showQuestionFlow, setShowQuestionFlow] = useState<boolean>(false);
   const [activeCycleId, setActiveCycleId] = useState<number | null>(null);
   const sidebarRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const restoreWorkflowState = async () => {
+      try {
+        const state = await getCurrentWorkflowState();
+        if (state === null) {
+          return;
+        }
+        setActiveCycleId(state.cycleId);
+        setSelectedCycleId(state.cycleId);
+        setCurrentSituation(state.situation as Situation);
+        setSelectedSituation(state.situation as Situation);
+        setInitialQuestionId(state.questionId);
+        if (state.situation !== 'Unconscious') {
+          setShowQuestionFlow(true);
+        }
+      } catch (error) {
+        console.error('Failed to restore workflow state:', error);
+      }
+    };
+    restoreWorkflowState();
+  }, []);
 
   const handleNodeClick = useCallback((situation: Situation) => {
     setSelectedSituation(situation);
@@ -377,6 +399,21 @@ const App: React.FC = () => {
                 situation={currentSituation}
                 initialQuestionId={initialQuestionId}
                 selectedCycleId={selectedCycleId || activeCycleId}
+                onQuestionChange={
+                  activeCycleId !== null
+                    ? async (questionId: string | null) => {
+                        try {
+                          await updateWorkflowUIState(
+                            activeCycleId,
+                            currentSituation,
+                            questionId
+                          );
+                        } catch (error) {
+                          console.error('Failed to persist question state:', error);
+                        }
+                      }
+                    : undefined
+                }
                 onComplete={async (nextSituation) => {
                   if (nextSituation) {
                     const cycleId = await getCurrentCycleId();

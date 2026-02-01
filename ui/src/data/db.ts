@@ -133,7 +133,13 @@ async function migrateDatabase(database: Database): Promise<void> {
     if (!cycleColumns.includes('unconscious_entry_reason')) {
       database.run('ALTER TABLE cycles ADD COLUMN unconscious_entry_reason TEXT');
     }
-    
+    if (!cycleColumns.includes('current_situation')) {
+      database.run('ALTER TABLE cycles ADD COLUMN current_situation TEXT');
+    }
+    if (!cycleColumns.includes('current_question_id')) {
+      database.run('ALTER TABLE cycles ADD COLUMN current_question_id TEXT');
+    }
+
     // Add cycle_id column to question_answers if it doesn't exist
     if (!columns.includes('cycle_id')) {
       console.log('Adding cycle_id column...');
@@ -504,6 +510,108 @@ export async function getCurrentCycleId(): Promise<number | null> {
   
   stmt.free();
   return null;
+}
+
+/**
+ * @brief Get current workflow UI state for the active cycle (for restore after refresh)
+ *
+ * @return Cycle ID, current situation, and current question ID, or null if no active cycle
+ *
+ * @pre Database is initialized
+ * @post Returns persisted workflow state for the active cycle
+ */
+export async function getCurrentWorkflowState(): Promise<{
+  cycleId: number;
+  situation: string;
+  questionId: string | null;
+} | null> {
+  await initDatabase();
+
+  if (!db) {
+    throw new Error('Database not initialized');
+  }
+
+  const cycleId = await getCurrentCycleId();
+  if (cycleId === null) {
+    return null;
+  }
+
+  const stmt = db.prepare(
+    'SELECT current_situation, current_question_id FROM cycles WHERE id = ?'
+  );
+  stmt.bind([cycleId]);
+  if (!stmt.step()) {
+    stmt.free();
+    return null;
+  }
+  const row = stmt.getAsObject();
+  stmt.free();
+
+  let situation =
+    row.current_situation != null && (row.current_situation as string) !== ''
+      ? (row.current_situation as string)
+      : null;
+  if (situation === null) {
+    const transStmt = db.prepare(`
+      SELECT situation FROM state_transitions
+      WHERE cycle_id = ? AND exited_at IS NULL
+      ORDER BY entered_at DESC LIMIT 1
+    `);
+    transStmt.bind([cycleId]);
+    if (transStmt.step()) {
+      situation = transStmt.getAsObject().situation as string;
+    }
+    transStmt.free();
+  }
+  if (situation === null) {
+    const lastStmt = db.prepare(`
+      SELECT situation FROM state_transitions
+      WHERE cycle_id = ?
+      ORDER BY entered_at DESC LIMIT 1
+    `);
+    lastStmt.bind([cycleId]);
+    if (lastStmt.step()) {
+      situation = lastStmt.getAsObject().situation as string;
+    }
+    lastStmt.free();
+  }
+  const finalSituation = situation ?? 'Unconscious';
+
+  const questionId =
+    row.current_question_id != null && row.current_question_id !== ''
+      ? (row.current_question_id as string)
+      : null;
+
+  return { cycleId, situation: finalSituation, questionId };
+}
+
+/**
+ * @brief Persist current question within a situation (for restore after refresh)
+ *
+ * @param cycleId - Cycle ID
+ * @param situation - Current situation name
+ * @param questionId - Current question ID within the flow, or null
+ *
+ * @pre Database is initialized, cycleId exists
+ * @post cycles.current_situation and current_question_id are updated
+ */
+export async function updateWorkflowUIState(
+  cycleId: number,
+  situation: string,
+  questionId: string | null
+): Promise<void> {
+  await initDatabase();
+
+  if (!db) {
+    throw new Error('Database not initialized');
+  }
+
+  db.run(
+    'UPDATE cycles SET current_situation = ?, current_question_id = ? WHERE id = ?',
+    [situation, questionId ?? null, cycleId]
+  );
+
+  await saveDatabase();
 }
 
 /**
@@ -1580,8 +1688,13 @@ export async function createCycle(): Promise<number> {
   const cycleId = idStmt.getAsObject().id as number;
   idStmt.free();
 
+  db.run(
+    'UPDATE cycles SET current_situation = ?, current_question_id = NULL WHERE id = ?',
+    ['Dumping', cycleId]
+  );
+
   await saveDatabase();
-  
+
   console.log(`Cycle ${nextCycleNumber} created: ID ${cycleId}`);
   return cycleId;
 }
@@ -2170,6 +2283,13 @@ export async function recordStateEntry(situation: string, cycleId: number | null
     'INSERT INTO state_transitions (cycle_id, situation, entered_at) VALUES (?, ?, ?)',
     [effectiveCycleId, situation, enteredAt]
   );
+
+  if (effectiveCycleId !== null) {
+    db.run(
+      'UPDATE cycles SET current_situation = ?, current_question_id = NULL WHERE id = ?',
+      [situation, effectiveCycleId]
+    );
+  }
 
   const idStmt = db.prepare('SELECT last_insert_rowid() as id');
   idStmt.step();

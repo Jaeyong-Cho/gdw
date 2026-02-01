@@ -122,6 +122,7 @@ interface InteractiveFlowProps {
   situation: Situation;
   initialQuestionId?: string | null;
   selectedCycleId?: number | null;
+  onQuestionChange?: (questionId: string | null) => void;
   onComplete: (nextSituation: Situation | null) => void;
   onAnswerSave: (answer: QuestionAnswer) => Promise<void>;
 }
@@ -137,10 +138,11 @@ interface InteractiveFlowProps {
  * @pre situation must be a valid Situation
  * @post Questions are displayed and answers are collected
  */
-export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({ 
+export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
   situation,
   initialQuestionId,
   selectedCycleId,
+  onQuestionChange,
   onComplete,
   onAnswerSave,
 }) => {
@@ -246,7 +248,8 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
           setQuestionHistory([startQuestionId]);
           currentQuestionIdRef.current = startQuestionId;
           setCurrentQuestionId(startQuestionId);
-          
+          onQuestionChange?.(startQuestionId);
+
           const startQuestion = situationFlow.questions.find(q => q.id === startQuestionId);
           if (startQuestion?.showData) {
             const db = await import('../data/db');
@@ -290,7 +293,7 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
     };
 
     loadFlow();
-  }, [situation, initialQuestionId]);
+  }, [situation, initialQuestionId, onQuestionChange]);
 
   /**
    * @brief Load display data based on question configuration
@@ -802,6 +805,7 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
     } else if (nextQuestionId) {
       setQuestionHistory([...questionHistory, nextQuestionId]);
       setCurrentQuestionId(nextQuestionId);
+      onQuestionChange?.(nextQuestionId);
     } else {
       onComplete(null);
     }
@@ -814,6 +818,7 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
       const previousQuestionId = newHistory[newHistory.length - 1];
       setQuestionHistory(newHistory);
       setCurrentQuestionId(previousQuestionId);
+      onQuestionChange?.(previousQuestionId);
     }
   };
 
@@ -1350,6 +1355,7 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
               } else if (nextQuestionId) {
                 setQuestionHistory([...questionHistory, nextQuestionId]);
                 setCurrentQuestionId(nextQuestionId);
+                onQuestionChange?.(nextQuestionId);
               } else {
                 onComplete(null);
               }
