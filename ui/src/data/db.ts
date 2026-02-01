@@ -2741,6 +2741,176 @@ export async function getCycleContext(cycleId: number): Promise<ContextAnswer[]>
 }
 
 /**
+ * @brief Get all text answers in a cycle (excludes yes/no answers)
+ *
+ * @param cycleId - Cycle ID
+ * @return Array of answers with id, questionId, answer, situation, answeredAt
+ *
+ * @pre Database is initialized, cycleId is valid
+ * @post Returns text answers only; yes/no answers are excluded
+ */
+export async function getAnswersByCycleId(cycleId: number): Promise<Array<{
+  id: number;
+  questionId: string;
+  answer: string;
+  situation: string;
+  answeredAt: string;
+}>> {
+  if (!Number.isInteger(cycleId) || cycleId <= 0) {
+    throw new Error('getAnswersByCycleId: cycleId must be a positive integer');
+  }
+  if (typeof cycleId !== 'number') {
+    throw new Error('getAnswersByCycleId: cycleId must be a number');
+  }
+
+  await initDatabase();
+
+  if (!db) {
+    throw new Error('Database not initialized');
+  }
+
+  const stmt = db.prepare(`
+    SELECT id, question_id, answer, situation, answered_at
+    FROM question_answers
+    WHERE cycle_id = ? AND answer NOT IN ('true', 'false')
+    ORDER BY answered_at ASC
+  `);
+  stmt.bind([cycleId]);
+
+  const answers: Array<{
+    id: number;
+    questionId: string;
+    answer: string;
+    situation: string;
+    answeredAt: string;
+  }> = [];
+
+  while (stmt.step()) {
+    const row = stmt.getAsObject();
+    answers.push({
+      id: row.id as number,
+      questionId: row.question_id as string,
+      answer: row.answer as string,
+      situation: row.situation as string,
+      answeredAt: row.answered_at as string,
+    });
+  }
+  stmt.free();
+
+  return answers;
+}
+
+/**
+ * @brief Add all answers from a source cycle as context for the current cycle
+ *
+ * @param cycleId - Current cycle ID
+ * @param sourceCycleId - Source cycle ID whose answers to add
+ * @return Number of context entries added (existing ones are skipped)
+ *
+ * @pre Database is initialized; cycleId and sourceCycleId are distinct
+ * @post All text answers from source cycle are in cycle_context for cycleId
+ */
+export async function addCycleContextByCycle(
+  cycleId: number,
+  sourceCycleId: number
+): Promise<number> {
+  if (!Number.isInteger(cycleId) || cycleId <= 0) {
+    throw new Error('addCycleContextByCycle: cycleId must be a positive integer');
+  }
+  if (
+    !Number.isInteger(sourceCycleId) ||
+    sourceCycleId <= 0 ||
+    cycleId === sourceCycleId
+  ) {
+    throw new Error(
+      'addCycleContextByCycle: sourceCycleId must be a positive integer and differ from cycleId'
+    );
+  }
+
+  await initDatabase();
+
+  if (!db) {
+    throw new Error('Database not initialized');
+  }
+
+  const answers = await getAnswersByCycleId(sourceCycleId);
+  let added = 0;
+
+  for (const a of answers) {
+    const existing = db.prepare(
+      'SELECT id FROM cycle_context WHERE cycle_id = ? AND source_answer_id = ?'
+    );
+    existing.bind([cycleId, a.id]);
+    if (existing.step()) {
+      existing.free();
+      continue;
+    }
+    existing.free();
+
+    const stmt = db.prepare(`
+      INSERT INTO cycle_context (cycle_id, source_cycle_id, source_answer_id, question_id, answer_text, situation, added_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `);
+    stmt.bind([
+      cycleId,
+      sourceCycleId,
+      a.id,
+      a.questionId,
+      a.answer,
+      a.situation,
+      new Date().toISOString(),
+    ]);
+    stmt.step();
+    stmt.free();
+    added += 1;
+  }
+
+  if (added > 0) {
+    await saveDatabase();
+  }
+
+  return added;
+}
+
+/**
+ * @brief Remove all context entries that came from a given source cycle
+ *
+ * @param cycleId - Current cycle ID
+ * @param sourceCycleId - Source cycle ID to remove context for
+ *
+ * @pre Database is initialized
+ * @post No cycle_context rows with (cycle_id, source_cycle_id) remain
+ */
+export async function removeCycleContextBySourceCycle(
+  cycleId: number,
+  sourceCycleId: number
+): Promise<void> {
+  if (!Number.isInteger(cycleId) || cycleId <= 0) {
+    throw new Error('removeCycleContextBySourceCycle: cycleId must be a positive integer');
+  }
+  if (!Number.isInteger(sourceCycleId) || sourceCycleId <= 0) {
+    throw new Error(
+      'removeCycleContextBySourceCycle: sourceCycleId must be a positive integer'
+    );
+  }
+
+  await initDatabase();
+
+  if (!db) {
+    throw new Error('Database not initialized');
+  }
+
+  const stmt = db.prepare(
+    'DELETE FROM cycle_context WHERE cycle_id = ? AND source_cycle_id = ?'
+  );
+  stmt.bind([cycleId, sourceCycleId]);
+  stmt.step();
+  stmt.free();
+
+  await saveDatabase();
+}
+
+/**
  * @brief Get answers from all previous cycles (excluding current)
  * 
  * @param currentCycleId - Current cycle ID to exclude

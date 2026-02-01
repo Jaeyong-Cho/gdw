@@ -7,7 +7,7 @@ import { Situation, QuestionAnswer, SituationFlow, QuestionDataDisplay } from '.
 import { getSituationFlows } from '../data/data-loader';
 import { getGoBackTargets, situationDefinitions } from '../data/situations';
 import { generatePrompt, buildPromptContext } from '../utils/prompt-generator';
-import { getTransitionCount, incrementTransitionCount, resetTransitionCount, getCurrentCycleId, completeCycle, getPreviousCyclesAnswers, addCycleContext, removeCycleContext, getCycleContext } from '../data/db';
+import { getTransitionCount, incrementTransitionCount, resetTransitionCount, getCurrentCycleId, completeCycle, getPreviousCyclesAnswers, addCycleContext, removeCycleContext, getCycleContext, addCycleContextByCycle, removeCycleContextBySourceCycle } from '../data/db';
 
 /**
  * @brief Previous cycle answer structure
@@ -27,6 +27,7 @@ interface PreviousCycleAnswer {
  */
 interface SelectedContext {
   id: number;
+  sourceCycleId: number;
   sourceAnswerId: number;
   questionId: string;
   answerText: string;
@@ -205,6 +206,7 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
             const sourceCycle = prevCycles.find(c => c.cycleId === ctx.sourceCycleId);
             return {
               id: ctx.id,
+              sourceCycleId: ctx.sourceCycleId,
               sourceAnswerId: ctx.sourceAnswerId,
               questionId: ctx.questionId,
               answerText: ctx.answerText,
@@ -442,6 +444,7 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
       
       setSelectedContexts(prev => [...prev, {
         id: contextId,
+        sourceCycleId: answer.cycleId,
         sourceAnswerId: answer.id,
         questionId: answer.questionId,
         answerText: answer.answer,
@@ -462,6 +465,62 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
       setSelectedContexts(prev => prev.filter(ctx => ctx.id !== contextId));
     } catch (error) {
       console.error('Error removing context:', error);
+    }
+  }, []);
+
+  /**
+   * @brief Reload selected contexts from DB and sync with previousCyclesAnswers
+   */
+  const reloadSelectedContexts = useCallback(async () => {
+    const currentCycleId = await getCurrentCycleId();
+    if (currentCycleId === null) {
+      return;
+    }
+    const savedContexts = await getCycleContext(currentCycleId);
+    const formatted: SelectedContext[] = savedContexts.map(ctx => {
+      const sourceCycle = previousCyclesAnswers.find(c => c.cycleId === ctx.sourceCycleId);
+      return {
+        id: ctx.id,
+        sourceCycleId: ctx.sourceCycleId,
+        sourceAnswerId: ctx.sourceAnswerId,
+        questionId: ctx.questionId,
+        answerText: ctx.answerText,
+        situation: ctx.situation,
+        cycleNumber: sourceCycle?.cycleNumber,
+      };
+    });
+    setSelectedContexts(formatted);
+  }, [previousCyclesAnswers]);
+
+  /**
+   * @brief Add all answers from a previous cycle as context for the current cycle
+   */
+  const handleAddCycleContext = useCallback(async (sourceCycleId: number) => {
+    const currentCycleId = await getCurrentCycleId();
+    if (currentCycleId === null) {
+      return;
+    }
+    try {
+      await addCycleContextByCycle(currentCycleId, sourceCycleId);
+      await reloadSelectedContexts();
+    } catch (error) {
+      console.error('Error adding cycle context:', error);
+    }
+  }, [reloadSelectedContexts]);
+
+  /**
+   * @brief Remove all context entries that came from a given source cycle
+   */
+  const handleRemoveCycleContextBySource = useCallback(async (sourceCycleId: number) => {
+    const currentCycleId = await getCurrentCycleId();
+    if (currentCycleId === null) {
+      return;
+    }
+    try {
+      await removeCycleContextBySourceCycle(currentCycleId, sourceCycleId);
+      setSelectedContexts(prev => prev.filter(ctx => ctx.sourceCycleId !== sourceCycleId));
+    } catch (error) {
+      console.error('Error removing cycle context:', error);
     }
   }, []);
 
@@ -1422,40 +1481,90 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
                       previousCyclesAnswers.map(cycle => (
                         <div key={cycle.cycleId}>
                           <div
-                            onClick={() => {
-                              setExpandedCycles(prev => {
-                                const newSet = new Set(prev);
-                                if (newSet.has(cycle.cycleId)) {
-                                  newSet.delete(cycle.cycleId);
-                                } else {
-                                  newSet.add(cycle.cycleId);
-                                }
-                                return newSet;
-                              });
-                            }}
                             style={{
                               padding: '10px 12px',
                               backgroundColor: '#f9fafb',
                               borderBottom: '1px solid #e5e7eb',
-                              cursor: 'pointer',
                               display: 'flex',
                               justifyContent: 'space-between',
                               alignItems: 'center',
+                              gap: '8px',
                             }}
                           >
-                            <span style={{
-                              fontSize: '13px',
-                              fontWeight: '600',
-                              color: '#374151',
-                            }}>
-                              Cycle #{cycle.cycleNumber}
-                            </span>
-                            <span style={{
-                              fontSize: '12px',
-                              color: '#6b7280',
-                            }}>
-                              {expandedCycles.has(cycle.cycleId) ? '▼' : '▶'} {cycle.answers.length}개 답변
-                            </span>
+                            <div
+                              onClick={() => {
+                                setExpandedCycles(prev => {
+                                  const newSet = new Set(prev);
+                                  if (newSet.has(cycle.cycleId)) {
+                                    newSet.delete(cycle.cycleId);
+                                  } else {
+                                    newSet.add(cycle.cycleId);
+                                  }
+                                  return newSet;
+                                });
+                              }}
+                              style={{
+                                flex: 1,
+                                cursor: 'pointer',
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                              }}
+                            >
+                              <span style={{
+                                fontSize: '13px',
+                                fontWeight: '600',
+                                color: '#374151',
+                              }}>
+                                Cycle #{cycle.cycleNumber}
+                              </span>
+                              <span style={{
+                                fontSize: '12px',
+                                color: '#6b7280',
+                              }}>
+                                {expandedCycles.has(cycle.cycleId) ? '▼' : '▶'} {cycle.answers.length}개 답변
+                              </span>
+                            </div>
+                            <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleAddCycleContext(cycle.cycleId);
+                                }}
+                                style={{
+                                  padding: '4px 8px',
+                                  fontSize: '11px',
+                                  backgroundColor: '#dbeafe',
+                                  color: '#1d4ed8',
+                                  border: 'none',
+                                  borderRadius: '4px',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                Cycle 전체 추가
+                              </button>
+                              {selectedContexts.some(ctx => ctx.sourceCycleId === cycle.cycleId) && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleRemoveCycleContextBySource(cycle.cycleId);
+                                  }}
+                                  style={{
+                                    padding: '4px 8px',
+                                    fontSize: '11px',
+                                    backgroundColor: '#fee2e2',
+                                    color: '#dc2626',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    cursor: 'pointer',
+                                  }}
+                                >
+                                  Cycle 전체 제거
+                                </button>
+                              )}
+                            </div>
                           </div>
                           
                           {expandedCycles.has(cycle.cycleId) && (
