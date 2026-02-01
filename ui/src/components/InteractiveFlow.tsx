@@ -1969,7 +1969,7 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {currentQuestion.options?.map((option, index) => {
               const validSituations: Situation[] = [
-                'DefiningIntent', 'FailingIntent', 'SelectingProblem', 'DefiningAcceptance',
+                'DefiningIntent', 'FailingIntent', 'SelectingProblem', 'ExploringSolution', 'DefiningAcceptance',
                 'CheckingFeasibility', 'Designing', 'BreakingTasks', 'Implementing',
                 'Verifying', 'Verified', 'Releasing', 'CollectingFeedback', 'Learning', 'Ending', 'Unconscious'
               ];

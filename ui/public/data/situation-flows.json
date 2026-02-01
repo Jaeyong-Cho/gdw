@@ -207,8 +207,38 @@
         "question": "문제를 해결했는지 알 수 있나요? (측정 가능한가요?)",
         "type": "yesno",
         "required": true,
-        "onYesNextSituation": "DefiningAcceptance",
+        "onYesNextSituation": "ExploringSolution",
         "onNoNextQuestionId": "problem-measurable"
+      }
+    ]
+  },
+  "ExploringSolution": {
+    "situation": "ExploringSolution",
+    "startQuestionId": "solution-exploration-text",
+    "questions": [
+      {
+        "id": "solution-exploration-text",
+        "question": "이 문제를 어떻게 해결할 수 있는지 탐색해보세요. 가능한 접근, 방향, 제약을 자유롭게 적어주세요. (완료 기준을 정하기 전에 해결 방향을 먼저 탐색합니다)",
+        "type": "text",
+        "required": true,
+        "nextQuestionId": "solution-exploration-complete",
+        "showData": {
+          "type": "problem-boundaries",
+          "label": "선택한 문제",
+          "source": "getAnswerByQuestionId",
+          "sourceParam": "problem-boundaries-text"
+        },
+        "aiPromptTemplate": {
+          "template": "# 해결 방향 탐색 도움\n\n## [INPUT – Human]\n\n1. 선택한 문제:\n- {{problem-boundaries-text}}\n\n2. 수집된 사실 (참고):\n- {{current-facts-text}}\n\n## [AI PROMPT]\n\nYou are helping to explore how the problem might be solved before defining acceptance criteria.\n\nRules:\n- Do not commit to a single solution; explore options and directions.\n- Consider constraints, risks, and trade-offs.\n- No detailed implementation yet; focus on \"how we might approach\" the problem.\n\nTasks:\n1. Based on the problem and context, suggest 2–4 possible solution directions or approaches.\n2. For each direction: what would it achieve, what are the main constraints or risks?\n3. Highlight what additional information might be needed to choose or refine an approach.\n4. Suggest how the exploration could inform acceptance criteria (what \"done\" might look like for each direction).\n\n## [OUTPUT FORMAT]\n\n- Output the answer as a copyable markdown code block or d2 code block\n- Use a list instead of a table\n- Do not nest d2 code blocks inside markdown code blocks\n\n## [EXIT CONDITION]\n\n- Multiple solution directions suggested\n- Constraints and trade-offs noted\n- Ready to define acceptance criteria"
+        }
+      },
+      {
+        "id": "solution-exploration-complete",
+        "question": "해결 방향 탐색이 충분한가요? (충분하면 완료 기준 단계로 넘어갑니다)",
+        "type": "yesno",
+        "required": true,
+        "onYesNextSituation": "DefiningAcceptance",
+        "onNoNextQuestionId": "solution-exploration-text"
       }
     ]
   },
@@ -664,7 +694,7 @@
         "question": "가장 가까운 상황이 무엇인가요?",
         "type": "multiple",
         "required": true,
-        "options": ["DefiningIntent", "SelectingProblem", "DefiningAcceptance", "CheckingFeasibility", "Designing", "BreakingTasks", "Implementing", "Verifying", "Verified", "Releasing", "CollectingFeedback", "Learning"]
+        "options": ["DefiningIntent", "SelectingProblem", "ExploringSolution", "DefiningAcceptance", "CheckingFeasibility", "Designing", "BreakingTasks", "Implementing", "Verifying", "Verified", "Releasing", "CollectingFeedback", "Learning"]
       }
     ]
   }

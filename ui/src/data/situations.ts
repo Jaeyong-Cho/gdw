@@ -69,6 +69,15 @@ export const situationDefinitions: Record<Situation, SituationDefinition> = {
       { description: 'The problem is actionable (not just a wish or abstract goal)' },
     ],
   },
+  ExploringSolution: {
+    name: 'ExploringSolution',
+    description: 'Exploring how the selected problem can be solved before defining acceptance criteria',
+    required_facts: [
+      { description: 'At least one solution direction or approach has been explored' },
+      { description: 'Exploration is documented (notes or options written)' },
+      { description: 'Ready to define acceptance criteria based on the exploration' },
+    ],
+  },
   DefiningAcceptance: {
     name: 'DefiningAcceptance',
     description: 'Acceptance criteria have been defined for the problem',
@@ -218,6 +227,9 @@ export const nodePositions: Record<Situation, NodePosition> = {
   // Column 1: Problem (x=600)
   SelectingProblem: { x: 600, y: 300 },
   
+  // Column 1.5: Solution exploration (x=800)
+  ExploringSolution: { x: 800, y: 300 },
+  
   // Column 2: Acceptance (x=1000)
   DefiningAcceptance: { x: 1000, y: 300 },
   
@@ -263,10 +275,13 @@ export const stateTransitions: Array<[Situation, Situation, string]> = [
   ['FailingIntent', 'DefiningIntent', ''],
   ['GatheringFacts', 'SelectingProblem', 'facts gathered'],
   ['SelectingProblem', 'GatheringFacts', 'need more facts'],
-  ['SelectingProblem', 'DefiningAcceptance', 'problem focused'],
+  ['SelectingProblem', 'ExploringSolution', 'problem focused'],
   ['SelectingProblem', 'DefiningIntent', 'problem drifting'],
+  ['ExploringSolution', 'DefiningAcceptance', 'solution explored'],
+  ['ExploringSolution', 'SelectingProblem', 're-select problem'],
   ['DefiningAcceptance', 'CheckingFeasibility', 'criteria measurable'],
   ['DefiningAcceptance', 'SelectingProblem', 'criteria vague'],
+  ['DefiningAcceptance', 'ExploringSolution', 'criteria vague'],
   ['CheckingFeasibility', 'Designing', 'feasible'],
   ['CheckingFeasibility', 'DefiningAcceptance', 'too hard'],
   ['CheckingFeasibility', 'SelectingProblem', 'problem too big'],

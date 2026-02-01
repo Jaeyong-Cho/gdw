@@ -108,7 +108,7 @@ function getLayoutConfig(layoutType: LayoutType): LayoutOptions {
         padding: 50,
         concentric: (node: any) => {
           const id = node.data('id');
-          const order = ['DefiningIntent', 'GatheringFacts', 'SelectingProblem', 'DefiningAcceptance', 'CheckingFeasibility', 
+          const order = ['DefiningIntent', 'GatheringFacts', 'SelectingProblem', 'ExploringSolution', 'DefiningAcceptance', 'CheckingFeasibility', 
                         'Designing', 'BreakingTasks', 'Implementing', 'Verifying', 'Verified', 
                         'Releasing', 'CollectingFeedback', 'Learning'].indexOf(id);
           return order >= 0 ? order : 99;
@@ -463,6 +463,7 @@ export const CytoscapeDiagram: React.FC<CytoscapeDiagramProps> = ({
       'FailingIntent',
       'GatheringFacts',
       'SelectingProblem',
+      'ExploringSolution',
       'DefiningAcceptance',
       'CheckingFeasibility',
       'Designing',
