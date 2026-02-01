@@ -262,6 +262,31 @@ export const SituationInfoPanel: React.FC<SituationInfoPanelProps> = ({
             </p>
           </div>
 
+          {guide.feedbackPath && (
+            <div style={{
+              ...sectionStyle,
+              padding: '12px',
+              backgroundColor: '#eff6ff',
+              borderLeft: '3px solid #3b82f6',
+              borderRadius: '4px',
+            }}>
+              <h4 style={{
+                ...sectionTitleStyle,
+                fontSize: '14px',
+                color: '#1d4ed8',
+              }}>
+                맥락 불일치 시 되돌아가기
+              </h4>
+              <p style={{
+                ...contentStyle,
+                fontSize: '13px',
+                whiteSpace: 'pre-line',
+              }}>
+                {guide.feedbackPath}
+              </p>
+            </div>
+          )}
+
           <div style={sectionStyle}>
             <h4 style={{
               ...sectionTitleStyle,

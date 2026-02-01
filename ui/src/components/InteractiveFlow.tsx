@@ -5,6 +5,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Situation, QuestionAnswer, SituationFlow, QuestionDataDisplay } from '../types';
 import { getSituationFlows } from '../data/data-loader';
+import { getGoBackTargets, situationDefinitions } from '../data/situations';
 import { generatePrompt, buildPromptContext } from '../utils/prompt-generator';
 import { getTransitionCount, incrementTransitionCount, resetTransitionCount, getCurrentCycleId, completeCycle, getPreviousCyclesAnswers, addCycleContext, removeCycleContext, getCycleContext } from '../data/db';
 
@@ -31,6 +32,86 @@ interface SelectedContext {
   answerText: string;
   situation: string;
   cycleNumber?: number;
+}
+
+/**
+ * @brief Renders the supplement / go-back row at a question step (same-place re-input, re-ask, or go back).
+ * @param situation - Current situation
+ * @param hasAIPrompt - Whether the current question has an AI prompt template
+ * @param onComplete - Callback to transition to another situation
+ * @param onReAsk - Callback to open AI prompt inputs (supplement and re-ask)
+ */
+function SupplementOrGoBackRow({
+  situation,
+  hasAIPrompt,
+  onComplete,
+  onReAsk,
+}: {
+  situation: Situation;
+  hasAIPrompt: boolean;
+  onComplete: (nextSituation: Situation | null) => void;
+  onReAsk: () => void;
+}): React.ReactElement | null {
+  const goBackTargets = getGoBackTargets(situation);
+  const hasGoBack = goBackTargets.length > 0;
+  if (!hasGoBack && !hasAIPrompt) return null;
+  return (
+    <div style={{
+      marginTop: '20px',
+      padding: '12px 16px',
+      backgroundColor: '#f8fafc',
+      border: '1px solid #e2e8f0',
+      borderRadius: '8px',
+    }}>
+      <div style={{
+        fontSize: '13px',
+        color: '#64748b',
+        marginBottom: '10px',
+        fontWeight: '500',
+      }}>
+        AI 답변이 부족하거나 맥락이 맞지 않나요?
+      </div>
+      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+        {goBackTargets.map((target) => (
+          <button
+            key={target}
+            onClick={() => onComplete(target)}
+            type="button"
+            style={{
+              padding: '8px 16px',
+              fontSize: '13px',
+              fontWeight: '500',
+              backgroundColor: '#ffffff',
+              color: '#475569',
+              border: '1px solid #cbd5e1',
+              borderRadius: '6px',
+              cursor: 'pointer',
+            }}
+          >
+            {situationDefinitions[target]?.name ?? target}으로 돌아가기
+          </button>
+        ))}
+        {hasAIPrompt && (
+          <button
+            onClick={onReAsk}
+            type="button"
+            style={{
+              padding: '8px 16px',
+              fontSize: '13px',
+              fontWeight: '500',
+              backgroundColor: '#eff6ff',
+              color: '#1d4ed8',
+              border: '1px solid #93c5fd',
+              borderRadius: '6px',
+              cursor: 'pointer',
+            }}
+          >
+            입력 보완 후 다시 질문
+          </button>
+        )}
+      </div>
+    </div>
+  );
 }
 
 /**
@@ -779,6 +860,12 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
                 </button>
               )}
             </div>
+            <SupplementOrGoBackRow
+              situation={situation}
+              hasAIPrompt={Boolean(currentQuestion.aiPromptTemplate)}
+              onComplete={onComplete}
+              onReAsk={() => setShowAIPromptInputs(true)}
+            />
             {showAIPromptInputs && currentQuestion.aiPromptTemplate?.inputFields && (
               <div style={{
                 marginTop: '16px',
@@ -1601,6 +1688,12 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
                 </button>
               )}
             </div>
+            <SupplementOrGoBackRow
+              situation={situation}
+              hasAIPrompt={Boolean(currentQuestion.aiPromptTemplate)}
+              onComplete={onComplete}
+              onReAsk={() => setShowAIPromptInputs(true)}
+            />
             {showAIPromptInputs && currentQuestion.aiPromptTemplate && (
               <div style={{
                 marginTop: '16px',

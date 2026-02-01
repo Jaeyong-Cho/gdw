@@ -95,6 +95,8 @@ export interface SituationGuide {
   conditionsToProceed: string[];
   failure: string[];
   goBackTo: string;
+  /** When present, describes the explicit path to go back (e.g. Dumping) when AI result does not match user context. */
+  feedbackPath?: string;
   warning: string;
   tip: string;
   aiUsage: string;

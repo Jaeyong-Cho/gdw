@@ -256,6 +256,7 @@ export const nodePositions: Record<Situation, NodePosition> = {
  */
 export const stateTransitions: Array<[Situation, Situation, string]> = [
   ['Dumping', 'WhatToDo', 'thoughts organized'],
+  ['WhatToDo', 'Dumping', 'context insufficient'],
   ['WhatToDo', 'DefiningIntent', 'action intent clear'],
   ['DefiningIntent', 'GatheringFacts', 'intent clear'],
   ['DefiningIntent', 'FailingIntent', 'intent unclear'],
@@ -292,3 +293,22 @@ export const stateTransitions: Array<[Situation, Situation, string]> = [
   ['Ending', 'Unconscious', 'yes'],
   ['Unconscious', 'Dumping', 'start new cycle'],
 ];
+
+/**
+ * @brief Situations that can be transitioned to from the given situation (go-back targets)
+ * @param situation - Current situation
+ * @return Array of situations that have a transition whose destination is the current situation
+ * @pre situation is a valid Situation
+ * @post Returns unique situations; empty if none (e.g. Dumping has no incoming back-target in flow)
+ */
+export function getGoBackTargets(situation: Situation): Situation[] {
+  const seen = new Set<Situation>();
+  const result: Situation[] = [];
+  for (const [from, to] of stateTransitions) {
+    if (to === situation && !seen.has(from)) {
+      seen.add(from);
+      result.push(from);
+    }
+  }
+  return result;
+}

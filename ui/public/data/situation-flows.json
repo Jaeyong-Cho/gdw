@@ -32,7 +32,7 @@
         "question": "지금 하고 싶은 행동/일을 작성해주세요",
         "type": "text",
         "required": true,
-        "nextQuestionId": "action-intent-clear",
+        "nextQuestionId": "context-match",
         "showData": {
           "type": "dump-thoughts",
           "label": "Dumping 단계에서 작성한 생각",
@@ -42,6 +42,14 @@
         "aiPromptTemplate": {
           "template": "# 하고 싶은 행동/일 정리 도움\n\n## [INPUT – Human]\n\nDumping 단계의 생각:\n{{dump-thoughts-text}}\n\n## [AI PROMPT]\n\nYou are helping to clarify what the user wants to do.\n\nTasks:\n1. Based on the dumped thoughts, help identify what action or task the user might want to do.\n2. Suggest potential motivations behind it.\n3. Extract possible assumptions about the action.\n\n## [OUTPUT FORMAT]\n\n- Output the answer as a copyable markdown code block or d2 code block\n- Use a list instead of a table\n- Do not nest d2 code blocks inside markdown code blocks\n\n## [EXIT CONDITION]\n\n- What the user wants to do is suggested\n- Motivation identified"
         }
+      },
+      {
+        "id": "context-match",
+        "question": "AI가 제안한 '하고 싶은 일'이 당신의 실제 맥락과 일치하나요? (어긋나면 Dumping으로 돌아가 맥락을 보강할 수 있습니다)",
+        "type": "yesno",
+        "required": true,
+        "onYesNextQuestionId": "action-intent-clear",
+        "onNoNextSituation": "Dumping"
       },
       {
         "id": "action-intent-clear",
