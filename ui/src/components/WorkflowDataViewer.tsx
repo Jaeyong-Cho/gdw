@@ -10,7 +10,8 @@
 import React, { useState, useEffect } from 'react';
 import { Situation } from '../types';
 import { workflowReadModel, StateHistoryEntry } from '../data/read-model';
-import { getAllCycles, getAllUnconsciousPeriods, deleteAnswer, updateAnswer, deleteCycle } from '../data/db';
+import { getAllCycles, getAllUnconsciousPeriods, deleteAnswer, updateAnswer, deleteCycle, getCycleData } from '../data/db';
+import { formatCycleAnswersAsMarkdown } from '../utils/cycle-markdown';
 
 interface WorkflowDataViewerProps {
   onClose: () => void;
@@ -64,6 +65,8 @@ export const WorkflowDataViewer: React.FC<WorkflowDataViewerProps> = ({ onClose 
   // Edit/Delete state
   const [editingEntryId, setEditingEntryId] = useState<number | null>(null);
   const [editingAnswer, setEditingAnswer] = useState<string>('');
+  const [copyStatus, setCopyStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [copiedCycleId, setCopiedCycleId] = useState<number | null>(null);
 
   // Computed pagination values
   const cycleTotalPages = Math.ceil(cycles.length / cyclePageSize);
@@ -496,6 +499,7 @@ export const WorkflowDataViewer: React.FC<WorkflowDataViewerProps> = ({ onClose 
                       <th style={{ padding: '10px', textAlign: 'left', borderBottom: '2px solid #e5e7eb', fontSize: '13px' }}>시작 시간</th>
                       <th style={{ padding: '10px', textAlign: 'left', borderBottom: '2px solid #e5e7eb', fontSize: '13px' }}>완료 시간</th>
                       <th style={{ padding: '10px', textAlign: 'center', borderBottom: '2px solid #e5e7eb', fontSize: '13px' }}>상태</th>
+                      <th style={{ padding: '10px', textAlign: 'center', borderBottom: '2px solid #e5e7eb', fontSize: '13px' }}>복사</th>
                       <th style={{ padding: '10px', textAlign: 'center', borderBottom: '2px solid #e5e7eb', fontSize: '13px' }}>선택</th>
                       <th style={{ padding: '10px', textAlign: 'center', borderBottom: '2px solid #e5e7eb', fontSize: '13px' }}>삭제</th>
                     </tr>
@@ -523,6 +527,41 @@ export const WorkflowDataViewer: React.FC<WorkflowDataViewerProps> = ({ onClose 
                           }}>
                             {cycle.status === 'completed' ? '완료' : '진행 중'}
                           </span>
+                        </td>
+                        <td style={{ padding: '10px', textAlign: 'center', borderBottom: '1px solid #e5e7eb' }}>
+                          <button
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              try {
+                                const data = await getCycleData(cycle.id);
+                                const md = formatCycleAnswersAsMarkdown({
+                                  cycleNumber: data.cycleNumber,
+                                  startedAt: data.startedAt,
+                                  completedAt: data.completedAt,
+                                  answers: data.answers,
+                                });
+                                await navigator.clipboard.writeText(md);
+                                setCopiedCycleId(cycle.id);
+                                setCopyStatus('success');
+                                setTimeout(() => { setCopyStatus('idle'); setCopiedCycleId(null); }, 2000);
+                              } catch {
+                                setCopiedCycleId(cycle.id);
+                                setCopyStatus('error');
+                                setTimeout(() => { setCopyStatus('idle'); setCopiedCycleId(null); }, 2000);
+                              }
+                            }}
+                            style={{
+                              padding: '4px 10px',
+                              fontSize: '12px',
+                              backgroundColor: copiedCycleId === cycle.id && copyStatus === 'success' ? '#10b981' : copiedCycleId === cycle.id && copyStatus === 'error' ? '#ef4444' : '#e5e7eb',
+                              color: copiedCycleId === cycle.id ? '#ffffff' : '#374151',
+                              border: 'none',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            {copiedCycleId === cycle.id && copyStatus === 'success' ? '복사됨' : copiedCycleId === cycle.id && copyStatus === 'error' ? '실패' : '복사'}
+                          </button>
                         </td>
                         <td style={{ padding: '10px', textAlign: 'center', borderBottom: '1px solid #e5e7eb' }}>
                           <button
@@ -681,6 +720,10 @@ export const WorkflowDataViewer: React.FC<WorkflowDataViewerProps> = ({ onClose 
             fontWeight: '600',
             color: '#111827',
             marginBottom: '16px',
+            display: 'flex',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '12px',
           }}>
             상태 이력 ({stateHistory.length}개)
             {selectedCycleId !== null && (
@@ -689,7 +732,6 @@ export const WorkflowDataViewer: React.FC<WorkflowDataViewerProps> = ({ onClose 
                   fontSize: '14px',
                   fontWeight: '400',
                   color: '#6b7280',
-                  marginLeft: '8px',
                 }}>
                   - Cycle {cycles.find(c => c.id === selectedCycleId)?.cycleNumber || selectedCycleId}
                 </span>
@@ -703,12 +745,44 @@ export const WorkflowDataViewer: React.FC<WorkflowDataViewerProps> = ({ onClose 
                     <span style={{
                       fontSize: '13px',
                       color: '#7c3aed',
-                      marginLeft: '12px',
                     }}>
                       Unconscious: {minutes} min
                     </span>
                   );
                 })()}
+                <button
+                  onClick={async () => {
+                    if (selectedCycleId === null) return;
+                    try {
+                      const data = await getCycleData(selectedCycleId);
+                      const md = formatCycleAnswersAsMarkdown({
+                        cycleNumber: data.cycleNumber,
+                        startedAt: data.startedAt,
+                        completedAt: data.completedAt,
+                        answers: data.answers,
+                      });
+                      await navigator.clipboard.writeText(md);
+                      setCopyStatus('success');
+                      setTimeout(() => setCopyStatus('idle'), 2000);
+                    } catch {
+                      setCopyStatus('error');
+                      setTimeout(() => setCopyStatus('idle'), 2000);
+                    }
+                  }}
+                  style={{
+                    padding: '6px 14px',
+                    fontSize: '13px',
+                    fontWeight: '500',
+                    backgroundColor: copyStatus === 'success' ? '#10b981' : copyStatus === 'error' ? '#ef4444' : '#6b7280',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    marginLeft: 'auto',
+                  }}
+                >
+                  {copyStatus === 'success' ? '복사됨' : copyStatus === 'error' ? '복사 실패' : '복사하기'}
+                </button>
               </>
             )}
           </h3>

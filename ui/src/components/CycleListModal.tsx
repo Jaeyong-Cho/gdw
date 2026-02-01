@@ -4,6 +4,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { getAllCycles, getCycleData } from '../data/db';
+import { formatCycleAnswersAsMarkdown } from '../utils/cycle-markdown';
 
 /**
  * @brief Props for CycleListModal component
@@ -52,6 +53,8 @@ export const CycleListModal: React.FC<CycleListModalProps> = ({
       situation: string;
     }>;
   } | null>(null);
+  const [copyStatus, setCopyStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [copiedCycleId, setCopiedCycleId] = useState<number | null>(null);
 
   useEffect(() => {
     const loadCycles = async () => {
@@ -209,35 +212,79 @@ export const CycleListModal: React.FC<CycleListModalProps> = ({
                     }}
                   >
                     <div style={{
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      color: '#1f2937',
-                      marginBottom: '4px',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'flex-start',
+                      gap: '8px',
                     }}>
-                      Cycle {cycle.cycleNumber}
-                    </div>
-                    <div style={{
-                      fontSize: '12px',
-                      color: '#6b7280',
-                      marginBottom: '4px',
-                    }}>
-                      시작: {formatDate(cycle.startedAt)}
-                    </div>
-                    {cycle.completedAt && (
-                      <div style={{
-                        fontSize: '12px',
-                        color: '#6b7280',
-                      }}>
-                        완료: {formatDate(cycle.completedAt)}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{
+                          fontSize: '14px',
+                          fontWeight: '600',
+                          color: '#1f2937',
+                          marginBottom: '4px',
+                        }}>
+                          Cycle {cycle.cycleNumber}
+                        </div>
+                        <div style={{
+                          fontSize: '12px',
+                          color: '#6b7280',
+                          marginBottom: '4px',
+                        }}>
+                          시작: {formatDate(cycle.startedAt)}
+                        </div>
+                        {cycle.completedAt && (
+                          <div style={{
+                            fontSize: '12px',
+                            color: '#6b7280',
+                          }}>
+                            완료: {formatDate(cycle.completedAt)}
+                          </div>
+                        )}
+                        <div style={{
+                          fontSize: '11px',
+                          color: cycle.status === 'completed' ? '#10b981' : '#f59e0b',
+                          marginTop: '4px',
+                          fontWeight: '500',
+                        }}>
+                          {cycle.status === 'completed' ? '완료됨' : '진행 중'}
+                        </div>
                       </div>
-                    )}
-                    <div style={{
-                      fontSize: '11px',
-                      color: cycle.status === 'completed' ? '#10b981' : '#f59e0b',
-                      marginTop: '4px',
-                      fontWeight: '500',
-                    }}>
-                      {cycle.status === 'completed' ? '완료됨' : '진행 중'}
+                      <button
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          try {
+                            const data = await getCycleData(cycle.id);
+                            const md = formatCycleAnswersAsMarkdown({
+                              cycleNumber: data.cycleNumber,
+                              startedAt: data.startedAt,
+                              completedAt: data.completedAt,
+                              answers: data.answers,
+                            });
+                            await navigator.clipboard.writeText(md);
+                            setCopiedCycleId(cycle.id);
+                            setCopyStatus('success');
+                            setTimeout(() => { setCopyStatus('idle'); setCopiedCycleId(null); }, 2000);
+                          } catch {
+                            setCopiedCycleId(cycle.id);
+                            setCopyStatus('error');
+                            setTimeout(() => { setCopyStatus('idle'); setCopiedCycleId(null); }, 2000);
+                          }
+                        }}
+                        style={{
+                          padding: '4px 10px',
+                          fontSize: '12px',
+                          fontWeight: '500',
+                          backgroundColor: copiedCycleId === cycle.id && copyStatus === 'success' ? '#10b981' : copiedCycleId === cycle.id && copyStatus === 'error' ? '#ef4444' : '#e5e7eb',
+                          color: copiedCycleId === cycle.id ? '#ffffff' : '#374151',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          flexShrink: 0,
+                        }}
+                      >
+                        {copiedCycleId === cycle.id && copyStatus === 'success' ? '복사됨' : copiedCycleId === cycle.id && copyStatus === 'error' ? '실패' : '복사'}
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -296,30 +343,72 @@ export const CycleListModal: React.FC<CycleListModalProps> = ({
                       <strong>답변 수:</strong> {cycleDetails.answers.length}개
                     </div>
                   </div>
-                  <button
-                    onClick={() => {
-                      onRestartCycle(cycleDetails.id, cycleDetails.lastSituation, cycleDetails.lastQuestionId);
-                    }}
-                    style={{
-                      padding: '12px 24px',
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      backgroundColor: '#3b82f6',
-                      color: '#ffffff',
-                      border: 'none',
-                      borderRadius: '6px',
-                      cursor: 'pointer',
-                      transition: 'background-color 0.2s',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = '#2563eb';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = '#3b82f6';
-                    }}
-                  >
-                    이 Cycle 다시 시작
-                  </button>
+                  <div style={{
+                    display: 'flex',
+                    gap: '12px',
+                    flexWrap: 'wrap',
+                    marginBottom: '16px',
+                  }}>
+                    <button
+                      onClick={() => {
+                        onRestartCycle(cycleDetails.id, cycleDetails.lastSituation, cycleDetails.lastQuestionId);
+                      }}
+                      style={{
+                        padding: '12px 24px',
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        backgroundColor: '#3b82f6',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        transition: 'background-color 0.2s',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = '#2563eb';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = '#3b82f6';
+                      }}
+                    >
+                      이 Cycle 다시 시작
+                    </button>
+                    <button
+                      onClick={async () => {
+                        const md = formatCycleAnswersAsMarkdown({
+                          cycleNumber: cycleDetails.cycleNumber,
+                          startedAt: cycleDetails.startedAt,
+                          completedAt: cycleDetails.completedAt,
+                          answers: cycleDetails.answers,
+                        });
+                        try {
+                          await navigator.clipboard.writeText(md);
+                          setCopyStatus('success');
+                          setTimeout(() => setCopyStatus('idle'), 2000);
+                        } catch {
+                          setCopyStatus('error');
+                          setTimeout(() => setCopyStatus('idle'), 2000);
+                        }
+                      }}
+                      style={{
+                        padding: '12px 24px',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        backgroundColor: copyStatus === 'success' ? '#10b981' : copyStatus === 'error' ? '#ef4444' : '#6b7280',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        transition: 'background-color 0.2s',
+                      }}
+                    >
+                      {copyStatus === 'success'
+                        ? '복사됨'
+                        : copyStatus === 'error'
+                          ? '복사 실패'
+                          : '복사하기'}
+                    </button>
+                  </div>
                 </div>
 
                 {cycleDetails.answers.length > 0 && (
