@@ -55,14 +55,14 @@
   },
   "DefiningIntent": {
     "situation": "DefiningIntent",
-    "startQuestionId": "intent-why-action",
+    "startQuestionId": "intent-summary-text",
     "questions": [
       {
-        "id": "intent-why-action",
-        "question": "이 행동/일을 하고 싶은 이유를 작성해주세요 (왜 이 행동/일이 필요한지, 어떤 문제나 불편함을 해결하려는지)",
+        "id": "intent-summary-text",
+        "question": "의도를 한 문장으로 작성해주세요. 하고 싶은 일, 그 이유, 그리고 중요한 가정을 포함하세요. 기능이나 기술이 아닌 목적에 집중하고, 설명할 때마다 일관되게 말할 수 있어야 합니다.",
         "type": "text",
         "required": true,
-        "nextQuestionId": "intent-assumptions",
+        "nextQuestionId": "intent-proceed",
         "showData": {
           "type": "action-intent",
           "label": "하고 싶은 행동/일",
@@ -70,51 +70,12 @@
           "sourceParam": "action-intent-text"
         },
         "aiPromptTemplate": {
-          "template": "# 하고 싶은 행동/일의 이유 정리 도움\n\n## [INPUT – Human]\n\n1. Dumping 단계의 생각:\n- {{dump-thoughts-text}}\n\n2. 하고 싶은 행동/일:\n- {{action-intent-text}}\n\n## [AI PROMPT]\n\nYou are helping to clarify the reasons for what the user wants to do.\n\nTasks:\n1. Consider the thoughts from the Dumping phase.\n2. Based on the action/task the user wants to do, help identify the core motivations.\n3. Extract underlying needs or desires that might drive this action.\n4. Identify what problem or discomfort this action aims to solve.\n5. Suggest potential reasons why the user wants to do this action.\n\nImportant: Focus on WHY the user wants to do this action, not WHAT they will do or HOW they will do it.\n\n## [OUTPUT FORMAT]\n\n- Output the answer as a copyable markdown code block or d2 code block\n- Use a list instead of a table\n- Do not nest d2 code blocks inside markdown code blocks\n\n## [EXIT CONDITION]\n\n- Potential reasons identified\n- Motivations suggested"
+          "template": "# 의도 한 문장 정리 도움\n\n## [INPUT – Human]\n\n1. Dumping 단계의 생각:\n- {{dump-thoughts-text}}\n\n2. 하고 싶은 행동/일:\n- {{action-intent-text}}\n\n## [AI PROMPT]\n\nYou are helping to draft a single-sentence intent.\n\nTasks:\n1. Consider the thoughts from the Dumping phase and the action/task the user wants to do.\n2. In one clear sentence, synthesize: (a) what the user wants to do, (b) why it is needed (core motivation or problem to solve), and (c) one key assumption if relevant.\n3. Keep the sentence focused on purpose and outcome; do not mention features or technology.\n4. Ensure the sentence is something the user can repeat consistently.\n\nImportant: Output ONE sentence only. It should integrate what, why, and key assumption without listing them separately.\n\n## [OUTPUT FORMAT]\n\n- Output the answer as a copyable markdown code block or d2 code block\n- Use a list instead of a table\n- Do not nest d2 code blocks inside markdown code blocks\n\n## [EXIT CONDITION]\n\n- Intent is one clear sentence\n- What, why, and key assumption (if any) are included"
         }
       },
       {
-        "id": "intent-assumptions",
-        "question": "이 행동/일에 대한 가정을 작성해주세요 (이 행동/일이 효과적일 것이라고 가정하는 것, 또는 이 행동/일을 하기 전에 참이라고 가정하는 것)",
-        "type": "text",
-        "required": true,
-        "nextQuestionId": "intent-summary-text",
-        "showData": {
-          "type": "why-action",
-          "label": "행동/일을 하고 싶은 이유",
-          "source": "getAnswerByQuestionId",
-          "sourceParam": "intent-why-action"
-        },
-        "aiPromptTemplate": {
-          "template": "# 가정 정리 도움\n\n## [INPUT – Human]\n\n1. Dumping 단계의 생각:\n- {{dump-thoughts-text}}\n\n2. 하고 싶은 행동/일:\n- {{action-intent-text}}\n\n3. 행동/일을 하고 싶은 이유:\n- {{intent-why-action}}\n\n## [AI PROMPT]\n\nYou are helping to identify and validate assumptions.\n\nTasks:\n1. Consider the thoughts from the Dumping phase.\n2. Based on the action intent and reasons, extract hidden assumptions.\n3. Identify what the user assumes to be true before taking this action.\n4. Identify assumptions about the effectiveness or outcome of this action.\n5. Identify assumptions that might be incorrect or need validation.\n6. Suggest ways to validate these assumptions.\n\nImportant: Focus on ASSUMPTIONS (what is assumed to be true), not reasons (why) or the action itself (what).\n\n## [OUTPUT FORMAT]\n\n- Output the answer as a copyable markdown code block or d2 code block\n- Use a list instead of a table\n- Do not nest d2 code blocks inside markdown code blocks\n\n## [EXIT CONDITION]\n\n- Assumptions identified\n- Validation methods suggested"
-        }
-      },
-      {
-        "id": "intent-summary-text",
-        "question": "위에서 작성한 내용을 바탕으로 의도를 한 문장으로 요약해주세요 (행동/일, 이유, 가정을 종합하여)",
-        "type": "text",
-        "required": true,
-        "nextQuestionId": "intent-consistent",
-        "showData": {
-          "type": "intent-summary",
-          "label": "기존 Intent 요약",
-          "source": "getIntentSummary"
-        },
-        "aiPromptTemplate": {
-          "template": "# 의도 요약 도움\n\n## [INPUT – Human]\n\n1. Dumping 단계의 생각:\n- {{dump-thoughts-text}}\n\n2. 하고 싶은 행동/일:\n- {{action-intent-text}}\n\n3. 행동/일을 하고 싶은 이유:\n- {{intent-why-action}}\n\n4. 가정:\n- {{intent-assumptions}}\n\n## [AI PROMPT]\n\nYou are helping to summarize intent.\n\nTasks:\n1. Consider the thoughts from the Dumping phase.\n2. Synthesize what the user wants to do, reasons, and assumptions into one clear sentence.\n3. Ensure the summary captures the essence without losing important context from the Dumping phase.\n4. The summary should integrate: what action/task, why it's needed, and key assumptions.\n\nImportant: This is a SUMMARY that combines all the above information into one sentence, not a repetition of any single part.\n\n## [OUTPUT FORMAT]\n\n- Output the answer as a copyable markdown code block or d2 code block\n- Use a list instead of a table\n- Do not nest d2 code blocks inside markdown code blocks\n\n## [EXIT CONDITION]\n\n- Intent is one clear sentence\n- All key elements included"
-        }
-      },
-      {
-        "id": "intent-consistent",
-        "question": "설명할 때마다 내용이 일관되나요?",
-        "type": "yesno",
-        "required": true,
-        "onYesNextQuestionId": "intent-no-tech",
-        "onNoNextSituation": "FailingIntent"
-      },
-      {
-        "id": "intent-no-tech",
-        "question": "기능이나 기술을 언급하지 않았나요?",
+        "id": "intent-proceed",
+        "question": "이 의도로 진행할까요? (일관되고, 기능/기술이 아닌 목적에 맞다면 예)",
         "type": "yesno",
         "required": true,
         "onYesNextSituation": "GatheringFacts",
@@ -174,7 +135,7 @@
           "source": "getIntentSummary"
         },
         "aiPromptTemplate": {
-          "template": "# 현재 상황 사실 수집 도움\n\n## [INPUT - Human]\n\n1. Dumping 단계의 생각:\n- {{dump-thoughts-text}}\n\n2. 하고 싶은 행동/일:\n- {{action-intent-text}}\n\n3. 행동/일을 하고 싶은 이유:\n- {{intent-why-action}}\n\n4. 가정:\n- {{intent-assumptions}}\n\n5. 의도 요약:\n- {{intent-summary-text}}\n\n## [AI PROMPT]\n\nYou are helping to gather facts about the current situation before problem definition.\n\nRules:\n- Focus only on FACTS (observable, measurable, verified)\n- No opinions, assumptions, or interpretations\n- No proposed solutions or problems yet\n- Facts should be specific and concrete\n\nTasks:\n1. Based on the intent and context, identify what factual information is needed.\n2. Suggest categories of facts to collect:\n   - Current state observations (what exists now)\n   - Measurements and metrics (quantifiable data)\n   - Constraints and limitations (verified boundaries)\n   - Stakeholders and their verified needs\n   - Historical facts (what happened, when)\n3. For each category, provide example questions to gather facts.\n4. Identify what facts are already implied in the context.\n5. Highlight gaps where facts are needed but not yet collected.\n\nImportant: Facts are objective truths, not interpretations. \"The system is slow\" is an interpretation. \"Response time is 5 seconds\" is a fact.\n\n## [OUTPUT FORMAT]\n\n- Output the answer as a copyable markdown code block or d2 code block\n- Use a list instead of a table\n- Do not nest d2 code blocks inside markdown code blocks\n\n## [EXIT CONDITION]\n\n- Fact categories identified\n- Example questions provided\n- Clear distinction between facts and interpretations"
+          "template": "# 현재 상황 사실 수집 도움\n\n## [INPUT - Human]\n\n1. Dumping 단계의 생각:\n- {{dump-thoughts-text}}\n\n2. 하고 싶은 행동/일:\n- {{action-intent-text}}\n\n3. 의도 요약 (한 문장):\n- {{intent-summary-text}}\n\n## [AI PROMPT]\n\nYou are helping to gather facts about the current situation before problem definition.\n\nRules:\n- Focus only on FACTS (observable, measurable, verified)\n- No opinions, assumptions, or interpretations\n- No proposed solutions or problems yet\n- Facts should be specific and concrete\n\nTasks:\n1. Based on the intent and context, identify what factual information is needed.\n2. Suggest categories of facts to collect:\n   - Current state observations (what exists now)\n   - Measurements and metrics (quantifiable data)\n   - Constraints and limitations (verified boundaries)\n   - Stakeholders and their verified needs\n   - Historical facts (what happened, when)\n3. For each category, provide example questions to gather facts.\n4. Identify what facts are already implied in the context.\n5. Highlight gaps where facts are needed but not yet collected.\n\nImportant: Facts are objective truths, not interpretations. \"The system is slow\" is an interpretation. \"Response time is 5 seconds\" is a fact.\n\n## [OUTPUT FORMAT]\n\n- Output the answer as a copyable markdown code block or d2 code block\n- Use a list instead of a table\n- Do not nest d2 code blocks inside markdown code blocks\n\n## [EXIT CONDITION]\n\n- Fact categories identified\n- Example questions provided\n- Clear distinction between facts and interpretations"
         }
       },
       {
@@ -212,7 +173,7 @@
           "sourceParam": "current-facts-text"
         },
         "aiPromptTemplate": {
-          "template": "# 문제 선택 및 경계 정의 도움\n\n## [INPUT – Human]\n\n1. Dumping 단계의 생각:\n- {{dump-thoughts-text}}\n\n2. 하고 싶은 행동/일:\n- {{action-intent-text}}\n\n3. 행동/일을 하고 싶은 이유:\n- {{intent-why-action}}\n\n4. 가정:\n- {{intent-assumptions}}\n\n5. 의도 요약:\n- {{intent-summary-text}}\n\n6. 수집된 사실들:\n{{current-facts-text}}\n\n7. 이전 개선점 (선택적):\n{{improvements}}\n\n## [AI PROMPT]\n\nYou are performing problem decomposition based on GATHERED FACTS.\n\nRules:\n- No solution framing.\n- No implementation hints.\n- Problems must be grounded in the gathered facts.\n- If facts are insufficient, indicate what additional facts are needed.\n\nPriority Principle:\n- **Problems that rarely change must be resolved first.**\n- When ranking problems, prioritize stability: problems with stable requirements, clear boundaries, and minimal expected changes should be addressed before problems that are likely to evolve.\n- This reduces rework and establishes a solid foundation.\n\nTasks:\n1. Review the gathered facts about the current situation.\n2. Based on the facts (not assumptions), enumerate problems that are evidenced by the facts.\n3. For each problem:\n   - Cite the supporting facts\n   - Assess expected change frequency (stable vs volatile)\n4. Rank problems by:\n   - **Primary: Evidence strength (well-supported by facts first)**\n   - **Secondary: Change frequency (stable first)**\n   - Tertiary: Urgency, impact, and dependency depth\n5. If the facts are insufficient to define a clear problem:\n   - Indicate what additional facts need to be gathered\n   - Suggest returning to GatheringFacts phase\n6. Select exactly ONE problem (prefer the most fact-supported and stable one).\n7. Rewrite it as a single precise question.\n8. If oversized, decompose and select the smallest viable unit.\n\n## [OUTPUT FORMAT]\n\n- Output the answer as a copyable markdown code block or d2 code block\n- Use a list instead of a table\n- Do not nest d2 code blocks inside markdown code blocks\n\n## [EXIT CONDITION]\n\n- One problem only\n- Grounded in gathered facts\n- Expressed as a question\n- Solvable independently\n- Change frequency assessment included\n- OR: Clear indication that more facts are needed",
+          "template": "# 문제 선택 및 경계 정의 도움\n\n## [INPUT – Human]\n\n1. Dumping 단계의 생각:\n- {{dump-thoughts-text}}\n\n2. 하고 싶은 행동/일:\n- {{action-intent-text}}\n\n3. 의도 요약 (한 문장):\n- {{intent-summary-text}}\n\n4. 수집된 사실들:\n{{current-facts-text}}\n\n5. 이전 개선점 (선택적):\n{{improvements}}\n\n## [AI PROMPT]\n\nYou are performing problem decomposition based on GATHERED FACTS.\n\nRules:\n- No solution framing.\n- No implementation hints.\n- Problems must be grounded in the gathered facts.\n- If facts are insufficient, indicate what additional facts are needed.\n\nPriority Principle:\n- **Problems that rarely change must be resolved first.**\n- When ranking problems, prioritize stability: problems with stable requirements, clear boundaries, and minimal expected changes should be addressed before problems that are likely to evolve.\n- This reduces rework and establishes a solid foundation.\n\nTasks:\n1. Review the gathered facts about the current situation.\n2. Based on the facts (not assumptions), enumerate problems that are evidenced by the facts.\n3. For each problem:\n   - Cite the supporting facts\n   - Assess expected change frequency (stable vs volatile)\n4. Rank problems by:\n   - **Primary: Evidence strength (well-supported by facts first)**\n   - **Secondary: Change frequency (stable first)**\n   - Tertiary: Urgency, impact, and dependency depth\n5. If the facts are insufficient to define a clear problem:\n   - Indicate what additional facts need to be gathered\n   - Suggest returning to GatheringFacts phase\n6. Select exactly ONE problem (prefer the most fact-supported and stable one).\n7. Rewrite it as a single precise question.\n8. If oversized, decompose and select the smallest viable unit.\n\n## [OUTPUT FORMAT]\n\n- Output the answer as a copyable markdown code block or d2 code block\n- Use a list instead of a table\n- Do not nest d2 code blocks inside markdown code blocks\n\n## [EXIT CONDITION]\n\n- One problem only\n- Grounded in gathered facts\n- Expressed as a question\n- Solvable independently\n- Change frequency assessment included\n- OR: Clear indication that more facts are needed",
           "selectableAnswers": {
             "questionId": "learned-improvements-text",
             "label": "이전 개선점 선택",

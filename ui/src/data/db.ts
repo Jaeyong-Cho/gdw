@@ -844,7 +844,7 @@ export async function getIntentSummary(): Promise<string | null> {
   }
 
   const stmt = db.prepare('SELECT answer FROM question_answers WHERE situation = ? AND question_id = ? ORDER BY answered_at DESC LIMIT 1');
-  stmt.bind(['DefiningIntent', 'intent-summarized-text']);
+  stmt.bind(['DefiningIntent', 'intent-summary-text']);
   
   if (stmt.step()) {
     const result = stmt.getAsObject();

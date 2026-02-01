@@ -200,6 +200,39 @@ const App: React.FC = () => {
           >
             이전 Cycle
           </button>
+          {currentSituation !== 'Unconscious' && (
+            <button
+              onClick={async () => {
+                const cycleId = await getCurrentCycleId();
+                if (!cycleId) {
+                  alert('Cycle을 먼저 시작해주세요.');
+                  return;
+                }
+                try {
+                  await recordStateExit(currentSituation, cycleId);
+                } catch {
+                  // Ignore exit record errors
+                }
+                setCurrentSituation('Learning');
+                setSelectedSituation('Learning');
+                setInitialQuestionId(null);
+                setShowQuestionFlow(true);
+              }}
+              style={{
+                padding: '10px 20px',
+                fontSize: '14px',
+                fontWeight: '500',
+                backgroundColor: '#a78bfa',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                transition: 'background-color 0.2s',
+              }}
+            >
+              Cycle 종료
+            </button>
+          )}
           <button
             onClick={() => setShowDataViewer(true)}
             style={{
@@ -232,32 +265,6 @@ const App: React.FC = () => {
           >
             통계 보기
           </button>
-          {currentSituation !== 'Unconscious' && (
-            <button
-              onClick={async () => {
-                const cycleId = await getCurrentCycleId();
-                if (!cycleId) {
-                  alert('Cycle을 먼저 시작해주세요.');
-                  return;
-                }
-                setUnconsciousEntryReason('');
-                setShowEnterUnconsciousModal(true);
-              }}
-              style={{
-                padding: '10px 20px',
-                fontSize: '14px',
-                fontWeight: '500',
-                backgroundColor: '#a78bfa',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                transition: 'background-color 0.2s',
-              }}
-            >
-              무의식으로 이동
-            </button>
-          )}
           <button
             onClick={() => setShowStateManager(true)}
             style={{
