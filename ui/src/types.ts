@@ -12,6 +12,7 @@ export type Situation =
   | 'FailingIntent'
   | 'GatheringFacts'
   | 'SelectingProblem'
+  | 'ListingActions'
   | 'ExploringSolution'
   | 'DefiningAcceptance'
   | 'CheckingFeasibility'

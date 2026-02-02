@@ -82,6 +82,7 @@ const STATE_COLORS: Record<string, string> = {
   DefiningIntent: '#8b5cf6',
   GatheringFacts: '#f59e0b',
   SelectingProblem: '#ec4899',
+  ListingActions: '#a855f7',
   ExploringSolution: '#7c3aed',
   DefiningAcceptance: '#f59e0b',
   CheckingFeasibility: '#10b981',

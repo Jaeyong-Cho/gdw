@@ -127,7 +127,33 @@
         { "question": "문제를 해결했는지 알 수 있나요? (측정 가능한가요?)" },
         { "question": "하나의 문제만 선택했나요?" }
       ],
-      "nextStep": "모두 \"예\"면 ExploringSolution으로 진행 가능"
+      "nextStep": "모두 \"예\"면 ListingActions로 진행 가능"
+    }
+  },
+  "ListingActions": {
+    "whatToDo": "선택한 문제를 해결하기 위해 수행해야 할 작은 action들을 리스트업. 각 action은 구체적이고 실행 가능해야 함. 예상 소요 시간: 5-10분.",
+    "conditionsToProceed": [
+      "5-10개의 작은 action이 리스트업됨",
+      "각 action이 구체적이고 실행 가능함",
+      "Action들이 문제 해결과 직접적으로 관련됨",
+      "해결 방향 탐색 단계로 넘어갈 준비가 됨"
+    ],
+    "failure": [
+      "Action이 너무 추상적이거나 모호함",
+      "Action이 문제 해결과 직접적인 관련이 없음",
+      "Action이 너무 크거나 복잡함 (독립적으로 실행 불가)"
+    ],
+    "goBackTo": "SelectingProblem (문제를 다시 선택할 때)",
+    "warning": "구체적인 구현 방법이 아닌 \"무엇을 해야 하는지\"에 집중. 각 action은 작고 독립적으로 실행 가능해야 함.",
+    "tip": "문제를 작은 단계로 나누어 생각해보세요. 각 action은 \"X를 확인한다\", \"Y를 작성한다\", \"Z를 테스트한다\" 같은 구체적인 형태여야 합니다. AI에게 \"이 문제를 해결하기 위해 필요한 작은 action들을 리스트업해줘\" 요청.",
+    "aiUsage": "문제 해결을 위한 작은 action 리스트업 요청, action의 구체성 검증 요청.",
+    "quickCheck": {
+      "items": [
+        { "question": "5-10개의 작은 action이 리스트업되었나요?" },
+        { "question": "각 action이 구체적이고 실행 가능한가요?" },
+        { "question": "Action 리스트가 충분한가요? (충분하면 해결 방향 탐색 단계로)" }
+      ],
+      "nextStep": "모두 \"예\"면 ExploringSolution으로 진행"
     }
   },
   "ExploringSolution": {

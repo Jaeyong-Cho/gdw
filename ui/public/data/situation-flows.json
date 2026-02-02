@@ -207,8 +207,38 @@
         "question": "문제를 해결했는지 알 수 있나요? (측정 가능한가요?)",
         "type": "yesno",
         "required": true,
-        "onYesNextSituation": "ExploringSolution",
+        "onYesNextSituation": "ListingActions",
         "onNoNextQuestionId": "problem-measurable"
+      }
+    ]
+  },
+  "ListingActions": {
+    "situation": "ListingActions",
+    "startQuestionId": "actions-list-text",
+    "questions": [
+      {
+        "id": "actions-list-text",
+        "question": "이 문제를 해결하기 위해 수행해야 할 작은 action들을 리스트업해주세요. 각 action은 구체적이고 실행 가능해야 합니다.",
+        "type": "text",
+        "required": true,
+        "nextQuestionId": "actions-complete",
+        "showData": {
+          "type": "problem-boundaries",
+          "label": "선택한 문제",
+          "source": "getAnswerByQuestionId",
+          "sourceParam": "problem-boundaries-text"
+        },
+        "aiPromptTemplate": {
+          "template": "# 문제 해결을 위한 Action 리스트업 도움\n\n## [INPUT – Human]\n\n선택한 이전 Cycle Context (있을 경우):\n{{selectedContext}}\n\n1. 선택한 문제:\n- {{problem-boundaries-text}}\n\n2. 수집된 사실 (참고):\n- {{current-facts-text}}\n\n## [AI PROMPT]\n\nYou are helping to list small, concrete actions needed to solve the problem.\n\nRules:\n- Each action must be specific and executable.\n- Actions should be small enough to be completed independently.\n- Focus on \"what needs to be done\" rather than \"how to do it\" (implementation details come later).\n- Actions should directly relate to solving the selected problem.\n\nTasks:\n1. Review the problem statement and gathered facts.\n2. Break down the problem into 5–10 small, concrete actions.\n3. For each action:\n   - Ensure it is specific and executable\n   - Verify it relates to solving the problem\n   - Check that it can be completed independently (or note dependencies)\n4. Order actions logically (prerequisites first, if any).\n5. Ensure actions collectively address the problem.\n\n## [OUTPUT FORMAT]\n\n- Output the answer as a copyable markdown code block or d2 code block\n- Use a list instead of a table\n- Do not nest d2 code blocks inside markdown code blocks\n\n## [EXIT CONDITION]\n\n- 5–10 concrete actions listed\n- Each action is specific and executable\n- Actions collectively address the problem\n- Ready to explore solution directions"
+        }
+      },
+      {
+        "id": "actions-complete",
+        "question": "Action 리스트가 충분한가요? (충분하면 해결 방향 탐색 단계로 넘어갑니다)",
+        "type": "yesno",
+        "required": true,
+        "onYesNextSituation": "ExploringSolution",
+        "onNoNextQuestionId": "actions-list-text"
       }
     ]
   },
@@ -229,7 +259,7 @@
           "sourceParam": "problem-boundaries-text"
         },
         "aiPromptTemplate": {
-          "template": "# 해결 방향 탐색 도움\n\n## [INPUT – Human]\n\n선택한 이전 Cycle Context (있을 경우):\n{{selectedContext}}\n\n1. 선택한 문제:\n- {{problem-boundaries-text}}\n\n2. 수집된 사실 (참고):\n- {{current-facts-text}}\n\n## [AI PROMPT]\n\nYou are helping to explore how the problem might be solved before defining acceptance criteria.\n\nRules:\n- Do not commit to a single solution; explore options and directions.\n- Consider constraints, risks, and trade-offs.\n- No detailed implementation yet; focus on \"how we might approach\" the problem.\n\nTasks:\n1. Based on the problem and context, suggest 2–4 possible solution directions or approaches.\n2. For each direction: what would it achieve, what are the main constraints or risks?\n3. Highlight what additional information might be needed to choose or refine an approach.\n4. Suggest how the exploration could inform acceptance criteria (what \"done\" might look like for each direction).\n\n## [OUTPUT FORMAT]\n\n- Output the answer as a copyable markdown code block or d2 code block\n- Use a list instead of a table\n- Do not nest d2 code blocks inside markdown code blocks\n\n## [EXIT CONDITION]\n\n- Multiple solution directions suggested\n- Constraints and trade-offs noted\n- Ready to define acceptance criteria"
+          "template": "# 해결 방향 탐색 도움\n\n## [INPUT – Human]\n\n선택한 이전 Cycle Context (있을 경우):\n{{selectedContext}}\n\n1. 선택한 문제:\n- {{problem-boundaries-text}}\n\n2. 수집된 사실 (참고):\n- {{current-facts-text}}\n\n3. ListingActions 단계에서 리스트업한 작은 action들:\n- {{actions-list-text}}\n\n## [AI PROMPT]\n\nYou are helping to explore how the problem might be solved before defining acceptance criteria.\n\nRules:\n- Do not commit to a single solution; explore options and directions.\n- Consider constraints, risks, and trade-offs.\n- No detailed implementation yet; focus on \"how we might approach\" the problem.\n- Consider the actions listed in the previous ListingActions phase.\n\nTasks:\n1. Review the actions listed in ListingActions phase.\n2. Based on the problem, context, and listed actions, suggest 2–4 possible solution directions or approaches.\n3. For each direction: what would it achieve, what are the main constraints or risks?\n4. Consider how the listed actions might be organized or sequenced within each solution direction.\n5. Highlight what additional information might be needed to choose or refine an approach.\n6. Suggest how the exploration could inform acceptance criteria (what \"done\" might look like for each direction).\n\n## [OUTPUT FORMAT]\n\n- Output the answer as a copyable markdown code block or d2 code block\n- Use a list instead of a table\n- Do not nest d2 code blocks inside markdown code blocks\n\n## [EXIT CONDITION]\n\n- Multiple solution directions suggested\n- Constraints and trade-offs noted\n- Solution directions consider the listed actions\n- Ready to define acceptance criteria"
         }
       },
       {
@@ -694,7 +724,7 @@
         "question": "가장 가까운 상황이 무엇인가요?",
         "type": "multiple",
         "required": true,
-        "options": ["DefiningIntent", "SelectingProblem", "ExploringSolution", "DefiningAcceptance", "CheckingFeasibility", "Designing", "BreakingTasks", "Implementing", "Verifying", "Verified", "Releasing", "CollectingFeedback", "Learning"]
+        "options": ["DefiningIntent", "SelectingProblem", "ListingActions", "ExploringSolution", "DefiningAcceptance", "CheckingFeasibility", "Designing", "BreakingTasks", "Implementing", "Verifying", "Verified", "Releasing", "CollectingFeedback", "Learning"]
       }
     ]
   }

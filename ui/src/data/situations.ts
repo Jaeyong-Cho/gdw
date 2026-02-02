@@ -69,6 +69,16 @@ export const situationDefinitions: Record<Situation, SituationDefinition> = {
       { description: 'The problem is actionable (not just a wish or abstract goal)' },
     ],
   },
+  ListingActions: {
+    name: 'ListingActions',
+    description: 'Small actions needed to solve the problem have been listed',
+    required_facts: [
+      { description: 'A list of small actions exists in written form' },
+      { description: 'Each action is concrete and executable' },
+      { description: 'Actions are related to solving the selected problem' },
+      { description: 'Ready to explore solution directions based on the actions' },
+    ],
+  },
   ExploringSolution: {
     name: 'ExploringSolution',
     description: 'Exploring how the selected problem can be solved before defining acceptance criteria',
@@ -227,6 +237,9 @@ export const nodePositions: Record<Situation, NodePosition> = {
   // Column 1: Problem (x=600)
   SelectingProblem: { x: 600, y: 300 },
   
+  // Column 1.25: Action listing (x=700)
+  ListingActions: { x: 700, y: 300 },
+  
   // Column 1.5: Solution exploration (x=800)
   ExploringSolution: { x: 800, y: 300 },
   
@@ -275,10 +288,13 @@ export const stateTransitions: Array<[Situation, Situation, string]> = [
   ['FailingIntent', 'DefiningIntent', ''],
   ['GatheringFacts', 'SelectingProblem', 'facts gathered'],
   ['SelectingProblem', 'GatheringFacts', 'need more facts'],
-  ['SelectingProblem', 'ExploringSolution', 'problem focused'],
+  ['SelectingProblem', 'ListingActions', 'problem focused'],
   ['SelectingProblem', 'DefiningIntent', 'problem drifting'],
+  ['ListingActions', 'ExploringSolution', 'actions listed'],
+  ['ListingActions', 'SelectingProblem', 're-select problem'],
   ['ExploringSolution', 'DefiningAcceptance', 'solution explored'],
   ['ExploringSolution', 'SelectingProblem', 're-select problem'],
+  ['ExploringSolution', 'ListingActions', 'need more actions'],
   ['DefiningAcceptance', 'CheckingFeasibility', 'criteria measurable'],
   ['DefiningAcceptance', 'SelectingProblem', 'criteria vague'],
   ['DefiningAcceptance', 'ExploringSolution', 'criteria vague'],
