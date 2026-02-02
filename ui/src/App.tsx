@@ -421,6 +421,21 @@ const App: React.FC = () => {
                       await recordStateExit(currentSituation, cycleId);
                       await recordStateEntry(nextSituation, cycleId);
                     }
+                    if (nextSituation === 'Unconscious') {
+                      try {
+                        if (cycleId) {
+                          const currentPeriod = await getCurrentUnconsciousPeriod();
+                          if (!currentPeriod) {
+                            await startUnconsciousPeriod(cycleId, null);
+                            await recordUnconsciousEntry(cycleId, null);
+                          }
+                        }
+                        setActiveCycleId(null);
+                        setShowQuestionFlow(false);
+                      } catch (error) {
+                        console.error('Error entering Unconscious:', error);
+                      }
+                    }
                     setCurrentSituation(nextSituation);
                     setSelectedSituation(nextSituation);
                     setInitialQuestionId(null);
