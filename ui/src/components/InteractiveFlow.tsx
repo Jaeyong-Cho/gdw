@@ -354,10 +354,13 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
   /**
    * @brief Generate AI prompt from template with user inputs
    * 
+   * @param userInputs - Optional user input values for prompt template
+   * @param autoCopy - Whether to automatically copy prompt to clipboard after generation
+   * 
    * @pre currentQuestion has aiPromptTemplate
-   * @post AI prompt is generated and displayed
+   * @post AI prompt is generated and displayed (and copied if autoCopy is true)
    */
-  const handleGenerateAIPrompt = useCallback(async (userInputs?: Record<string, string>) => {
+  const handleGenerateAIPrompt = useCallback(async (userInputs?: Record<string, string>, autoCopy: boolean = false) => {
     if (!flow || !currentQuestionId) {
       return;
     }
@@ -410,6 +413,37 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
       setAiPrompt(prompt);
       setShowAIPrompt(true);
       setShowAIPromptInputs(false);
+
+      if (autoCopy && prompt) {
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(prompt);
+            setCopyStatus('success');
+            setTimeout(() => setCopyStatus('idle'), 1500);
+          } else {
+            const textArea = document.createElement('textarea');
+            textArea.value = prompt;
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-999999px';
+            textArea.style.top = '-999999px';
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            const successful = document.execCommand('copy');
+            document.body.removeChild(textArea);
+            if (successful) {
+              setCopyStatus('success');
+              setTimeout(() => setCopyStatus('idle'), 1500);
+            } else {
+              throw new Error('execCommand copy failed');
+            }
+          }
+        } catch (error) {
+          console.error('Error copying prompt:', error);
+          setCopyStatus('error');
+          setTimeout(() => setCopyStatus('idle'), 1500);
+        }
+      }
     } catch (error) {
       console.error('Error generating AI prompt:', error);
     }
@@ -586,7 +620,7 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
         }
       }
     } else {
-      handleGenerateAIPrompt();
+      handleGenerateAIPrompt(undefined, true);
     }
   }, [flow, currentQuestionId, handleGenerateAIPrompt]);
 
@@ -1065,7 +1099,7 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
                   
                   <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
                     <button
-                      onClick={() => handleGenerateAIPrompt(aiPromptInputs)}
+                      onClick={() => handleGenerateAIPrompt(aiPromptInputs, true)}
                       disabled={currentQuestion.aiPromptTemplate.inputFields?.some(f => 
                         f.required && !aiPromptInputs[f.id]?.trim()
                       )}
@@ -1889,7 +1923,7 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
                   
                   <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
                     <button
-                      onClick={() => handleGenerateAIPrompt(aiPromptInputs)}
+                      onClick={() => handleGenerateAIPrompt(aiPromptInputs, true)}
                       disabled={currentQuestion.aiPromptTemplate.inputFields?.some(f => 
                         f.required && !aiPromptInputs[f.id]?.trim()
                       )}
