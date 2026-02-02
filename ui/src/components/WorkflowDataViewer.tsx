@@ -11,7 +11,7 @@ import React, { useState, useEffect } from 'react';
 import { Situation } from '../types';
 import { workflowReadModel, StateHistoryEntry } from '../data/read-model';
 import { getAllCycles, getAllUnconsciousPeriods, deleteAnswer, updateAnswer, deleteCycle, getCycleData } from '../data/db';
-import { formatCycleAnswersAsMarkdown } from '../utils/cycle-markdown';
+import { formatCycleAnswersAsMarkdown, copyToClipboard } from '../utils/cycle-markdown';
 
 interface WorkflowDataViewerProps {
   onClose: () => void;
@@ -540,11 +540,12 @@ export const WorkflowDataViewer: React.FC<WorkflowDataViewerProps> = ({ onClose 
                                   completedAt: data.completedAt,
                                   answers: data.answers,
                                 });
-                                await navigator.clipboard.writeText(md);
+                                await copyToClipboard(md);
                                 setCopiedCycleId(cycle.id);
                                 setCopyStatus('success');
                                 setTimeout(() => { setCopyStatus('idle'); setCopiedCycleId(null); }, 2000);
-                              } catch {
+                              } catch (error) {
+                                console.error('Error copying cycle:', error);
                                 setCopiedCycleId(cycle.id);
                                 setCopyStatus('error');
                                 setTimeout(() => { setCopyStatus('idle'); setCopiedCycleId(null); }, 2000);
@@ -761,10 +762,11 @@ export const WorkflowDataViewer: React.FC<WorkflowDataViewerProps> = ({ onClose 
                         completedAt: data.completedAt,
                         answers: data.answers,
                       });
-                      await navigator.clipboard.writeText(md);
+                      await copyToClipboard(md);
                       setCopyStatus('success');
                       setTimeout(() => setCopyStatus('idle'), 2000);
-                    } catch {
+                    } catch (error) {
+                      console.error('Error copying cycle:', error);
                       setCopyStatus('error');
                       setTimeout(() => setCopyStatus('idle'), 2000);
                     }

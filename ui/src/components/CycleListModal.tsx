@@ -4,7 +4,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { getAllCycles, getCycleData } from '../data/db';
-import { formatCycleAnswersAsMarkdown } from '../utils/cycle-markdown';
+import { formatCycleAnswersAsMarkdown, copyToClipboard } from '../utils/cycle-markdown';
 
 /**
  * @brief Props for CycleListModal component
@@ -261,11 +261,12 @@ export const CycleListModal: React.FC<CycleListModalProps> = ({
                               completedAt: data.completedAt,
                               answers: data.answers,
                             });
-                            await navigator.clipboard.writeText(md);
+                            await copyToClipboard(md);
                             setCopiedCycleId(cycle.id);
                             setCopyStatus('success');
                             setTimeout(() => { setCopyStatus('idle'); setCopiedCycleId(null); }, 2000);
-                          } catch {
+                          } catch (error) {
+                            console.error('Error copying cycle:', error);
                             setCopiedCycleId(cycle.id);
                             setCopyStatus('error');
                             setTimeout(() => { setCopyStatus('idle'); setCopiedCycleId(null); }, 2000);
@@ -375,17 +376,18 @@ export const CycleListModal: React.FC<CycleListModalProps> = ({
                     </button>
                     <button
                       onClick={async () => {
-                        const md = formatCycleAnswersAsMarkdown({
-                          cycleNumber: cycleDetails.cycleNumber,
-                          startedAt: cycleDetails.startedAt,
-                          completedAt: cycleDetails.completedAt,
-                          answers: cycleDetails.answers,
-                        });
                         try {
-                          await navigator.clipboard.writeText(md);
+                          const md = formatCycleAnswersAsMarkdown({
+                            cycleNumber: cycleDetails.cycleNumber,
+                            startedAt: cycleDetails.startedAt,
+                            completedAt: cycleDetails.completedAt,
+                            answers: cycleDetails.answers,
+                          });
+                          await copyToClipboard(md);
                           setCopyStatus('success');
                           setTimeout(() => setCopyStatus('idle'), 2000);
-                        } catch {
+                        } catch (error) {
+                          console.error('Error copying cycle:', error);
                           setCopyStatus('error');
                           setTimeout(() => setCopyStatus('idle'), 2000);
                         }

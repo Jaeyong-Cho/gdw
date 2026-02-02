@@ -169,6 +169,7 @@ export const CytoscapeDiagram: React.FC<CytoscapeDiagramProps> = ({
   const cyRef = useRef<Core | null>(null);
   const rotationRef = useRef<number>(0);
   const animationFrameRef = useRef<number | null>(null);
+  const previousIsUnconsciousRef = useRef<boolean>(isUnconscious);
 
   // Prepare elements
   const elements = useMemo(() => {
@@ -339,8 +340,7 @@ export const CytoscapeDiagram: React.FC<CytoscapeDiagramProps> = ({
       }
     });
 
-    // Fit to viewport
-    cy.fit(undefined, 50);
+    // Zoom effect will apply fit (animated) based on selectedSituation / isUnconscious
 
     // Cleanup
     return () => {
@@ -442,16 +442,100 @@ export const CytoscapeDiagram: React.FC<CytoscapeDiagramProps> = ({
     }
   }, [selectedSituation, isUnconscious, layoutType]);
 
+  // Zoom in on current state when in cycle, zoom out when Unconscious (animated)
+  const ZOOM_OUT_PADDING = 50;
+  const ZOOM_IN_PADDING = 100;
+  const ZOOM_ANIMATION_MS = 400;
+  const ZOOM_EASING: 'ease-out' = 'ease-out';
+
+  const runZoomToFit = useCallback(
+    (cy: Core, eles: ReturnType<Core['elements']>, padding: number) => {
+      if (cy.animated()) {
+        cy.stop(true, false);
+      }
+      cy.animate(
+        {
+          fit: { eles, padding },
+          duration: ZOOM_ANIMATION_MS,
+          easing: ZOOM_EASING,
+        },
+        { queue: false }
+      );
+    },
+    []
+  );
+
+  const LAYOUT_SETTLE_MS = 550;
+
+  useEffect(() => {
+    if (!cyRef.current) return;
+
+    const cy = cyRef.current;
+    const justLeftUnconscious =
+      previousIsUnconsciousRef.current && !isUnconscious;
+    previousIsUnconsciousRef.current = isUnconscious;
+
+    if (isUnconscious) {
+      runZoomToFit(cy, cy.elements(), ZOOM_OUT_PADDING);
+      return;
+    }
+
+    if (selectedSituation) {
+      const node = cy.getElementById(selectedSituation);
+      if (node.length > 0) {
+        if (layoutType === 'circle' && !justLeftUnconscious) {
+          return;
+        }
+        if (layoutType === 'circle' && justLeftUnconscious) {
+          const timeoutId = setTimeout(() => {
+            if (cyRef.current) {
+              const n = cyRef.current.getElementById(selectedSituation);
+              if (n.length > 0) {
+                runZoomToFit(cyRef.current, n, ZOOM_IN_PADDING);
+              }
+            }
+          }, LAYOUT_SETTLE_MS);
+          return () => clearTimeout(timeoutId);
+        }
+        runZoomToFit(cy, node, ZOOM_IN_PADDING);
+      }
+    } else {
+      runZoomToFit(cy, cy.elements(), ZOOM_OUT_PADDING);
+    }
+  }, [
+    selectedSituation,
+    isUnconscious,
+    layoutType,
+    runZoomToFit,
+  ]);
+
   // Update layout when layoutType changes
   useEffect(() => {
     if (!cyRef.current) return;
 
-    const layout = cyRef.current.layout(getLayoutConfig(layoutType));
+    const cy = cyRef.current;
+    const layout = cy.layout(getLayoutConfig(layoutType));
     layout.run();
-    
-    // Fit to viewport after layout
-    cyRef.current.fit(undefined, 50);
-  }, [layoutType]);
+
+    const applyFit = () => {
+      if (!cyRef.current) return;
+      const c = cyRef.current;
+      if (isUnconscious) {
+        runZoomToFit(c, c.elements(), ZOOM_OUT_PADDING);
+      } else if (selectedSituation) {
+        const node = c.getElementById(selectedSituation);
+        if (node.length > 0) {
+          runZoomToFit(c, node, ZOOM_IN_PADDING);
+        } else {
+          runZoomToFit(c, c.elements(), ZOOM_OUT_PADDING);
+        }
+      } else {
+        runZoomToFit(c, c.elements(), ZOOM_OUT_PADDING);
+      }
+    };
+
+    applyFit();
+  }, [layoutType, runZoomToFit]);
 
   // Get node order for circle layout
   const getNodeOrder = useCallback((): string[] => {
@@ -532,13 +616,14 @@ export const CytoscapeDiagram: React.FC<CytoscapeDiagramProps> = ({
       nodeData.set(node.id(), { radius, baseAngle: angle });
     });
 
+    const targetNode = cy.getElementById(selectedSituation);
+    const fitPadding = 100;
+
     const animateRotation = (currentTime: number) => {
       const elapsed = currentTime - startTime;
       const progress = Math.min(elapsed / animationDuration, 1);
-      
-      // Ease out cubic
+
       const easeProgress = 1 - Math.pow(1 - progress, 3);
-      
       const currentAngle = startRotation + rotationDiff * easeProgress;
       rotationRef.current = currentAngle;
 
@@ -553,6 +638,10 @@ export const CytoscapeDiagram: React.FC<CytoscapeDiagramProps> = ({
           }
         });
       });
+
+      if (targetNode.length > 0) {
+        cy.fit(targetNode, fitPadding);
+      }
 
       if (progress < 1) {
         animationFrameRef.current = requestAnimationFrame(animateRotation);
@@ -631,24 +720,23 @@ export const CytoscapeDiagram: React.FC<CytoscapeDiagramProps> = ({
         animationFrameRef.current = null;
       }
       rotationRef.current = 0;
-      
-      // Re-run layout to reset positions
+
+      // Re-run layout to reset positions; zoom effect will animate fit
       if (cy && layoutType === 'circle') {
         const layout = cy.layout(getLayoutConfig(layoutType));
         layout.run();
-        cy.fit(undefined, 50);
       }
     }
   }, [isUnconscious, layoutType]);
 
   /**
-   * @brief Fit the graph to the viewport
+   * @brief Fit the graph to the viewport with animation
    */
-  const handleFit = () => {
+  const handleFit = useCallback(() => {
     if (cyRef.current) {
-      cyRef.current.fit(undefined, 50);
+      runZoomToFit(cyRef.current, cyRef.current.elements(), ZOOM_OUT_PADDING);
     }
-  };
+  }, [runZoomToFit]);
 
   return (
     <div

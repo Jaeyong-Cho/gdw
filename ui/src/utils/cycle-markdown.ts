@@ -89,3 +89,48 @@ export function formatCycleAnswersAsMarkdown(input: CycleMarkdownInput): string 
 
   return lines.join('\n').replace(/\n{3,}/g, '\n\n').trim();
 }
+
+/**
+ * @brief Copy text to clipboard with fallback for cross-platform compatibility
+ * 
+ * @param text - Text to copy
+ * @return Promise that resolves when copy succeeds, rejects on failure
+ * 
+ * @pre text is a string
+ * @post Text is copied to clipboard (or throws error)
+ */
+export async function copyToClipboard(text: string): Promise<void> {
+  if (!text || typeof text !== 'string') {
+    throw new Error('copyToClipboard: text must be a non-empty string');
+  }
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return;
+    } catch (error) {
+      console.warn('Clipboard API failed, trying fallback:', error);
+    }
+  }
+
+  const textArea = document.createElement('textarea');
+  textArea.value = text;
+  textArea.style.position = 'fixed';
+  textArea.style.left = '-999999px';
+  textArea.style.top = '-999999px';
+  textArea.style.opacity = '0';
+  document.body.appendChild(textArea);
+  textArea.focus();
+  textArea.select();
+
+  try {
+    const successful = document.execCommand('copy');
+    document.body.removeChild(textArea);
+    if (!successful) {
+      throw new Error('execCommand copy failed');
+    }
+  } catch (error) {
+    document.body.removeChild(textArea);
+    throw error;
+  }
+}
