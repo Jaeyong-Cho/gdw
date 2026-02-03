@@ -21,6 +21,11 @@ const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3001';
 const DB_KEY = 'gdw-db';
 
 /**
+ * @brief LocalStorage key for database path backup
+ */
+const DB_PATH_KEY = 'gdw-db-path';
+
+/**
  * @brief Check if backend server is available
  * 
  * @return True if server is reachable
@@ -244,6 +249,35 @@ async function loadDatabaseData(): Promise<Uint8Array | null> {
           } catch (error) {
             console.warn('Failed to load from backend file:', error);
             // Fall through to localStorage fallback
+          }
+        } else {
+          // Path not configured on server, try to restore from localStorage
+          try {
+            const savedPath = localStorage.getItem(DB_PATH_KEY);
+            if (savedPath && savedPath.trim() !== '') {
+              console.log('Restoring database path from localStorage:', savedPath);
+              const restoreResponse = await fetch(`${SERVER_URL}/api/db/path`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ path: savedPath })
+              });
+              
+              if (restoreResponse.ok) {
+                // Try to load database from restored path
+                const loadResponse = await fetch(`${SERVER_URL}/api/db`);
+                if (loadResponse.ok) {
+                  const arrayBuffer = await loadResponse.arrayBuffer();
+                  const fileData = new Uint8Array(arrayBuffer);
+                  
+                  if (fileData.length > 0) {
+                    console.log('Database loaded from restored path:', savedPath);
+                    return fileData;
+                  }
+                }
+              }
+            }
+          } catch (restoreError) {
+            console.warn('Failed to restore path from localStorage:', restoreError);
           }
         }
       }
@@ -1023,6 +1057,13 @@ export async function setDatabaseLocationWithPath(filePath: string): Promise<str
 
     const result = await response.json();
     
+    // Save path to localStorage as backup
+    try {
+      localStorage.setItem(DB_PATH_KEY, result.path);
+    } catch (error) {
+      console.warn('Failed to save path to localStorage:', error);
+    }
+    
     // Try to load database from the file
     try {
       const loadResponse = await fetch(`${SERVER_URL}/api/db`);
@@ -1103,6 +1144,9 @@ export async function isDatabaseLocationConfigured(): Promise<boolean> {
 
 /**
  * @brief Clear database location on backend
+ * 
+ * @pre None
+ * @post Database path is cleared from backend and localStorage
  */
 export async function clearDatabaseLocation(): Promise<void> {
   const serverAvailable = await isServerAvailable();
@@ -1112,6 +1156,14 @@ export async function clearDatabaseLocation(): Promise<void> {
 
   try {
     await fetch(`${SERVER_URL}/api/db/path`, { method: 'DELETE' });
+    
+    // Also clear from localStorage
+    try {
+      localStorage.removeItem(DB_PATH_KEY);
+    } catch (error) {
+      console.warn('Failed to clear path from localStorage:', error);
+    }
+    
     console.log('Database location cleared');
   } catch (error) {
     console.error('Error clearing location:', error);
@@ -1245,11 +1297,12 @@ export async function clearDatabase(): Promise<void> {
   const tables = [
     'cycle_context',
     'unconscious_periods', 
+    'state_transitions',
     'state_entries',
     'question_answers',
     'cycles',
     'workflow_states',
-    'transition_counts'
+    'transition_counters'
   ];
   
   for (const table of tables) {

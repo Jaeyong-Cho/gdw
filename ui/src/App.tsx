@@ -423,10 +423,11 @@ const App: React.FC = () => {
                     }
                     if (nextSituation === 'Unconscious') {
                       try {
-                        if (cycleId) {
-                          const currentPeriod = await getCurrentUnconsciousPeriod();
-                          if (!currentPeriod) {
-                            await startUnconsciousPeriod(cycleId, null);
+                        const currentPeriod = await getCurrentUnconsciousPeriod();
+                        if (!currentPeriod) {
+                          // Start unconscious period even if cycleId is null (e.g., after completeCycle)
+                          await startUnconsciousPeriod(cycleId, null);
+                          if (cycleId) {
                             await recordUnconsciousEntry(cycleId, null);
                           }
                         }

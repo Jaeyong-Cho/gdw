@@ -25,6 +25,74 @@ app.use(express.raw({ type: 'application/octet-stream', limit: '50mb' }));
 // Store current database path
 let currentDbPath = null;
 
+// Path to configuration file
+const DB_PATH_CONFIG_FILE = path.join(__dirname, '..', '.db-path.json');
+
+/**
+ * @brief Load database path from configuration file
+ * 
+ * @pre None
+ * @post currentDbPath is set if config file exists and contains valid path
+ */
+async function loadDbPathFromConfig() {
+  try {
+    const configData = await fs.readFile(DB_PATH_CONFIG_FILE, 'utf-8');
+    const config = JSON.parse(configData);
+    
+    if (config.path && typeof config.path === 'string') {
+      const normalized = path.resolve(config.path);
+      currentDbPath = normalized;
+      console.log(`Database path loaded from config: ${normalized}`);
+    }
+  } catch (error) {
+    if (error.code !== 'ENOENT') {
+      console.warn('Error loading database path config:', error.message);
+    }
+  }
+}
+
+/**
+ * @brief Save database path to configuration file
+ * 
+ * @param dbPath - Database path to save
+ * @pre dbPath is a valid string
+ * @post Configuration file is created/updated with the path
+ */
+async function saveDbPathToConfig(dbPath) {
+  if (!dbPath || typeof dbPath !== 'string') {
+    throw new Error('Invalid database path for saving');
+  }
+  
+  try {
+    const config = { path: dbPath };
+    await fs.writeFile(DB_PATH_CONFIG_FILE, JSON.stringify(config, null, 2), 'utf-8');
+    console.log(`Database path saved to config: ${dbPath}`);
+  } catch (error) {
+    console.error('Error saving database path config:', error);
+    throw error;
+  }
+}
+
+/**
+ * @brief Clear database path from configuration file
+ * 
+ * @pre None
+ * @post Configuration file is deleted if it exists
+ */
+async function clearDbPathConfig() {
+  try {
+    await fs.unlink(DB_PATH_CONFIG_FILE);
+    console.log('Database path config cleared');
+  } catch (error) {
+    if (error.code !== 'ENOENT') {
+      console.warn('Error clearing database path config:', error.message);
+    }
+  }
+}
+
+// Load database path on server start
+loadDbPathFromConfig();
+
 /**
  * @brief Validate and normalize file path
  * 
@@ -90,6 +158,8 @@ app.post('/api/db/path', async (req, res) => {
     
     const normalized = validatePath(dbPath);
     currentDbPath = normalized;
+    
+    await saveDbPathToConfig(normalized);
     
     console.log(`Database path set to: ${normalized}`);
     
@@ -172,8 +242,9 @@ app.post('/api/db', async (req, res) => {
  * @brief DELETE /api/db/path
  * Clear database file path configuration
  */
-app.delete('/api/db/path', (req, res) => {
+app.delete('/api/db/path', async (req, res) => {
   currentDbPath = null;
+  await clearDbPathConfig();
   console.log('Database path cleared');
   res.json({ success: true });
 });

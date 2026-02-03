@@ -7,7 +7,7 @@ import { Situation, QuestionAnswer, SituationFlow, QuestionDataDisplay } from '.
 import { getSituationFlows } from '../data/data-loader';
 import { getGoBackTargets, situationDefinitions } from '../data/situations';
 import { generatePrompt, buildPromptContext } from '../utils/prompt-generator';
-import { getTransitionCount, incrementTransitionCount, resetTransitionCount, getCurrentCycleId, completeCycle, getPreviousCyclesAnswers, addCycleContext, removeCycleContext, getCycleContext, addCycleContextByCycle, removeCycleContextBySourceCycle } from '../data/db';
+import { getTransitionCount, incrementTransitionCount, resetTransitionCount, getCurrentCycleId, completeCycle, getPreviousCyclesAnswers, addCycleContext, removeCycleContext, getCycleContext, addCycleContextByCycle, removeCycleContextBySourceCycle, startUnconsciousPeriod, recordUnconsciousEntry, getCurrentUnconsciousPeriod } from '../data/db';
 
 /**
  * @brief Previous cycle answer structure
@@ -796,6 +796,16 @@ export const InteractiveFlow: React.FC<InteractiveFlowProps> = ({
       const cycleId = await getCurrentCycleId();
       if (cycleId) {
         await completeCycle(cycleId);
+        // Start unconscious period with the completed cycle ID
+        try {
+          const currentPeriod = await getCurrentUnconsciousPeriod();
+          if (!currentPeriod) {
+            await startUnconsciousPeriod(cycleId, null);
+            await recordUnconsciousEntry(cycleId, null);
+          }
+        } catch (error) {
+          console.error('Error starting unconscious period:', error);
+        }
       }
       nextSituation = 'Unconscious';
     }
